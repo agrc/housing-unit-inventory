@@ -3,10 +3,58 @@ import os
 import arcpy
 import pandas as pd
 
-
 # import numpy as np
 # from arcgis import GIS
 # from arcgis.features import GeoAccessor, GeoSeriesAccessor
+
+
+def _dissolve_duplicate_parcels(parcels_for_modeling_layer, scratch):
+    # dissolve on parcel id,summarizing attributes in various ways
+    parcels_dissolved = arcpy.management.Dissolve(
+        parcels_for_modeling_layer, os.path.join(scratch, '_00_parcels_dissolved'), 'PARCEL_ID', [
+            ['PARCEL_ID', 'COUNT'],
+            ['TAXEXEMPT_TYPE', 'FIRST'],
+            ['TOTAL_MKT_VALUE', 'SUM'],
+            ['LAND_MKT_VALUE', 'SUM'],
+            ['PARCEL_ACRES', 'SUM'],
+            ['PROP_CLASS', 'FIRST'],
+            ['PRIMARY_RES', 'FIRST'],
+            ['HOUSE_CNT', 'MAX'],
+            ['BLDG_SQFT', 'SUM'],
+            ['FLOORS_CNT', 'MAX'],
+            ['BUILT_YR', 'FIRST'],
+            ['EFFBUILT_YR', 'FIRST'],
+        ], 'MULTI_PART', 'DISSOLVE_LINES'
+    )
+
+    # rename columns
+    parcels_dissolved_sdf = pd.DataFrame.spatial.from_featureclass(parcels_dissolved)
+    parcels_dissolved_sdf.columns = [
+        'OBJECTID',
+        'PARCEL_ID',
+        'COUNT_PARCEL_ID',
+        'TAXEXEMPT_TYPE',
+        'TOTAL_MKT_VALUE',
+        'LAND_MKT_VALUE',
+        'PARCEL_ACRES',
+        'PROP_CLASS',
+        'PRIMARY_RES',
+        'HOUSE_CNT',
+        'BLDG_SQFT',
+        'FLOORS_CNT',
+        'BUILT_YR',
+        'EFFBUILT_YR',
+        'SHAPE',
+    ]
+
+    # remove parcels without parcel ids
+    # parcels_dissolved_sdf = parcels_dissolved_sdf[parcels_dissolved_sdf['PARCEL_ID'].isnull() == False].copy()
+    # parcels_dissolved_sdf = parcels_dissolved_sdf[parcels_dissolved_sdf['PARCEL_ID'].notnull()].copy()
+    parcels_dissolved_sdf.dropna(subset='PARCEL_ID', inplace=True)
+
+    return parcels_dissolved_sdf
+
+
 def davis():
     arcpy.env.overwriteOutput = True
 
@@ -57,50 +105,8 @@ def davis():
     # Dissolve duplicate parcel ids
     ################################
 
-    # dissolve on parcel id,summarizing attributes in various ways
-    parcels_dissolved = arcpy.management.Dissolve(
-        parcels_for_modeling_layer, os.path.join(scratch, '_00_parcels_dissolved'), 'PARCEL_ID', [
-            ['PARCEL_ID', 'COUNT'],
-            ['TAXEXEMPT_TYPE', 'FIRST'],
-            ['TOTAL_MKT_VALUE', 'SUM'],
-            ['LAND_MKT_VALUE', 'SUM'],
-            ['PARCEL_ACRES', 'SUM'],
-            ['PROP_CLASS', 'FIRST'],
-            ['PRIMARY_RES', 'FIRST'],
-            ['HOUSE_CNT', 'MAX'],
-            ['BLDG_SQFT', 'SUM'],
-            ['FLOORS_CNT', 'MAX'],
-            ['BUILT_YR', 'FIRST'],
-            ['EFFBUILT_YR', 'FIRST'],
-        ], 'MULTI_PART', 'DISSOLVE_LINES'
-    )
+    parcels_dissolved_sdf = _dissolve_duplicate_parcels(parcels_for_modeling_layer, scratch)
 
-    # rename columns
-    parcels_dissolved_sdf = pd.DataFrame.spatial.from_featureclass(parcels_dissolved)
-    parcels_dissolved_sdf.columns = [
-        'OBJECTID',
-        'PARCEL_ID',
-        'COUNT_PARCEL_ID',
-        'TAXEXEMPT_TYPE',
-        'TOTAL_MKT_VALUE',
-        'LAND_MKT_VALUE',
-        'PARCEL_ACRES',
-        'PROP_CLASS',
-        'PRIMARY_RES',
-        'HOUSE_CNT',
-        'BLDG_SQFT',
-        'FLOORS_CNT',
-        'BUILT_YR',
-        'EFFBUILT_YR',
-        'SHAPE',
-    ]
-
-    # remove parcels without parcel ids
-    # parcels_dissolved_sdf = parcels_dissolved_sdf[parcels_dissolved_sdf['PARCEL_ID'].isnull() == False].copy()
-    parcels_dissolved_sdf = parcels_dissolved_sdf[parcels_dissolved_sdf['PARCEL_ID'].notnull()].copy()
-
-    #
-    #
     #: Join extended parcel info (Davis Co only)
     # load extended descriptions
     def add_leading_zeroes(parcel_id_str):
