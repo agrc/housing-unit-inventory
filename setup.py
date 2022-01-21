@@ -33,8 +33,8 @@ setup(
     },
     keywords=['gis'],
     install_requires=[
-        'pandas==1.3.3',
-        'numpy==1.20.1',
+        'pandas==1.3.*',
+        'numpy==1.20.*',
         'arcgis==1.9.*',
     ],
     extras_require={
@@ -55,6 +55,6 @@ setup(
         'pytest-runner',
     ],
     entry_points={'console_scripts': [
-        'housing-characteristics = housing-characteristics.main:process',
+        'housing-characteristics = housing_characteristics.main:process',
     ]},
 )
