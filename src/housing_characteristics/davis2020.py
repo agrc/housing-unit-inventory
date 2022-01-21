@@ -48,7 +48,7 @@ def davis():
     )
 
     # recalc acreage
-    arcpy.CalculateField_management(parcels_for_modeling, 'PARCEL_ACRES', '''!SHAPE.area@ACRES!''', 'PYTHON3')
+    arcpy.CalculateField_management(parcels_for_modeling, 'PARCEL_ACRES', '!SHAPE.area@ACRES!')
 
     # create the main layer
     parcels_for_modeling_layer = arcpy.MakeFeatureLayer_management(parcels_for_modeling, 'parcels_for_modeling_lyr')
@@ -155,7 +155,7 @@ def davis():
 
     # add second built year field
     arcpy.AddField_management(parcels_for_modeling_layer, 'BUILT_YR2', 'SHORT')
-    arcpy.CalculateField_management(parcels_for_modeling_layer, 'BUILT_YR2', '''!BUILT_YR!''', 'PYTHON3')
+    arcpy.CalculateField_management(parcels_for_modeling_layer, 'BUILT_YR2', '!BUILT_YR!')
 
     # get a count of all parcels
     count_all = arcpy.GetCount_management(parcels_for_modeling_layer)
@@ -205,7 +205,7 @@ def davis():
     )
 
     # recalc acreage
-    arcpy.CalculateField_management(ca_pud, 'PARCEL_ACRES', '''!SHAPE.area@ACRES!''', 'PYTHON3')
+    arcpy.CalculateField_management(ca_pud, 'PARCEL_ACRES', '!SHAPE.area@ACRES!')
 
     #==================================================
     # summarize units attributes within pud areas
@@ -268,14 +268,12 @@ def davis():
     )
 
     # calculate the type field
-    arcpy.CalculateField_management(oug_sj, field='TYPE_WFRC', expression="'{}'".format(tag), expression_type='PYTHON3')
+    arcpy.CalculateField_management(oug_sj, field='TYPE_WFRC', expression="'{}'".format(tag))
 
-    arcpy.CalculateField_management(
-        oug_sj, field='SUBTYPE_WFRC', expression="'{}'".format(tag2), expression_type='PYTHON3'
-    )
+    arcpy.CalculateField_management(oug_sj, field='SUBTYPE_WFRC', expression="'{}'".format(tag2))
 
     # rename join_count
-    arcpy.CalculateField_management(oug_sj, field='parcel_count', expression='!Join_Count!', expression_type='PYTHON3')
+    arcpy.CalculateField_management(oug_sj, field='parcel_count', expression='!Join_Count!')
 
     arcpy.DeleteField_management(oug_sj, 'Join_Count')
 
@@ -302,7 +300,7 @@ def davis():
         match_option='INTERSECT'
     )
 
-    arcpy.CalculateField_management(oug_sj2, field='ap_count', expression='!Join_Count!', expression_type='PYTHON3')
+    arcpy.CalculateField_management(oug_sj2, field='ap_count', expression='!Join_Count!')
     arcpy.DeleteField_management(oug_sj2, 'Join_Count')
 
     #################################
@@ -339,10 +337,10 @@ def davis():
             cursor.updateRow(row)
 
     # calculate basebldg field
-    arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1', expression_type='PYTHON3')
+    arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1')
 
     # calculate building_type_id field
-    arcpy.CalculateField_management(oug_sj2, field='building_type_id', expression='1', expression_type='PYTHON3')
+    arcpy.CalculateField_management(oug_sj2, field='building_type_id', expression='1')
 
     # message
     print('{} "{}" parcels were selected.\n{} parcels remain...'.format(count_type, tag, count_remaining))
@@ -374,7 +372,7 @@ def davis():
     )
 
     # recalc acreage
-    arcpy.CalculateField_management(ca_multi_family, 'PARCEL_ACRES', '''!SHAPE.area@ACRES!''', 'PYTHON3')
+    arcpy.CalculateField_management(ca_multi_family, 'PARCEL_ACRES', '!SHAPE.area@ACRES!')
 
     #==================================================
     # summarize units attributes within pud areas
@@ -431,10 +429,10 @@ def davis():
     )
 
     # calculate the type field
-    arcpy.CalculateField_management(oug_sj, field='TYPE_WFRC', expression="'{}'".format(tag), expression_type='PYTHON3')
+    arcpy.CalculateField_management(oug_sj, field='TYPE_WFRC', expression="'{}'".format(tag))
 
     # rename join_count
-    arcpy.CalculateField_management(oug_sj, field='parcel_count', expression='!Join_Count!', expression_type='PYTHON3')
+    arcpy.CalculateField_management(oug_sj, field='parcel_count', expression='!Join_Count!')
 
     arcpy.DeleteField_management(oug_sj, 'Join_Count')
 
@@ -461,7 +459,7 @@ def davis():
         match_option='INTERSECT'
     )
 
-    arcpy.CalculateField_management(oug_sj2, field='ap_count', expression='!Join_Count!', expression_type='PYTHON3')
+    arcpy.CalculateField_management(oug_sj2, field='ap_count', expression='!Join_Count!')
     arcpy.DeleteField_management(oug_sj2, 'Join_Count')
 
     #################################
@@ -497,10 +495,10 @@ def davis():
             cursor.updateRow(row)
 
     # calculate basebldg field
-    arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1', expression_type='PYTHON3')
+    arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1')
 
     # calculate building_type_id field
-    arcpy.CalculateField_management(oug_sj2, field='building_type_id', expression='2', expression_type='PYTHON3')
+    arcpy.CalculateField_management(oug_sj2, field='building_type_id', expression='2')
 
     # message
     print('{} "{}" parcels were selected.\n{} parcels remain...'.format(count_type, tag, count_remaining))
@@ -525,26 +523,18 @@ def davis():
     count_type = arcpy.GetCount_management(parcels_for_modeling_layer)
 
     # calculate the type field
-    arcpy.CalculateField_management(
-        parcels_for_modeling_layer, field='TYPE_WFRC', expression="'{}'".format(tag), expression_type='PYTHON3'
-    )
+    arcpy.CalculateField_management(parcels_for_modeling_layer, field='TYPE_WFRC', expression="'{}'".format(tag))
 
-    arcpy.CalculateField_management(
-        parcels_for_modeling_layer, field='SUBTYPE_WFRC', expression="'{}'".format(tag), expression_type='PYTHON3'
-    )
+    arcpy.CalculateField_management(parcels_for_modeling_layer, field='SUBTYPE_WFRC', expression="'{}'".format(tag))
 
     # create the feature class for the parcel type
     single_family = arcpy.FeatureClassToFeatureClass_conversion(parcels_for_modeling_layer, gdb, '_02_{}'.format(tag))
 
     # calculate basebldg field
-    arcpy.CalculateField_management(
-        os.path.join(gdb, '_02_{}'.format(tag)), field='basebldg', expression='1', expression_type='PYTHON3'
-    )
+    arcpy.CalculateField_management(os.path.join(gdb, '_02_{}'.format(tag)), field='basebldg', expression='1')
 
     # calculate building_type_id field
-    arcpy.CalculateField_management(
-        os.path.join(gdb, '_02_{}'.format(tag)), field='building_type_id', expression='1', expression_type='PYTHON3'
-    )
+    arcpy.CalculateField_management(os.path.join(gdb, '_02_{}'.format(tag)), field='building_type_id', expression='1')
 
     # delete features from working parcels
     parcels_for_modeling_layer = arcpy.DeleteFeatures_management(parcels_for_modeling_layer)
@@ -575,9 +565,7 @@ def davis():
     count_type = arcpy.GetCount_management(parcels_for_modeling_layer)
 
     # calculate the type field
-    arcpy.CalculateField_management(
-        parcels_for_modeling_layer, field='TYPE_WFRC', expression="'{}'".format(tag), expression_type='PYTHON3'
-    )
+    arcpy.CalculateField_management(parcels_for_modeling_layer, field='TYPE_WFRC', expression="'{}'".format(tag))
 
     # calculate the type field
     # arcpy.CalculateField_management(parcels_for_modeling_layer, field='SUBTYPE_WFRC', expression="!class!",
@@ -622,7 +610,7 @@ def davis():
         match_option='INTERSECT'
     )
 
-    arcpy.CalculateField_management(oug_sj2, field='ap_count', expression='!Join_Count!', expression_type='PYTHON3')
+    arcpy.CalculateField_management(oug_sj2, field='ap_count', expression='!Join_Count!')
     arcpy.DeleteField_management(oug_sj2, 'Join_Count')
 
     #################################
@@ -630,10 +618,10 @@ def davis():
     #################################
 
     # calculate basebldg field
-    arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1', expression_type='PYTHON3')
+    arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1')
 
     # calculate building_type_id field
-    arcpy.CalculateField_management(oug_sj2, field='building_type_id', expression='2', expression_type='PYTHON3')
+    arcpy.CalculateField_management(oug_sj2, field='building_type_id', expression='2')
 
     # delete features from working parcels
     parcels_for_modeling_layer = arcpy.DeleteFeatures_management(parcels_for_modeling_layer)
@@ -673,14 +661,10 @@ def davis():
     count_type = arcpy.GetCount_management(parcels_for_modeling_layer)
 
     # calculate the type field
-    arcpy.CalculateField_management(
-        parcels_for_modeling_layer, field='TYPE_WFRC', expression="'{}'".format(tag), expression_type='PYTHON3'
-    )
+    arcpy.CalculateField_management(parcels_for_modeling_layer, field='TYPE_WFRC', expression="'{}'".format(tag))
 
     # calculate the type field
-    arcpy.CalculateField_management(
-        parcels_for_modeling_layer, field='SUBTYPE_WFRC', expression="'{}'".format(tag2), expression_type='PYTHON3'
-    )
+    arcpy.CalculateField_management(parcels_for_modeling_layer, field='SUBTYPE_WFRC', expression="'{}'".format(tag2))
 
     # create the feature class for the parcel type
     mhp = arcpy.FeatureClassToFeatureClass_conversion(parcels_for_modeling_layer, scratch, '_07a_{}'.format(tag))
@@ -694,7 +678,7 @@ def davis():
 
     # recalc acreage
     # arcpy.CalculateGeometryAttributes_management(mhp, [['PARCEL_ACRES', 'AREA']], area_unit='ACRES')
-    arcpy.CalculateField_management(mhp, 'PARCEL_ACRES', '''!SHAPE.area@ACRES!''', 'PYTHON3')
+    arcpy.CalculateField_management(mhp, 'PARCEL_ACRES', '!SHAPE.area@ACRES!')
 
     #################################
     # get count from address points
@@ -709,11 +693,11 @@ def davis():
         target_features, join_features, output_features, 'JOIN_ONE_TO_ONE', 'KEEP_ALL', match_option='INTERSECT'
     )
 
-    arcpy.CalculateField_management(oug_sj2, field='ap_count', expression='!Join_Count!', expression_type='PYTHON3')
+    arcpy.CalculateField_management(oug_sj2, field='ap_count', expression='!Join_Count!')
     arcpy.DeleteField_management(oug_sj2, 'Join_Count')
 
     # calculate basebldg field
-    arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1', expression_type='PYTHON3')
+    arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1')
 
     # message
     print('{} "{}" parcels were selected.\n{} parcels remain...'.format(count_type, tag, count_remaining))
