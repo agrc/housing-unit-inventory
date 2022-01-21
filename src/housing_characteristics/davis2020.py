@@ -8,6 +8,33 @@ import pandas as pd
 # from arcgis.features import GeoAccessor, GeoSeriesAccessor
 
 
+def _get_non_base_addr_points(address_pts, scratch):
+    # get address points without base address point
+    address_pts_lyr = arcpy.MakeFeatureLayer_management(address_pts, 'address_pts_lyr')
+    query = (''' PtType <> 'BASE ADDRESS' ''')
+    arcpy.SelectLayerByAttribute_management(address_pts_lyr, 'NEW_SELECTION', query)
+    address_pts_no_base = arcpy.FeatureClassToFeatureClass_conversion(
+        address_pts_lyr, scratch, '_00_address_pts_no_base'
+    )
+
+    return address_pts_no_base
+
+
+def _get_parcels_in_modelling_area(parcels, area_boundary, scratch):
+    parcels_layer = arcpy.MakeFeatureLayer_management(parcels, 'parcels')
+    arcpy.SelectLayerByLocation_management(parcels_layer, 'HAVE_THEIR_CENTER_IN', area_boundary)
+    parcels_for_modeling = arcpy.FeatureClassToFeatureClass_conversion(
+        parcels_layer, scratch, '_01_parcels_for_modeling'
+    )
+    # recalc acreage
+    arcpy.CalculateField_management(parcels_for_modeling, 'PARCEL_ACRES', '!SHAPE.area@ACRES!')
+
+    # create the main layer
+    parcels_for_modeling_layer = arcpy.MakeFeatureLayer_management(parcels_for_modeling, 'parcels_for_modeling_lyr')
+
+    return parcels_for_modeling_layer
+
+
 def _dissolve_duplicate_parcels(parcels_for_modeling_layer, scratch):
     # dissolve on parcel id,summarizing attributes in various ways
     parcels_dissolved = arcpy.management.Dissolve(
@@ -79,27 +106,11 @@ def davis():
         arcpy.CreateFileGDB_management(outputs, 'scratch_HUI.gdb')
 
     #: Address points (used later)
-    # get address points without base address point
-    address_pts_lyr = arcpy.MakeFeatureLayer_management(address_pts, 'address_pts_lyr')
-    query = (''' PtType <> 'BASE ADDRESS' ''')
-    arcpy.SelectLayerByAttribute_management(address_pts_lyr, 'NEW_SELECTION', query)
-    address_pts_no_base = arcpy.FeatureClassToFeatureClass_conversion(
-        address_pts_lyr, scratch, '_00_address_pts_no_base'
-    )
+    address_pts_no_base = _get_non_base_addr_points(address_pts, scratch)
 
     #: Prep Main Parcel Layer
     # select parcels within modeling area
-    parcels_layer = arcpy.MakeFeatureLayer_management(parcels, 'parcels')
-    arcpy.SelectLayerByLocation_management(parcels_layer, 'HAVE_THEIR_CENTER_IN', taz_shp)
-    parcels_for_modeling = arcpy.FeatureClassToFeatureClass_conversion(
-        parcels_layer, scratch, '_01_parcels_for_modeling'
-    )
-
-    # recalc acreage
-    arcpy.CalculateField_management(parcels_for_modeling, 'PARCEL_ACRES', '!SHAPE.area@ACRES!')
-
-    # create the main layer
-    parcels_for_modeling_layer = arcpy.MakeFeatureLayer_management(parcels_for_modeling, 'parcels_for_modeling_lyr')
+    parcels_for_modeling_layer = _get_parcels_in_modelling_area(parcels, taz_shp, scratch)
 
     ################################
     # Dissolve duplicate parcel ids
