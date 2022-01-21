@@ -82,6 +82,24 @@ def _dissolve_duplicate_parcels(parcels_for_modeling_layer, scratch):
     return parcels_dissolved_sdf
 
 
+def _join_extended_parcel_info(info_csv, parcels_dissolved_sdf, scratch):
+    ext_desc = pd.read_csv(info_csv, dtype={'ACCOUNTNO': str})
+
+    # format account numbers so that they are all 9 characters long
+    # ext_desc['ACCOUNTNO'] = ext_desc['ACCOUNTNO'].astype(str).map(add_leading_zeroes)
+    ext_desc['ACCOUNTNO'] = ext_desc['ACCOUNTNO'].zfill(9)
+    ext_desc = ext_desc[['ACCOUNTNO', 'des_all', 'class']].copy()
+
+    # parcels_sdf = pd.DataFrame.spatial.from_featureclass(parcels_for_modeling_layer)
+    parcels_sdf = parcels_dissolved_sdf.merge(ext_desc, left_on='PARCEL_ID', right_on='ACCOUNTNO', how='left')
+    parcels_sdf.spatial.to_featureclass(location=os.path.join(scratch, '_01_parcels_extended'), sanitize_columns=False)
+
+    updated_parcels = os.path.join(scratch, '_01_parcels_extended')
+    parcels_for_modeling_layer = arcpy.MakeFeatureLayer_management(updated_parcels, 'parcels_for_modeling_lyr')
+
+    return parcels_for_modeling_layer
+
+
 def davis():
     arcpy.env.overwriteOutput = True
 
@@ -118,33 +136,10 @@ def davis():
 
     parcels_dissolved_sdf = _dissolve_duplicate_parcels(parcels_for_modeling_layer, scratch)
 
-    #: Join extended parcel info (Davis Co only)
-    # load extended descriptions
-    def add_leading_zeroes(parcel_id_str):
-        if len(parcel_id_str) == 8:
-            return '0{}'.format(str(parcel_id_str))
-        if len(parcel_id_str) == 7:
-            return '00{}'.format(str(parcel_id_str))
-        else:
-            return parcel_id_str
-
     # Load Extended Descriptions - be sure to format ACCOUNTNO column as text in excel first
-    ext_desc = pd.read_csv(davis_extended, dtype={'ACCOUNTNO': str})
+    #: NOTE: this parcels_for_modeling_layer is completely independent of the earlier one.
+    parcels_for_modeling_layer = _join_extended_parcel_info(davis_extended, parcels_dissolved_sdf, scratch)
 
-    # format account numbers so that they are all 9 characters long
-    ext_desc['ACCOUNTNO'] = ext_desc['ACCOUNTNO'].astype(str).map(add_leading_zeroes)
-    ext_desc = ext_desc[['ACCOUNTNO', 'des_all', 'class']].copy()
-
-    # parcels_sdf = pd.DataFrame.spatial.from_featureclass(parcels_for_modeling_layer)
-    parcels_sdf = parcels_dissolved_sdf.merge(ext_desc, left_on='PARCEL_ID', right_on='ACCOUNTNO', how='left')
-    parcels_sdf.spatial.to_featureclass(location=os.path.join(scratch, '_01_parcels_extended'), sanitize_columns=False)
-
-    updated_parcels = os.path.join(scratch, '_01_parcels_extended')
-    parcels_for_modeling_layer = arcpy.MakeFeatureLayer_management(updated_parcels, 'parcels_for_modeling_lyr')
-
-    #
-    #
-    #
     #: More parcel prep
     # add a field to indicate parcel type
     arcpy.AddField_management(parcels_for_modeling_layer, 'TYPE_WFRC', 'TEXT')
