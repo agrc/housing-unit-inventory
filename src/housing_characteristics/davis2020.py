@@ -100,6 +100,30 @@ def _join_extended_parcel_info(info_csv, parcels_dissolved_sdf, scratch):
     return parcels_for_modeling_layer
 
 
+def _add_fields(layer, fields):
+
+    for field, field_type in fields.items():
+        arcpy.management.AddField(layer, field, field_type)
+
+    return layer
+
+
+def _remove_empty_geomtries(layer):
+
+    shape_fields = ['OID@', 'SHAPE@AREA', 'SHAPE@LENGTH']
+    with arcpy.da.UpdateCursor(layer, shape_fields) as empties_cursor:
+        for row in empties_cursor:
+            oid, area, length = row
+            if not area and not length:
+                empties_cursor.deleteRow()
+                continue
+
+            if not area or not length:
+                print(f'Feature OID {oid} has missing area or length but not both')
+
+    return layer
+
+
 def davis():
     arcpy.env.overwriteOutput = True
 
@@ -138,35 +162,20 @@ def davis():
 
     # Load Extended Descriptions - be sure to format ACCOUNTNO column as text in excel first
     #: NOTE: this parcels_for_modeling_layer is completely independent of the earlier one.
+    #: FeatureLayer
     parcels_for_modeling_layer = _join_extended_parcel_info(davis_extended, parcels_dissolved_sdf, scratch)
 
     #: More parcel prep
-    # add a field to indicate parcel type
-    arcpy.AddField_management(parcels_for_modeling_layer, 'TYPE_WFRC', 'TEXT')
-    arcpy.AddField_management(parcels_for_modeling_layer, 'SUBTYPE_WFRC', 'TEXT')
-    arcpy.AddField_management(parcels_for_modeling_layer, 'NOTE', 'TEXT')
-
-    # count parts and rings to find empty geometries
-    arcpy.AddField_management(parcels_for_modeling_layer, 'PARTS', 'LONG')
-    arcpy.AddField_management(parcels_for_modeling_layer, 'RINGS', 'LONG')
-
-    fields = ['shape@', 'PARTS', 'RINGS']
-    with arcpy.da.UpdateCursor(parcels_for_modeling_layer, fields) as cursor:
-        for row in cursor:
-            shape = row[0]
-            parts = shape.partCount
-            rings = shape.boundary().partCount
-            row[1] = parts
-            row[2] = rings
-            cursor.updateRow(row)
-
-    # delete parcels with empty geometry
-    query = (''' PARTS =  0''')
-    arcpy.SelectLayerByAttribute_management(parcels_for_modeling_layer, 'NEW_SELECTION', query)
-    parcels_for_modeling_layer = arcpy.DeleteFeatures_management(parcels_for_modeling_layer)
+    fields = {
+        'TYPE_WFRC': 'TEXT',
+        'SUBTYPE_WFRC': 'TEXT',
+        'NOTE': 'TEXT',
+        'BUILT_YR2': 'SHORT',
+    }
+    parcels_for_modeling_layer = _add_fields(parcels_for_modeling_layer, fields)
+    parcels_for_modeling_layer = _remove_empty_geomtries(parcels_for_modeling_layer)
 
     # add second built year field
-    arcpy.AddField_management(parcels_for_modeling_layer, 'BUILT_YR2', 'SHORT')
     arcpy.CalculateField_management(parcels_for_modeling_layer, 'BUILT_YR2', '!BUILT_YR!')
 
     # get a count of all parcels
