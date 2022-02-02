@@ -124,6 +124,67 @@ def _remove_empty_geomtries(layer):
     return layer
 
 
+def _build_field_mapping(target, join, fields):
+    """Build a field mappings object from the input tables and a list of fields and their grouping stats
+
+    Args:
+        target (FeatureLayer): The target of the spatial join
+        join (FeatureLayer): The layer that will be spatially joined to the target
+        fields (dict): Mapping of field names to the statistic operation (supported by arcpy's spatial join) for them
+
+    Returns:
+        arcpy.FieldMappings: A field mapping that includes all the fields in both tables and the appropriate statistical operations for fields of features that will be combined
+    """
+
+    fieldmappings = arcpy.FieldMappings()
+    fieldmappings.addTable(target)
+    fieldmappings.addTable(join)
+
+    for field_name, statistic in fields.items():
+        fieldindex = fieldmappings.findFieldMapIndex(field_name)
+        fieldmap = fieldmappings.getFieldMap(fieldindex)
+        fieldmap.mergeRule = statistic
+        fieldmappings.replaceFieldMap(fieldindex, fieldmap)
+
+    return fieldmappings
+
+    # # total market value - sum
+    # fieldindex = fieldmappings.findFieldMapIndex('TOTAL_MKT_VALUE')
+    # fieldmap = fieldmappings.getFieldMap(fieldindex)
+    # fieldmap.mergeRule = 'Sum'
+    # fieldmappings.replaceFieldMap(fieldindex, fieldmap)
+
+    # # total land value - sum
+    # fieldindex = fieldmappings.findFieldMapIndex('LAND_MKT_VALUE')
+    # fieldmap = fieldmappings.getFieldMap(fieldindex)
+    # fieldmap.mergeRule = 'Sum'
+    # fieldmappings.replaceFieldMap(fieldindex, fieldmap)
+
+    # # building square feet - sum
+    # fieldindex = fieldmappings.findFieldMapIndex('BLDG_SQFT')
+    # fieldmap = fieldmappings.getFieldMap(fieldindex)
+    # fieldmap.mergeRule = 'Sum'
+    # fieldmappings.replaceFieldMap(fieldindex, fieldmap)
+
+    # # floor count - mean
+    # fieldindex = fieldmappings.findFieldMapIndex('FLOORS_CNT')
+    # fieldmap = fieldmappings.getFieldMap(fieldindex)
+    # fieldmap.mergeRule = 'Mean'
+    # fieldmappings.replaceFieldMap(fieldindex, fieldmap)
+
+    # # year - mode
+    # fieldindex = fieldmappings.findFieldMapIndex('BUILT_YR')
+    # fieldmap = fieldmappings.getFieldMap(fieldindex)
+    # fieldmap.mergeRule = 'Mode'
+    # fieldmappings.replaceFieldMap(fieldindex, fieldmap)
+
+    # # built year max - max
+    # fieldindex = fieldmappings.findFieldMapIndex('BUILT_YR2')
+    # fieldmap = fieldmappings.getFieldMap(fieldindex)
+    # fieldmap.mergeRule = 'Max'
+    # fieldmappings.replaceFieldMap(fieldindex, fieldmap)
+
+
 def davis():
     arcpy.env.overwriteOutput = True
 
@@ -203,7 +264,9 @@ def davis():
     ###############
 
     #: Join centroids of intersecting parcels to PUD boundaries => oug_sj (_03a_pud_sj)
+    #: Use spatial join to set various fields
     #: Save count of centroids to parcel_count
+    #: Update fields in oug_sj
     #: Join address points to output of first join => oug_sj2 (_02_pud)
     #: Save count of address points to ap_count
     #: From main parcel layer, delete parcels that have their center in, or are completely within, oug_sj2
@@ -232,50 +295,24 @@ def davis():
     # summarize units attributes within pud areas
     #==================================================
 
+    #: TODO: implement as a series of dataframe ops instead of arcpy methods?
+
     # use spatial join to summarize market value & acreage from centroids
     target_features = ca_pud
     join_features = pud_centroids
     output_features = os.path.join(scratch, '_03a_pud_sj')
 
-    fieldmappings = arcpy.FieldMappings()
-    fieldmappings.addTable(target_features)
-    fieldmappings.addTable(join_features)
+    #: Use the proper statistics when combining attributes from the PUD parcel centroids into the common area parcel
+    fields = {
+        'TOTAL_MKT_VALUE': 'Sum',
+        'LAND_MKT_VALUE': 'Sum',
+        'BLDG_SQFT': 'Sum',
+        'FLOORS_CNT': 'Mean',
+        'BUILT_YR': 'Mode',
+        'BUILT_YR2': 'Max',
+    }
 
-    # total market value
-    fieldindex = fieldmappings.findFieldMapIndex('TOTAL_MKT_VALUE')
-    fieldmap = fieldmappings.getFieldMap(fieldindex)
-    fieldmap.mergeRule = 'Sum'
-    fieldmappings.replaceFieldMap(fieldindex, fieldmap)
-
-    # total land value
-    fieldindex = fieldmappings.findFieldMapIndex('LAND_MKT_VALUE')
-    fieldmap = fieldmappings.getFieldMap(fieldindex)
-    fieldmap.mergeRule = 'Sum'
-    fieldmappings.replaceFieldMap(fieldindex, fieldmap)
-
-    # building square feet
-    fieldindex = fieldmappings.findFieldMapIndex('BLDG_SQFT')
-    fieldmap = fieldmappings.getFieldMap(fieldindex)
-    fieldmap.mergeRule = 'Sum'
-    fieldmappings.replaceFieldMap(fieldindex, fieldmap)
-
-    # floor count
-    fieldindex = fieldmappings.findFieldMapIndex('FLOORS_CNT')
-    fieldmap = fieldmappings.getFieldMap(fieldindex)
-    fieldmap.mergeRule = 'Mean'
-    fieldmappings.replaceFieldMap(fieldindex, fieldmap)
-
-    # year
-    fieldindex = fieldmappings.findFieldMapIndex('BUILT_YR')
-    fieldmap = fieldmappings.getFieldMap(fieldindex)
-    fieldmap.mergeRule = 'Mode'
-    fieldmappings.replaceFieldMap(fieldindex, fieldmap)
-
-    # built year max
-    fieldindex = fieldmappings.findFieldMapIndex('BUILT_YR2')
-    fieldmap = fieldmappings.getFieldMap(fieldindex)
-    fieldmap.mergeRule = 'Max'
-    fieldmappings.replaceFieldMap(fieldindex, fieldmap)
+    fieldmappings = _build_field_mapping(ca_pud, pud_centroids, fields)
 
     # run the spatial join, use 'Join_Count' for number of units
     oug_sj = arcpy.SpatialJoin_analysis(
@@ -301,6 +338,7 @@ def davis():
     #################################
     # get count from address points
     #################################
+    #: TODO: replace w/ summarize within?
 
     # summarize address points address_point_count 'ap_count'
     target_features = oug_sj
@@ -352,7 +390,7 @@ def davis():
     #: BUILT_YR is mode of join, BUILT_YR2 is max
     with arcpy.da.UpdateCursor(oug_sj2, ['BUILT_YR', 'BUILT_YR2']) as cursor:
         for row in cursor:
-            if row[0] is None or row[0] < 1 or row[0] == '':
+            if row[0] is None or row[0] < 1 or row[0] == '':  #: if not row[0]:
                 row[0] = row[1]
 
             cursor.updateRow(row)
