@@ -55,6 +55,7 @@ def _dissolve_duplicate_parcels(parcels_for_modeling_layer, scratch):
     )
 
     # rename columns
+    #: moves OBJECTID to first column
     parcels_dissolved_sdf = pd.DataFrame.spatial.from_featureclass(parcels_dissolved)
     parcels_dissolved_sdf.columns = [
         'OBJECTID',
@@ -195,7 +196,7 @@ def _update_year_built(layer, year_fields):
             cursor.updateRow(row)
 
 
-def _remove_analyzed_featurs(layer, selecting_features):
+def _remove_analyzed_features(layer, selecting_features):
     # delete features from working parcels
     arcpy.SelectLayerByLocation_management(
         in_layer=layer,
@@ -272,8 +273,8 @@ def davis():
 
     #: More parcel prep
     fields = {
-        'HOUSING_TYPE': 'TEXT',
-        'HOUSING_SUBTYPE': 'TEXT',
+        'TYPE': 'TEXT',
+        'SUBTYPE': 'TEXT',
         'NOTE': 'TEXT',
         'BUILT_YR2': 'SHORT',
     }
@@ -361,9 +362,9 @@ def davis():
     )
 
     # calculate the type field
-    arcpy.CalculateField_management(oug_sj, field='HOUSING_TYPE', expression="'{}'".format(tag))
+    arcpy.CalculateField_management(oug_sj, field='TYPE', expression="'{}'".format(tag))
 
-    arcpy.CalculateField_management(oug_sj, field='HOUSING_SUBTYPE', expression="'{}'".format(tag2))
+    arcpy.CalculateField_management(oug_sj, field='SUBTYPE', expression="'{}'".format(tag2))
 
     # rename join_count
     arcpy.CalculateField_management(oug_sj, field='parcel_count', expression='!Join_Count!')
@@ -387,7 +388,7 @@ def davis():
     # WRAP-UP
     #################################
 
-    parcels_for_modeling_layer, count_type, count_remaining = _remove_analyzed_featurs(
+    parcels_for_modeling_layer, count_type, count_remaining = _remove_analyzed_features(
         parcels_for_modeling_layer, oug_sj2
     )
 
@@ -449,7 +450,7 @@ def davis():
     )
 
     # calculate the type field
-    arcpy.CalculateField_management(oug_sj, field='HOUSING_TYPE', expression="'{}'".format(tag))
+    arcpy.CalculateField_management(oug_sj, field='TYPE', expression="'{}'".format(tag))
 
     # rename join_count
     arcpy.CalculateField_management(oug_sj, field='parcel_count', expression='!Join_Count!')
@@ -472,7 +473,7 @@ def davis():
     # WRAP-UP
     #################################
 
-    parcels_for_modeling_layer, count_type, count_remaining = _remove_analyzed_featurs(
+    parcels_for_modeling_layer, count_type, count_remaining = _remove_analyzed_features(
         parcels_for_modeling_layer, oug_sj2
     )
 
@@ -508,9 +509,9 @@ def davis():
     count_type = arcpy.GetCount_management(parcels_for_modeling_layer)
 
     # calculate the type field
-    arcpy.CalculateField_management(parcels_for_modeling_layer, field='HOUSING_TYPE', expression="'{}'".format(tag))
+    arcpy.CalculateField_management(parcels_for_modeling_layer, field='TYPE', expression="'{}'".format(tag))
 
-    arcpy.CalculateField_management(parcels_for_modeling_layer, field='HOUSING_SUBTYPE', expression="'{}'".format(tag))
+    arcpy.CalculateField_management(parcels_for_modeling_layer, field='SUBTYPE', expression="'{}'".format(tag))
 
     # create the feature class for the parcel type
     single_family = arcpy.FeatureClassToFeatureClass_conversion(parcels_for_modeling_layer, gdb, '_02_{}'.format(tag))
@@ -550,15 +551,15 @@ def davis():
     count_type = arcpy.GetCount_management(parcels_for_modeling_layer)
 
     # calculate the type field
-    arcpy.CalculateField_management(parcels_for_modeling_layer, field='HOUSING_TYPE', expression="'{}'".format(tag))
+    arcpy.CalculateField_management(parcels_for_modeling_layer, field='TYPE', expression="'{}'".format(tag))
 
     # calculate the type field
-    # arcpy.CalculateField_management(parcels_for_modeling_layer, field='HOUSING_SUBTYPE', expression="!class!",
+    # arcpy.CalculateField_management(parcels_for_modeling_layer, field='SUBTYPE', expression="!class!",
     #                                 expression_type="PYTHON3")
 
     #: reclassify triplex-quadplex to apartment
 
-    fields = ['HOUSING_SUBTYPE', 'NOTE', 'class']
+    fields = ['SUBTYPE', 'NOTE', 'class']
     _reclassify_tri_quad_to_appartment(parcels_for_modeling_layer, fields)
 
     # create the feature class for the parcel type
@@ -623,10 +624,10 @@ def davis():
     count_type = arcpy.GetCount_management(parcels_for_modeling_layer)
 
     # calculate the type field
-    arcpy.CalculateField_management(parcels_for_modeling_layer, field='HOUSING_TYPE', expression="'{}'".format(tag))
+    arcpy.CalculateField_management(parcels_for_modeling_layer, field='TYPE', expression="'{}'".format(tag))
 
     # calculate the type field
-    arcpy.CalculateField_management(parcels_for_modeling_layer, field='HOUSING_SUBTYPE', expression="'{}'".format(tag2))
+    arcpy.CalculateField_management(parcels_for_modeling_layer, field='SUBTYPE', expression="'{}'".format(tag2))
 
     # create the feature class for the parcel type
     mhp = arcpy.FeatureClassToFeatureClass_conversion(parcels_for_modeling_layer, scratch, '_07a_{}'.format(tag))
@@ -707,7 +708,7 @@ def davis():
 
     #: convert to dataframe, format/rename, export
     rf_merged_df = pd.DataFrame.spatial.from_featureclass(rf_merged)
-    # rf_merged_df = rf_merged_df[['OBJECTID','HOUSING_TYPE', 'HOUSING_SUBTYPE', 'PARCEL_ID','COUNT_PARCEL_ID', 'TOTAL_MKT_VALUE',
+    # rf_merged_df = rf_merged_df[['OBJECTID','TYPE', 'SUBTYPE', 'PARCEL_ID','COUNT_PARCEL_ID', 'TOTAL_MKT_VALUE',
     #                              'LAND_MKT_VALUE', 'PARCEL_ACRES', 'HOUSE_CNT', 'parcel_count', 'ap_count', 'BLDG_SQFT',
     #                              'FLOORS_CNT','BUILT_YR', 'des_all','NAME','NewSA', 'SHAPE']].copy()
 
@@ -728,15 +729,14 @@ def davis():
     rf_merged_df['UNIT_COUNT'] = rf_merged_df['ap_count']
 
     # fix single family (non-pud)
-    rf_merged_df.loc[(rf_merged_df['UNIT_COUNT'] == 0) & (rf_merged_df['HOUSING_SUBTYPE'] == 'single_family'),
-                     'UNIT_COUNT'] = 1
+    rf_merged_df.loc[(rf_merged_df['UNIT_COUNT'] == 0) & (rf_merged_df['SUBTYPE'] == 'single_family'), 'UNIT_COUNT'] = 1
 
     # fix duplex
-    rf_merged_df.loc[(rf_merged_df['HOUSING_SUBTYPE'] == 'duplex'), 'UNIT_COUNT'] = 2
+    rf_merged_df.loc[(rf_merged_df['SUBTYPE'] == 'duplex'), 'UNIT_COUNT'] = 2
 
     # fix triplex-quadplex
     rf_merged_df.loc[(rf_merged_df['UNIT_COUNT'] < rf_merged_df['HOUSE_CNT']) &
-                     (rf_merged_df['HOUSING_SUBTYPE'] == 'triplex-quadplex'), 'UNIT_COUNT'] = rf_merged_df['HOUSE_CNT']
+                     (rf_merged_df['SUBTYPE'] == 'triplex-quadplex'), 'UNIT_COUNT'] = rf_merged_df['HOUSE_CNT']
 
     # calculate the decade
     rf_merged_df['BUILT_DECADE'] = 'NA'
@@ -771,9 +771,8 @@ def davis():
 
     # Final ordering and subsetting of fields
     rf_merged_df = rf_merged_df[[
-        'OBJECTID', 'PARCEL_ID', 'HOUSING_TYPE', 'HOUSING_SUBTYPE', 'NOTE', 'CITY', 'SUBREGION', 'COUNTY', 'UNIT_COUNT',
-        'PARCEL_COUNT', 'FLOORS_CNT', 'PARCEL_ACRES', 'BLDG_SQFT', 'TOTAL_MKT_VALUE', 'BUILT_YR', 'BUILT_DECADE',
-        'SHAPE'
+        'OBJECTID', 'PARCEL_ID', 'TYPE', 'SUBTYPE', 'NOTE', 'CITY', 'SUBREGION', 'COUNTY', 'UNIT_COUNT', 'PARCEL_COUNT',
+        'FLOORS_CNT', 'PARCEL_ACRES', 'BLDG_SQFT', 'TOTAL_MKT_VALUE', 'BUILT_YR', 'BUILT_DECADE', 'SHAPE'
     ]].copy()
 
     # export to feature class
