@@ -148,42 +148,6 @@ def _build_field_mapping(target, join, fields):
 
     return fieldmappings
 
-    # # total market value - sum
-    # fieldindex = fieldmappings.findFieldMapIndex('TOTAL_MKT_VALUE')
-    # fieldmap = fieldmappings.getFieldMap(fieldindex)
-    # fieldmap.mergeRule = 'Sum'
-    # fieldmappings.replaceFieldMap(fieldindex, fieldmap)
-
-    # # total land value - sum
-    # fieldindex = fieldmappings.findFieldMapIndex('LAND_MKT_VALUE')
-    # fieldmap = fieldmappings.getFieldMap(fieldindex)
-    # fieldmap.mergeRule = 'Sum'
-    # fieldmappings.replaceFieldMap(fieldindex, fieldmap)
-
-    # # building square feet - sum
-    # fieldindex = fieldmappings.findFieldMapIndex('BLDG_SQFT')
-    # fieldmap = fieldmappings.getFieldMap(fieldindex)
-    # fieldmap.mergeRule = 'Sum'
-    # fieldmappings.replaceFieldMap(fieldindex, fieldmap)
-
-    # # floor count - mean
-    # fieldindex = fieldmappings.findFieldMapIndex('FLOORS_CNT')
-    # fieldmap = fieldmappings.getFieldMap(fieldindex)
-    # fieldmap.mergeRule = 'Mean'
-    # fieldmappings.replaceFieldMap(fieldindex, fieldmap)
-
-    # # year - mode
-    # fieldindex = fieldmappings.findFieldMapIndex('BUILT_YR')
-    # fieldmap = fieldmappings.getFieldMap(fieldindex)
-    # fieldmap.mergeRule = 'Mode'
-    # fieldmappings.replaceFieldMap(fieldindex, fieldmap)
-
-    # # built year max - max
-    # fieldindex = fieldmappings.findFieldMapIndex('BUILT_YR2')
-    # fieldmap = fieldmappings.getFieldMap(fieldindex)
-    # fieldmap.mergeRule = 'Max'
-    # fieldmappings.replaceFieldMap(fieldindex, fieldmap)
-
 
 def _create_centroids_within_common_area(parcels, common_areas, output):
 
@@ -308,8 +272,8 @@ def davis():
 
     #: More parcel prep
     fields = {
-        'TYPE_WFRC': 'TEXT',
-        'SUBTYPE_WFRC': 'TEXT',
+        'HOUSING_TYPE': 'TEXT',
+        'HOUSING_SUBTYPE': 'TEXT',
         'NOTE': 'TEXT',
         'BUILT_YR2': 'SHORT',
     }
@@ -397,9 +361,9 @@ def davis():
     )
 
     # calculate the type field
-    arcpy.CalculateField_management(oug_sj, field='TYPE_WFRC', expression="'{}'".format(tag))
+    arcpy.CalculateField_management(oug_sj, field='HOUSING_TYPE', expression="'{}'".format(tag))
 
-    arcpy.CalculateField_management(oug_sj, field='SUBTYPE_WFRC', expression="'{}'".format(tag2))
+    arcpy.CalculateField_management(oug_sj, field='HOUSING_SUBTYPE', expression="'{}'".format(tag2))
 
     # rename join_count
     arcpy.CalculateField_management(oug_sj, field='parcel_count', expression='!Join_Count!')
@@ -485,7 +449,7 @@ def davis():
     )
 
     # calculate the type field
-    arcpy.CalculateField_management(oug_sj, field='TYPE_WFRC', expression="'{}'".format(tag))
+    arcpy.CalculateField_management(oug_sj, field='HOUSING_TYPE', expression="'{}'".format(tag))
 
     # rename join_count
     arcpy.CalculateField_management(oug_sj, field='parcel_count', expression='!Join_Count!')
@@ -544,9 +508,9 @@ def davis():
     count_type = arcpy.GetCount_management(parcels_for_modeling_layer)
 
     # calculate the type field
-    arcpy.CalculateField_management(parcels_for_modeling_layer, field='TYPE_WFRC', expression="'{}'".format(tag))
+    arcpy.CalculateField_management(parcels_for_modeling_layer, field='HOUSING_TYPE', expression="'{}'".format(tag))
 
-    arcpy.CalculateField_management(parcels_for_modeling_layer, field='SUBTYPE_WFRC', expression="'{}'".format(tag))
+    arcpy.CalculateField_management(parcels_for_modeling_layer, field='HOUSING_SUBTYPE', expression="'{}'".format(tag))
 
     # create the feature class for the parcel type
     single_family = arcpy.FeatureClassToFeatureClass_conversion(parcels_for_modeling_layer, gdb, '_02_{}'.format(tag))
@@ -586,15 +550,15 @@ def davis():
     count_type = arcpy.GetCount_management(parcels_for_modeling_layer)
 
     # calculate the type field
-    arcpy.CalculateField_management(parcels_for_modeling_layer, field='TYPE_WFRC', expression="'{}'".format(tag))
+    arcpy.CalculateField_management(parcels_for_modeling_layer, field='HOUSING_TYPE', expression="'{}'".format(tag))
 
     # calculate the type field
-    # arcpy.CalculateField_management(parcels_for_modeling_layer, field='SUBTYPE_WFRC', expression="!class!",
+    # arcpy.CalculateField_management(parcels_for_modeling_layer, field='HOUSING_SUBTYPE', expression="!class!",
     #                                 expression_type="PYTHON3")
 
     #: reclassify triplex-quadplex to apartment
 
-    fields = ['SUBTYPE_WFRC', 'NOTE', 'class']
+    fields = ['HOUSING_SUBTYPE', 'NOTE', 'class']
     _reclassify_tri_quad_to_appartment(parcels_for_modeling_layer, fields)
 
     # create the feature class for the parcel type
@@ -659,10 +623,10 @@ def davis():
     count_type = arcpy.GetCount_management(parcels_for_modeling_layer)
 
     # calculate the type field
-    arcpy.CalculateField_management(parcels_for_modeling_layer, field='TYPE_WFRC', expression="'{}'".format(tag))
+    arcpy.CalculateField_management(parcels_for_modeling_layer, field='HOUSING_TYPE', expression="'{}'".format(tag))
 
     # calculate the type field
-    arcpy.CalculateField_management(parcels_for_modeling_layer, field='SUBTYPE_WFRC', expression="'{}'".format(tag2))
+    arcpy.CalculateField_management(parcels_for_modeling_layer, field='HOUSING_SUBTYPE', expression="'{}'".format(tag2))
 
     # create the feature class for the parcel type
     mhp = arcpy.FeatureClassToFeatureClass_conversion(parcels_for_modeling_layer, scratch, '_07a_{}'.format(tag))
@@ -743,7 +707,7 @@ def davis():
 
     #: convert to dataframe, format/rename, export
     rf_merged_df = pd.DataFrame.spatial.from_featureclass(rf_merged)
-    # rf_merged_df = rf_merged_df[['OBJECTID','Type_WFRC', 'SUBTYPE_WFRC', 'PARCEL_ID','COUNT_PARCEL_ID', 'TOTAL_MKT_VALUE',
+    # rf_merged_df = rf_merged_df[['OBJECTID','HOUSING_TYPE', 'HOUSING_SUBTYPE', 'PARCEL_ID','COUNT_PARCEL_ID', 'TOTAL_MKT_VALUE',
     #                              'LAND_MKT_VALUE', 'PARCEL_ACRES', 'HOUSE_CNT', 'parcel_count', 'ap_count', 'BLDG_SQFT',
     #                              'FLOORS_CNT','BUILT_YR', 'des_all','NAME','NewSA', 'SHAPE']].copy()
 
@@ -764,15 +728,15 @@ def davis():
     rf_merged_df['UNIT_COUNT'] = rf_merged_df['ap_count']
 
     # fix single family (non-pud)
-    rf_merged_df.loc[(rf_merged_df['UNIT_COUNT'] == 0) & (rf_merged_df['SUBTYPE_WFRC'] == 'single_family'),
+    rf_merged_df.loc[(rf_merged_df['UNIT_COUNT'] == 0) & (rf_merged_df['HOUSING_SUBTYPE'] == 'single_family'),
                      'UNIT_COUNT'] = 1
 
     # fix duplex
-    rf_merged_df.loc[(rf_merged_df['SUBTYPE_WFRC'] == 'duplex'), 'UNIT_COUNT'] = 2
+    rf_merged_df.loc[(rf_merged_df['HOUSING_SUBTYPE'] == 'duplex'), 'UNIT_COUNT'] = 2
 
     # fix triplex-quadplex
     rf_merged_df.loc[(rf_merged_df['UNIT_COUNT'] < rf_merged_df['HOUSE_CNT']) &
-                     (rf_merged_df['SUBTYPE_WFRC'] == 'triplex-quadplex'), 'UNIT_COUNT'] = rf_merged_df['HOUSE_CNT']
+                     (rf_merged_df['HOUSING_SUBTYPE'] == 'triplex-quadplex'), 'UNIT_COUNT'] = rf_merged_df['HOUSE_CNT']
 
     # calculate the decade
     rf_merged_df['BUILT_DECADE'] = 'NA'
@@ -807,7 +771,7 @@ def davis():
 
     # Final ordering and subsetting of fields
     rf_merged_df = rf_merged_df[[
-        'OBJECTID', 'PARCEL_ID', 'TYPE_WFRC', 'SUBTYPE_WFRC', 'NOTE', 'CITY', 'SUBREGION', 'COUNTY', 'UNIT_COUNT',
+        'OBJECTID', 'PARCEL_ID', 'HOUSING_TYPE', 'HOUSING_SUBTYPE', 'NOTE', 'CITY', 'SUBREGION', 'COUNTY', 'UNIT_COUNT',
         'PARCEL_COUNT', 'FLOORS_CNT', 'PARCEL_ACRES', 'BLDG_SQFT', 'TOTAL_MKT_VALUE', 'BUILT_YR', 'BUILT_DECADE',
         'SHAPE'
     ]].copy()
