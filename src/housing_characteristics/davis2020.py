@@ -87,15 +87,14 @@ def _join_extended_parcel_info(info_csv, parcels_dissolved_sdf, scratch):
     ext_desc = pd.read_csv(info_csv, dtype={'ACCOUNTNO': str})
 
     # format account numbers so that they are all 9 characters long
-    # ext_desc['ACCOUNTNO'] = ext_desc['ACCOUNTNO'].astype(str).map(add_leading_zeroes)
     ext_desc['ACCOUNTNO'] = ext_desc['ACCOUNTNO'].zfill(9)
     ext_desc = ext_desc[['ACCOUNTNO', 'des_all', 'class']].copy()
 
-    # parcels_sdf = pd.DataFrame.spatial.from_featureclass(parcels_for_modeling_layer)
-    parcels_sdf = parcels_dissolved_sdf.merge(ext_desc, left_on='PARCEL_ID', right_on='ACCOUNTNO', how='left')
-    parcels_sdf.spatial.to_featureclass(location=os.path.join(scratch, '_01_parcels_extended'), sanitize_columns=False)
-
     updated_parcels = os.path.join(scratch, '_01_parcels_extended')
+
+    parcels_sdf = parcels_dissolved_sdf.merge(ext_desc, left_on='PARCEL_ID', right_on='ACCOUNTNO', how='left')
+    parcels_sdf.spatial.to_featureclass(location=updated_parcels, sanitize_columns=False)
+
     parcels_for_modeling_layer = arcpy.MakeFeatureLayer_management(updated_parcels, 'parcels_for_modeling_lyr')
 
     return parcels_for_modeling_layer
@@ -111,6 +110,7 @@ def _add_fields(layer, fields):
 
 def _remove_empty_geomtries(layer):
 
+    #: According to Esri, a geometry is empty if area and/or length are emtpy/0.
     shape_fields = ['OID@', 'SHAPE@AREA', 'SHAPE@LENGTH']
     with arcpy.da.UpdateCursor(layer, shape_fields) as empties_cursor:
         for row in empties_cursor:
@@ -134,7 +134,8 @@ def _build_field_mapping(target, join, fields):
         fields (dict): Mapping of field names to the statistic operation (supported by arcpy's spatial join) for them
 
     Returns:
-        arcpy.FieldMappings: A field mapping that includes all the fields in both tables and the appropriate statistical operations for fields of features that will be combined
+        arcpy.FieldMappings: A field mapping that includes all the fields in both tables and the appropriate
+        statistical operations for fields of features that will be combined
     """
 
     fieldmappings = arcpy.FieldMappings()
@@ -286,7 +287,7 @@ def davis():
 
     # get a count of all parcels
     count_all = arcpy.GetCount_management(parcels_for_modeling_layer)
-    print('# initial parcels in modeling area:\n {}'.format(count_all))
+    print(f'# initial parcels in modeling area:\n {count_all}')
 
     ###############
     # Common Areas
@@ -362,9 +363,9 @@ def davis():
     )
 
     # calculate the type field
-    arcpy.CalculateField_management(oug_sj, field='TYPE', expression="'{}'".format(tag))
+    arcpy.CalculateField_management(oug_sj, field='TYPE', expression=f"'{tag}'")
 
-    arcpy.CalculateField_management(oug_sj, field='SUBTYPE', expression="'{}'".format(tag2))
+    arcpy.CalculateField_management(oug_sj, field='SUBTYPE', expression=f"'{tag2}'")
 
     # rename join_count
     arcpy.CalculateField_management(oug_sj, field='parcel_count', expression='!Join_Count!')
@@ -401,7 +402,7 @@ def davis():
     arcpy.CalculateField_management(oug_sj2, field='building_type_id', expression='1')
 
     # message
-    print('{} "{}" parcels were selected.\n{} parcels remain...'.format(count_type, tag, count_remaining))
+    print(f'{count_type} "{tag}" parcels were selected.\n{count_remaining} parcels remain...')
 
     ###############
     # multi family  (Generally condos or other things with common areas)
@@ -450,7 +451,7 @@ def davis():
     )
 
     # calculate the type field
-    arcpy.CalculateField_management(oug_sj, field='TYPE', expression="'{}'".format(tag))
+    arcpy.CalculateField_management(oug_sj, field='TYPE', expression=f"'{tag}'")
 
     # rename join_count
     arcpy.CalculateField_management(oug_sj, field='parcel_count', expression='!Join_Count!')
@@ -487,7 +488,7 @@ def davis():
     arcpy.CalculateField_management(oug_sj2, field='building_type_id', expression='2')
 
     # message
-    print('{} "{}" parcels were selected.\n{} parcels remain...'.format(count_type, tag, count_remaining))
+    print(f'{count_type} "{tag}" parcels were selected.\n{count_remaining} parcels remain...')
 
     #: Categorize parcels using info from extended descriptions
     ################
@@ -509,18 +510,18 @@ def davis():
     count_type = arcpy.GetCount_management(parcels_for_modeling_layer)
 
     # calculate the type field
-    arcpy.CalculateField_management(parcels_for_modeling_layer, field='TYPE', expression="'{}'".format(tag))
+    arcpy.CalculateField_management(parcels_for_modeling_layer, field='TYPE', expression=f"'{tag}'")
 
-    arcpy.CalculateField_management(parcels_for_modeling_layer, field='SUBTYPE', expression="'{}'".format(tag))
+    arcpy.CalculateField_management(parcels_for_modeling_layer, field='SUBTYPE', expression=f"'{tag}'")
 
     # create the feature class for the parcel type
-    single_family = arcpy.FeatureClassToFeatureClass_conversion(parcels_for_modeling_layer, gdb, '_02_{}'.format(tag))
+    single_family = arcpy.FeatureClassToFeatureClass_conversion(parcels_for_modeling_layer, gdb, f'_02_{tag}')
 
     # calculate basebldg field
-    arcpy.CalculateField_management(os.path.join(gdb, '_02_{}'.format(tag)), field='basebldg', expression='1')
+    arcpy.CalculateField_management(os.path.join(gdb, f'_02_{tag}'), field='basebldg', expression='1')
 
     # calculate building_type_id field
-    arcpy.CalculateField_management(os.path.join(gdb, '_02_{}'.format(tag)), field='building_type_id', expression='1')
+    arcpy.CalculateField_management(os.path.join(gdb, f'_02_{tag}'), field='building_type_id', expression='1')
 
     # delete features from working parcels
     parcels_for_modeling_layer = arcpy.DeleteFeatures_management(parcels_for_modeling_layer)
@@ -530,7 +531,7 @@ def davis():
     count_remaining = arcpy.GetCount_management(parcels_for_modeling_layer)
 
     # message
-    print('{} "{}" parcels were selected.\n{} parcels remain...'.format(count_type, tag, count_remaining))
+    print(f'{count_type} "{tag}" parcels were selected.\n{count_remaining} parcels remain...')
 
     ################
     # Multi-Family (non-common-area, using classification in parcel data)
@@ -551,7 +552,7 @@ def davis():
     count_type = arcpy.GetCount_management(parcels_for_modeling_layer)
 
     # calculate the type field
-    arcpy.CalculateField_management(parcels_for_modeling_layer, field='TYPE', expression="'{}'".format(tag))
+    arcpy.CalculateField_management(parcels_for_modeling_layer, field='TYPE', expression=f"'{tag}'")
 
     # calculate the type field
     # arcpy.CalculateField_management(parcels_for_modeling_layer, field='SUBTYPE', expression="!class!",
@@ -594,7 +595,7 @@ def davis():
     count_remaining = arcpy.GetCount_management(parcels_for_modeling_layer)
 
     # message
-    print('{} "{}" parcels were selected.\n{} parcels remain...'.format(count_type, tag, count_remaining))
+    print(f'{count_type} "{tag}" parcels were selected.\n{count_remaining} parcels remain...')
 
     ##########################
     # mobile home parks
@@ -624,13 +625,13 @@ def davis():
     count_type = arcpy.GetCount_management(parcels_for_modeling_layer)
 
     # calculate the type field
-    arcpy.CalculateField_management(parcels_for_modeling_layer, field='TYPE', expression="'{}'".format(tag))
+    arcpy.CalculateField_management(parcels_for_modeling_layer, field='TYPE', expression=f"'{tag}'")
 
     # calculate the type field
-    arcpy.CalculateField_management(parcels_for_modeling_layer, field='SUBTYPE', expression="'{}'".format(tag2))
+    arcpy.CalculateField_management(parcels_for_modeling_layer, field='SUBTYPE', expression=f"'{tag2}'")
 
     # create the feature class for the parcel type
-    mhp = arcpy.FeatureClassToFeatureClass_conversion(parcels_for_modeling_layer, scratch, '_07a_{}'.format(tag))
+    mhp = arcpy.FeatureClassToFeatureClass_conversion(parcels_for_modeling_layer, scratch, f'_07a_{tag}')
 
     # delete features from working parcels
     parcels_for_modeling_layer = arcpy.DeleteFeatures_management(parcels_for_modeling_layer)
@@ -659,7 +660,7 @@ def davis():
     arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1')
 
     # message
-    print('{} "{}" parcels were selected.\n{} parcels remain...'.format(count_type, tag, count_remaining))
+    print(f'{count_type} "{tag}" parcels were selected.\n{count_remaining} parcels remain...')
 
     #
     #
