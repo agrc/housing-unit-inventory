@@ -185,6 +185,41 @@ def _build_field_mapping(target, join, fields):
     # fieldmappings.replaceFieldMap(fieldindex, fieldmap)
 
 
+def _create_centroids_within_common_area(parcels, common_areas, output):
+
+    # parcels that are contained by condo common areas
+    arcpy.SelectLayerByLocation_management(
+        in_layer=parcels, overlap_type='INTERSECT', select_features=common_areas, selection_type='NEW_SELECTION'
+    )
+
+    # convert condo parcels that are contained by common areas into centroids
+    centroids = arcpy.FeatureToPoint_management(parcels, output, 'INSIDE')
+
+    return centroids
+
+
+def _get_address_point_count(target_features, join_features, output_features, count_field_name):
+
+    fieldmappings = arcpy.FieldMappings()
+    fieldmappings.addTable(target_features)
+    fieldmappings.addTable(join_features)
+
+    oug_sj2 = arcpy.SpatialJoin_analysis(
+        target_features,
+        join_features,
+        output_features,
+        'JOIN_ONE_TO_ONE',
+        'KEEP_ALL',
+        fieldmappings,
+        match_option='INTERSECT'
+    )
+
+    arcpy.CalculateField_management(oug_sj2, field=count_field_name, expression='!Join_Count!')
+    arcpy.DeleteField_management(oug_sj2, 'Join_Count')
+
+    return oug_sj2
+
+
 def davis():
     arcpy.env.overwriteOutput = True
 
@@ -275,17 +310,8 @@ def davis():
     tag = 'single_family'  #: TYPE_WFRC
     tag2 = 'pud'  #: SUBTYPE_WFRC
 
-    # parcels that are contained by condo common areas
-    arcpy.SelectLayerByLocation_management(
-        in_layer=parcels_for_modeling_layer,
-        overlap_type='INTERSECT',
-        select_features=ca_pud,
-        selection_type='NEW_SELECTION'
-    )
-
-    # convert condo parcels that are contained by common areas into centroids
-    pud_centroids = arcpy.FeatureToPoint_management(
-        parcels_for_modeling_layer, os.path.join(scratch, '_03a_pud_centroids'), 'INSIDE'
+    pud_centroids = _create_centroids_within_common_area(
+        parcels_for_modeling_layer, ca_pud, os.path.join(scratch, '_03a_pud_centroids')
     )
 
     # recalc acreage
@@ -344,23 +370,9 @@ def davis():
     target_features = oug_sj
     join_features = address_pts_no_base
     output_features = os.path.join(gdb, '_02_pud')
+    count_field_name = 'ap_count'
 
-    fieldmappings = arcpy.FieldMappings()
-    fieldmappings.addTable(target_features)
-    fieldmappings.addTable(join_features)
-
-    oug_sj2 = arcpy.SpatialJoin_analysis(
-        target_features,
-        join_features,
-        output_features,
-        'JOIN_ONE_TO_ONE',
-        'KEEP_ALL',
-        fieldmappings,
-        match_option='INTERSECT'
-    )
-
-    arcpy.CalculateField_management(oug_sj2, field='ap_count', expression='!Join_Count!')
-    arcpy.DeleteField_management(oug_sj2, 'Join_Count')
+    oug_sj2 = _get_address_point_count(target_features, join_features, output_features, count_field_name)
 
     #################################
     # WRAP-UP
@@ -417,17 +429,8 @@ def davis():
 
     tag = 'multi_family'
 
-    # parcels that are contained by condo common areas
-    arcpy.SelectLayerByLocation_management(
-        in_layer=parcels_for_modeling_layer,
-        overlap_type='INTERSECT',
-        select_features=ca_multi_family,
-        selection_type='NEW_SELECTION'
-    )
-
-    # convert condo parcels that are contained by common areas into centroids
-    mf_centroids = arcpy.FeatureToPoint_management(
-        parcels_for_modeling_layer, os.path.join(scratch, '_03a_mf_centroids'), 'INSIDE'
+    mf_centroids = _create_centroids_within_common_area(
+        parcels_for_modeling_layer, ca_multi_family, os.path.join(scratch, '_03a_mf_centroids')
     )
 
     # recalc acreage
@@ -503,23 +506,9 @@ def davis():
     target_features = oug_sj
     join_features = address_pts_no_base
     output_features = os.path.join(gdb, '_02_multi_family')
+    count_field_name = 'ap_count'
 
-    fieldmappings = arcpy.FieldMappings()
-    fieldmappings.addTable(target_features)
-    fieldmappings.addTable(join_features)
-
-    oug_sj2 = arcpy.SpatialJoin_analysis(
-        target_features,
-        join_features,
-        output_features,
-        'JOIN_ONE_TO_ONE',
-        'KEEP_ALL',
-        fieldmappings,
-        match_option='INTERSECT'
-    )
-
-    arcpy.CalculateField_management(oug_sj2, field='ap_count', expression='!Join_Count!')
-    arcpy.DeleteField_management(oug_sj2, 'Join_Count')
+    oug_sj2 = _get_address_point_count(target_features, join_features, output_features, count_field_name)
 
     #################################
     # WRAP-UP
@@ -747,13 +736,9 @@ def davis():
     target_features = mhp
     join_features = address_pts_no_base
     output_features = os.path.join(gdb, '_02_mobile_home_park')
+    count_field_name = 'ap_count'
 
-    oug_sj2 = arcpy.SpatialJoin_analysis(
-        target_features, join_features, output_features, 'JOIN_ONE_TO_ONE', 'KEEP_ALL', match_option='INTERSECT'
-    )
-
-    arcpy.CalculateField_management(oug_sj2, field='ap_count', expression='!Join_Count!')
-    arcpy.DeleteField_management(oug_sj2, 'Join_Count')
+    oug_sj2 = _get_address_point_count(target_features, join_features, output_features, count_field_name)
 
     # calculate basebldg field
     arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1')
