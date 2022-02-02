@@ -454,45 +454,17 @@ def davis():
     join_features = mf_centroids
     output_features = os.path.join(scratch, '_03b_mf_sj')
 
-    fieldmappings = arcpy.FieldMappings()
-    fieldmappings.addTable(target_features)
-    fieldmappings.addTable(join_features)
+    #: Use the proper statistics when combining attributes from the PUD parcel centroids into the common area parcel
+    fields = {
+        'TOTAL_MKT_VALUE': 'Sum',
+        'LAND_MKT_VALUE': 'Sum',
+        'BLDG_SQFT': 'Sum',
+        'FLOORS_CNT': 'Mean',
+        'BUILT_YR': 'Mode',
+        'BUILT_YR2': 'Max',
+    }
 
-    # total market value
-    fieldindex = fieldmappings.findFieldMapIndex('TOTAL_MKT_VALUE')
-    fieldmap = fieldmappings.getFieldMap(fieldindex)
-    fieldmap.mergeRule = 'Sum'
-    fieldmappings.replaceFieldMap(fieldindex, fieldmap)
-
-    # total land value
-    fieldindex = fieldmappings.findFieldMapIndex('LAND_MKT_VALUE')
-    fieldmap = fieldmappings.getFieldMap(fieldindex)
-    fieldmap.mergeRule = 'Sum'
-    fieldmappings.replaceFieldMap(fieldindex, fieldmap)
-
-    # building square feet
-    fieldindex = fieldmappings.findFieldMapIndex('BLDG_SQFT')
-    fieldmap = fieldmappings.getFieldMap(fieldindex)
-    fieldmap.mergeRule = 'Sum'
-    fieldmappings.replaceFieldMap(fieldindex, fieldmap)
-
-    # floor count
-    fieldindex = fieldmappings.findFieldMapIndex('FLOORS_CNT')
-    fieldmap = fieldmappings.getFieldMap(fieldindex)
-    fieldmap.mergeRule = 'Mean'
-    fieldmappings.replaceFieldMap(fieldindex, fieldmap)
-
-    # year
-    fieldindex = fieldmappings.findFieldMapIndex('BUILT_YR')
-    fieldmap = fieldmappings.getFieldMap(fieldindex)
-    fieldmap.mergeRule = 'Mode'
-    fieldmappings.replaceFieldMap(fieldindex, fieldmap)
-
-    # built year max
-    fieldindex = fieldmappings.findFieldMapIndex('BUILT_YR2')
-    fieldmap = fieldmappings.getFieldMap(fieldindex)
-    fieldmap.mergeRule = 'Max'
-    fieldmappings.replaceFieldMap(fieldindex, fieldmap)
+    fieldmappings = _build_field_mapping(ca_multi_family, mf_centroids, fields)
 
     # run the spatial join, use 'Join_Count' for number of units
     oug_sj = arcpy.SpatialJoin_analysis(
