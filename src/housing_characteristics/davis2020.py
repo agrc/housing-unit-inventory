@@ -252,6 +252,19 @@ def _remove_analyzed_featurs(layer, selecting_features):
     return parcels_for_modeling_layer, count_type, count_remaining
 
 
+def _reclassify_tri_quad_to_appartment(layer, fields):
+    with arcpy.da.UpdateCursor(layer, fields) as cursor:
+        for row in cursor:
+            if row[2] in ['duplex', 'apartment', 'townhome', 'multi_family']:
+                row[0] = row[2]
+
+            if row[2] == 'triplex-quadplex':
+                row[0] = 'apartment'
+                row[1] = row[2]
+
+            cursor.updateRow(row)
+
+
 def davis():
     arcpy.env.overwriteOutput = True
 
@@ -580,17 +593,9 @@ def davis():
     #                                 expression_type="PYTHON3")
 
     #: reclassify triplex-quadplex to apartment
+
     fields = ['SUBTYPE_WFRC', 'NOTE', 'class']
-    with arcpy.da.UpdateCursor(parcels_for_modeling_layer, fields) as cursor:
-        for row in cursor:
-            if row[2] in ['duplex', 'apartment', 'townhome', 'multi_family']:
-                row[0] = row[2]
-
-            if row[2] == 'triplex-quadplex':
-                row[0] = 'apartment'
-                row[1] = row[2]
-
-            cursor.updateRow(row)
+    _reclassify_tri_quad_to_appartment(parcels_for_modeling_layer, fields)
 
     # create the feature class for the parcel type
     mf2_commons = arcpy.FeatureClassToFeatureClass_conversion(parcels_for_modeling_layer, scratch, '_02_mf2_commons')
@@ -604,22 +609,7 @@ def davis():
     join_features = address_pts_no_base
     output_features = os.path.join(gdb, '_02_multi_family2')
 
-    fieldmappings = arcpy.FieldMappings()
-    fieldmappings.addTable(target_features)
-    fieldmappings.addTable(join_features)
-
-    oug_sj2 = arcpy.SpatialJoin_analysis(
-        target_features,
-        join_features,
-        output_features,
-        'JOIN_ONE_TO_ONE',
-        'KEEP_ALL',
-        fieldmappings,
-        match_option='INTERSECT'
-    )
-
-    arcpy.CalculateField_management(oug_sj2, field='ap_count', expression='!Join_Count!')
-    arcpy.DeleteField_management(oug_sj2, 'Join_Count')
+    oug_sj2 = _get_layer_with_address_point_count(target_features, join_features, output_features, 'ap_count')
 
     #################################
     # WRAP-UP
@@ -761,6 +751,7 @@ def davis():
     rf_merged_df = rf_merged_df.rename(columns={'NewSA': 'SUBREGION'})
 
     # calc note column using property class
+    #: 'NOTE' is not null if we already reclassified tri/quadplex to apartment
     rf_merged_df.loc[(rf_merged_df['NOTE'].isnull()), 'NOTE'] = rf_merged_df['des_all']
 
     # convert unit count columns to int
