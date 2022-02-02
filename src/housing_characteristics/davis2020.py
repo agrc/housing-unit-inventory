@@ -220,6 +220,38 @@ def _get_address_point_count(target_features, join_features, output_features, co
     return oug_sj2
 
 
+def _update_year_built(layer, year_fields):
+    # update year built with max if mode is 0
+    #: BUILT_YR is mode of join, BUILT_YR2 is max
+    with arcpy.da.UpdateCursor(layer, year_fields) as cursor:
+        for row in cursor:
+            if row[0] is None or row[0] < 1 or row[0] == '':  #: if not row[0]:
+                row[0] = row[1]
+
+            cursor.updateRow(row)
+
+
+def _remove_analyzed_featurs(layer, selecting_features):
+    # delete features from working parcels
+    arcpy.SelectLayerByLocation_management(
+        in_layer=layer,
+        overlap_type='HAVE_THEIR_CENTER_IN',
+        select_features=selecting_features,
+        selection_type='NEW_SELECTION'
+    )
+    arcpy.SelectLayerByLocation_management(
+        in_layer=layer, overlap_type='WITHIN', select_features=selecting_features, selection_type='ADD_TO_SELECTION'
+    )
+
+    count_type = arcpy.GetCount_management(layer)
+    parcels_for_modeling_layer = arcpy.DeleteFeatures_management(layer)
+
+    # count of remaining parcels
+    count_remaining = arcpy.GetCount_management(parcels_for_modeling_layer)
+
+    return parcels_for_modeling_layer, count_type, count_remaining
+
+
 def davis():
     arcpy.env.overwriteOutput = True
 
@@ -378,34 +410,11 @@ def davis():
     # WRAP-UP
     #################################
 
-    # delete features from working parcels
-    arcpy.SelectLayerByLocation_management(
-        in_layer=parcels_for_modeling_layer,
-        overlap_type='HAVE_THEIR_CENTER_IN',
-        select_features=oug_sj2,
-        selection_type='NEW_SELECTION'
-    )
-    arcpy.SelectLayerByLocation_management(
-        in_layer=parcels_for_modeling_layer,
-        overlap_type='WITHIN',
-        select_features=oug_sj2,
-        selection_type='ADD_TO_SELECTION'
+    parcels_for_modeling_layer, count_type, count_remaining = _remove_analyzed_featurs(
+        parcels_for_modeling_layer, oug_sj2
     )
 
-    count_type = arcpy.GetCount_management(parcels_for_modeling_layer)
-    parcels_for_modeling_layer = arcpy.DeleteFeatures_management(parcels_for_modeling_layer)
-
-    # count of remaining parcels
-    count_remaining = arcpy.GetCount_management(parcels_for_modeling_layer)
-
-    # update year built with max if mode is 0
-    #: BUILT_YR is mode of join, BUILT_YR2 is max
-    with arcpy.da.UpdateCursor(oug_sj2, ['BUILT_YR', 'BUILT_YR2']) as cursor:
-        for row in cursor:
-            if row[0] is None or row[0] < 1 or row[0] == '':  #: if not row[0]:
-                row[0] = row[1]
-
-            cursor.updateRow(row)
+    _update_year_built(oug_sj2, ['BUILT_YR', 'BUILT_YR2'])
 
     # calculate basebldg field
     arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1')
@@ -514,33 +523,12 @@ def davis():
     # WRAP-UP
     #################################
 
-    # delete features from working parcels
-    arcpy.SelectLayerByLocation_management(
-        in_layer=parcels_for_modeling_layer,
-        overlap_type='HAVE_THEIR_CENTER_IN',
-        select_features=oug_sj2,
-        selection_type='NEW_SELECTION'
+    parcels_for_modeling_layer, count_type, count_remaining = _remove_analyzed_featurs(
+        parcels_for_modeling_layer, oug_sj2
     )
-    arcpy.SelectLayerByLocation_management(
-        in_layer=parcels_for_modeling_layer,
-        overlap_type='WITHIN',
-        select_features=oug_sj2,
-        selection_type='ADD_TO_SELECTION'
-    )
-
-    count_type = arcpy.GetCount_management(parcels_for_modeling_layer)
-    parcels_for_modeling_layer = arcpy.DeleteFeatures_management(parcels_for_modeling_layer)
-
-    # count of remaining parcels
-    count_remaining = arcpy.GetCount_management(parcels_for_modeling_layer)
 
     # update year built with max if mode is 0
-    with arcpy.da.UpdateCursor(oug_sj2, ['BUILT_YR', 'BUILT_YR2']) as cursor:
-        for row in cursor:
-            if row[0] is None or row[0] < 1 or row[0] == '':
-                row[0] = row[1]
-
-            cursor.updateRow(row)
+    _update_year_built(oug_sj2, ['BUILT_YR', 'BUILT_YR2'])
 
     # calculate basebldg field
     arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1')
