@@ -198,7 +198,7 @@ def _create_centroids_within_common_area(parcels, common_areas, output):
     return centroids
 
 
-def _get_address_point_count(target_features, join_features, output_features, count_field_name):
+def _get_layer_with_address_point_count(target_features, join_features, output_features, count_field_name):
 
     fieldmappings = arcpy.FieldMappings()
     fieldmappings.addTable(target_features)
@@ -404,7 +404,7 @@ def davis():
     output_features = os.path.join(gdb, '_02_pud')
     count_field_name = 'ap_count'
 
-    oug_sj2 = _get_address_point_count(target_features, join_features, output_features, count_field_name)
+    oug_sj2 = _get_layer_with_address_point_count(target_features, join_features, output_features, count_field_name)
 
     #################################
     # WRAP-UP
@@ -517,7 +517,7 @@ def davis():
     output_features = os.path.join(gdb, '_02_multi_family')
     count_field_name = 'ap_count'
 
-    oug_sj2 = _get_address_point_count(target_features, join_features, output_features, count_field_name)
+    oug_sj2 = _get_layer_with_address_point_count(target_features, join_features, output_features, count_field_name)
 
     #################################
     # WRAP-UP
@@ -726,7 +726,7 @@ def davis():
     output_features = os.path.join(gdb, '_02_mobile_home_park')
     count_field_name = 'ap_count'
 
-    oug_sj2 = _get_address_point_count(target_features, join_features, output_features, count_field_name)
+    oug_sj2 = _get_layer_with_address_point_count(target_features, join_features, output_features, count_field_name)
 
     # calculate basebldg field
     arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1')
