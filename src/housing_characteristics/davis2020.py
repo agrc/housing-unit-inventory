@@ -15,6 +15,8 @@ import pandas as pd
 #:          Don't pass scratch around, use arcpy.env.scratchGDB instead
 #:      Come up with a better way to pass analyzed parcels around
 #:      Is 'building_type_id' used?
+#:      Can Mobile homes fit the same process as the other common area ones?
+#:      Look at new WFRC data for 'single_family_adu', 'mixed th/single_family', and 'mixed condo/th' subtypes
 
 
 def _get_non_base_addr_points(address_pts, scratch):
@@ -647,13 +649,10 @@ def davis():
 
     #: Prep Main Parcel Layer
     # select parcels within modeling area
-    parcels_for_modeling_layer = _get_parcels_in_modelling_area(parcels, taz_shp, scratch)
+    parcels_in_study_area = _get_parcels_in_modelling_area(parcels, taz_shp, scratch)
 
-    ################################
-    # Dissolve duplicate parcel ids
-    ################################
-
-    parcels_dissolved_sdf = _dissolve_duplicate_parcels(parcels_for_modeling_layer, scratch)
+    #: Dissolve duplicate parcel ids
+    parcels_dissolved_sdf = _dissolve_duplicate_parcels(parcels_in_study_area, scratch)
 
     # Load Extended Descriptions - be sure to format ACCOUNTNO column as text in excel first
     #: NOTE: this parcels_for_modeling_layer is completely independent of the earlier one.
