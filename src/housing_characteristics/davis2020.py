@@ -620,6 +620,21 @@ def evaluate_mobile_home_communities(input_parcel_layer, common_areas_features, 
     return parcels_without_mobile_home_communities
 
 
+def _add_area_attribute(target_features, area_features, output_features):
+
+    join_features = area_features
+    rf_merged = arcpy.SpatialJoin_analysis(
+        target_features,
+        join_features,
+        output_features,
+        'JOIN_ONE_TO_ONE',
+        'KEEP_ALL',
+        match_option='HAVE_THEIR_CENTER_IN'
+    )
+
+    return rf_merged
+
+
 def davis():
     arcpy.env.overwriteOutput = True
 
@@ -730,33 +745,15 @@ def davis():
     # add cities as an attribute
     #-----------------------------
     cities = r'.\Inputs\Cities.shp'
-    target_features = rf_merged
-    join_features = cities
     output_features = os.path.join(scratch, '_10b_Housing_Unit_Inventory_City')
-    rf_merged = arcpy.SpatialJoin_analysis(
-        target_features,
-        join_features,
-        output_features,
-        'JOIN_ONE_TO_ONE',
-        'KEEP_ALL',
-        match_option='HAVE_THEIR_CENTER_IN'
-    )
+    rf_merged = _add_area_attribute(rf_merged, cities, output_features)
 
     #---------------------------------
     # add subcounties as an attribute
     #---------------------------------
     subcounties = r'.\Inputs\SubCountyArea_2019.shp'
-    target_features = rf_merged
-    join_features = subcounties
     output_features = os.path.join(scratch, '_10c_Housing_Unit_Inventory_SubCounty')
-    rf_merged = arcpy.SpatialJoin_analysis(
-        target_features,
-        join_features,
-        output_features,
-        'JOIN_ONE_TO_ONE',
-        'KEEP_ALL',
-        match_option='HAVE_THEIR_CENTER_IN'
-    )
+    rf_merged = _add_area_attribute(rf_merged, subcounties, output_features)
 
     #: convert to dataframe, format/rename, export
     rf_merged_df = pd.DataFrame.spatial.from_featureclass(rf_merged)
