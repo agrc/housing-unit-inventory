@@ -7,6 +7,15 @@ import pandas as pd
 # from arcgis import GIS
 # from arcgis.features import GeoAccessor, GeoSeriesAccessor
 
+#: TODO:
+#:      Do as much in data frames as possible
+#:      Switch scratch to a scratch.gdb within the scratch workspace
+#:          (https://pro.arcgis.com/en/pro-app/latest/tool-reference/environment-settings/scratch-gdb.htm)
+#:          Delete/create scratch gdb at start of process to ensure clean slate
+#:          Don't pass scratch around, use arcpy.env.scratchGDB instead
+#:      Come up with a better way to pass analyzed parcels around
+#:      Is 'building_type_id' used?
+
 
 def _get_non_base_addr_points(address_pts, scratch):
     # get address points without base address point
@@ -231,6 +240,384 @@ def _reclassify_tri_quad_to_appartment(layer, fields):
             cursor.updateRow(row)
 
 
+def evaluate_pud(input_parcel_layer, common_areas_features, scratch, address_points, output_gdb):
+    """Run the PUD process.
+
+    Saves analyzed PUD parcels to ouput gdb/_02_pud feature class and passes the original parcel layer without the PUD
+    parcels for further analysis
+
+    Args:
+        input_parcel_layer (FeatureLayer): The parcel layer we're working against
+        common_areas_features (Feature Class): Boundaries of all the PUDs that encompas any PUD parcels
+        scratch (GDB): Scratch GDB
+        address_points (Feature Class): State address points with BASE_ADDRESS points removed
+        output_gdb (GDB): GDB to store parcels with data (_02_pud)
+
+    Returns:
+        FeatureLayer: input_parcel_layer with the PUD parcels removed
+    """
+
+    ###############
+    # PUD
+    ###############
+
+    #: Join centroids of intersecting parcels to PUD boundaries => oug_sj (_03a_pud_sj)
+    #: Use spatial join to set various fields
+    #: Save count of centroids to parcel_count
+    #: Update fields in oug_sj
+    #: Join address points to output of first join => oug_sj2 (_02_pud)
+    #: Save count of address points to ap_count
+    #: From main parcel layer, delete parcels that have their center in, or are completely within, oug_sj2
+    #: Update fields in oug_sj2
+
+    tag = 'single_family'  #: TYPE_WFRC
+    tag2 = 'pud'  #: SUBTYPE_WFRC
+
+    pud_centroids = _create_centroids_within_common_area(
+        input_parcel_layer, common_areas_features, os.path.join(scratch, '_03a_pud_centroids')
+    )
+
+    # recalc acreage
+    arcpy.CalculateField_management(common_areas_features, 'PARCEL_ACRES', '!SHAPE.area@ACRES!')
+
+    #==================================================
+    # summarize units attributes within pud areas
+    #==================================================
+
+    # use spatial join to summarize market value & acreage from centroids
+    target_features = common_areas_features
+    join_features = pud_centroids
+    output_features = os.path.join(scratch, '_03a_pud_sj')
+
+    #: Use the proper statistics when combining attributes from the PUD parcel centroids into the common area parcel
+    fields = {
+        'TOTAL_MKT_VALUE': 'Sum',
+        'LAND_MKT_VALUE': 'Sum',
+        'BLDG_SQFT': 'Sum',
+        'FLOORS_CNT': 'Mean',
+        'BUILT_YR': 'Mode',
+        'BUILT_YR2': 'Max',
+    }
+
+    fieldmappings = _build_field_mapping(common_areas_features, pud_centroids, fields)
+
+    # run the spatial join, use 'Join_Count' for number of units
+    oug_sj = arcpy.SpatialJoin_analysis(
+        target_features,
+        join_features,
+        output_features,
+        'JOIN_ONE_TO_ONE',
+        'KEEP_ALL',
+        fieldmappings,
+        match_option='INTERSECT'
+    )
+
+    # calculate the type field
+    arcpy.CalculateField_management(oug_sj, field='TYPE', expression=f"'{tag}'")
+
+    arcpy.CalculateField_management(oug_sj, field='SUBTYPE', expression=f"'{tag2}'")
+
+    # rename join_count
+    arcpy.CalculateField_management(oug_sj, field='parcel_count', expression='!Join_Count!')
+
+    arcpy.DeleteField_management(oug_sj, 'Join_Count')
+
+    #################################
+    # get count from address points
+    #################################
+    #: TODO: replace w/ summarize within?
+
+    # summarize address points address_point_count 'ap_count'
+    target_features = oug_sj
+    join_features = address_points  #: Should have BASE_ADDRESSes removed
+    output_features = os.path.join(output_gdb, '_02_pud')
+    count_field_name = 'ap_count'
+
+    oug_sj2 = _get_layer_with_address_point_count(target_features, join_features, output_features, count_field_name)
+
+    #################################
+    # WRAP-UP
+    #################################
+
+    parcels_without_pud_parcels, count_type, count_remaining = _remove_analyzed_features(input_parcel_layer, oug_sj2)
+
+    _update_year_built(oug_sj2, ['BUILT_YR', 'BUILT_YR2'])
+
+    # calculate basebldg field
+    arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1')
+
+    # calculate building_type_id field
+    arcpy.CalculateField_management(oug_sj2, field='building_type_id', expression='1')
+
+    # message
+    print(f'{count_type} "{tag}" parcels were selected.\n{count_remaining} parcels remain...')
+
+    return parcels_without_pud_parcels
+
+
+def evaluate_multi_family_with_common_area(
+    input_parcel_layer, common_areas_features, scratch, address_points, output_gdb
+):
+
+    #: Join centroids of intersecting parcels to PUD boundaries => oug_sj (_03b_mf_sj)
+    #: Save count of centroids to parcel_count
+    #: Join address points to output of first join => oug_sj2 (_02_multi_family)
+    #: Save count of address points to ap_count
+    #: From main parcel layer, delete parcels that have their center in, or are completely within, oug_sj2
+    #: Update fields in oug_sj2
+
+    tag = 'multi_family'
+
+    mf_centroids = _create_centroids_within_common_area(
+        input_parcel_layer, common_areas_features, os.path.join(scratch, '_03a_mf_centroids')
+    )
+
+    # recalc acreage
+    arcpy.CalculateField_management(common_areas_features, 'PARCEL_ACRES', '!SHAPE.area@ACRES!')
+
+    #==================================================
+    # summarize units attributes within pud areas
+    #==================================================
+
+    # use spatial join to summarize market value & acreage
+    target_features = common_areas_features
+    join_features = mf_centroids
+    output_features = os.path.join(scratch, '_03b_mf_sj')
+
+    #: Use the proper statistics when combining attributes from the PUD parcel centroids into the common area parcel
+    fields = {
+        'TOTAL_MKT_VALUE': 'Sum',
+        'LAND_MKT_VALUE': 'Sum',
+        'BLDG_SQFT': 'Sum',
+        'FLOORS_CNT': 'Mean',
+        'BUILT_YR': 'Mode',
+        'BUILT_YR2': 'Max',
+    }
+
+    fieldmappings = _build_field_mapping(common_areas_features, mf_centroids, fields)
+
+    # run the spatial join, use 'Join_Count' for number of units
+    oug_sj = arcpy.SpatialJoin_analysis(
+        target_features, join_features, output_features, 'JOIN_ONE_TO_ONE', 'KEEP_ALL', fieldmappings, 'INTERSECT'
+    )
+
+    # calculate the type field
+    arcpy.CalculateField_management(oug_sj, field='TYPE', expression=f"'{tag}'")
+
+    # rename join_count
+    arcpy.CalculateField_management(oug_sj, field='parcel_count', expression='!Join_Count!')
+
+    arcpy.DeleteField_management(oug_sj, 'Join_Count')
+
+    #################################
+    # get count from address points
+    #################################
+
+    # summarize address points address_point_count 'ap_count'
+    target_features = oug_sj
+    join_features = address_points
+    output_features = os.path.join(output_gdb, '_02_multi_family')
+    count_field_name = 'ap_count'
+
+    oug_sj2 = _get_layer_with_address_point_count(target_features, join_features, output_features, count_field_name)
+
+    #################################
+    # WRAP-UP
+    #################################
+
+    parcels_without_multifamily_parcels, count_type, count_remaining = _remove_analyzed_features(
+        input_parcel_layer, oug_sj2
+    )
+
+    # update year built with max if mode is 0
+    _update_year_built(oug_sj2, ['BUILT_YR', 'BUILT_YR2'])
+
+    # calculate basebldg field
+    arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1')
+
+    # calculate building_type_id field
+    arcpy.CalculateField_management(oug_sj2, field='building_type_id', expression='2')
+
+    # message
+    print(f'{count_type} "{tag}" parcels were selected.\n{count_remaining} parcels remain...')
+
+    return parcels_without_multifamily_parcels
+
+
+def evaluate_single_family(input_parcel_layer, output_gdb):
+    #: Query out 'single_family' parcels from main parcel feature class
+    #: Update type, subtype
+    #: save to _02_single_family
+    #: Delete queried parcels from main parcel layer
+
+    query = (" class IN ('single_family') ")
+    tag = 'single_family'
+
+    # select the features
+    arcpy.SelectLayerByAttribute_management(input_parcel_layer, 'NEW_SELECTION', query)
+
+    # count the selected features
+    count_type = arcpy.GetCount_management(input_parcel_layer)
+
+    # calculate the type field
+    arcpy.CalculateField_management(input_parcel_layer, field='TYPE', expression=f"'{tag}'")
+
+    arcpy.CalculateField_management(input_parcel_layer, field='SUBTYPE', expression=f"'{tag}'")
+
+    # create the feature class for the parcel type
+    arcpy.FeatureClassToFeatureClass_conversion(input_parcel_layer, output_gdb, f'_02_{tag}')
+
+    # calculate basebldg field
+    arcpy.CalculateField_management(os.path.join(output_gdb, f'_02_{tag}'), field='basebldg', expression='1')
+
+    # calculate building_type_id field
+    arcpy.CalculateField_management(os.path.join(output_gdb, f'_02_{tag}'), field='building_type_id', expression='1')
+
+    # delete features from working parcels
+    parcels_without_single_family_parcels = arcpy.DeleteFeatures_management(input_parcel_layer)
+
+    # count remaining features
+    arcpy.SelectLayerByAttribute_management(parcels_without_single_family_parcels, 'CLEAR_SELECTION')
+    count_remaining = arcpy.GetCount_management(parcels_without_single_family_parcels)
+
+    # message
+    print(f'{count_type} "{tag}" parcels were selected.\n{count_remaining} parcels remain...')
+
+    return parcels_without_single_family_parcels
+
+
+def evaluate_multi_family_single_parcles(input_parcel_layer, scratch, address_points, output_gdb):
+
+    #: Query out various multi-family parcels from main parcel feature class
+    #: Update type, subtype
+    #: Spatially join address points to queried parcels, calculate count
+    #: save to _02_multi_family2
+
+    query = (" class IN ('multi_family', 'duplex','apartment', 'townhome', 'triplex-quadplex') ")
+    tag = 'multi_family'
+
+    # select the features
+    arcpy.SelectLayerByAttribute_management(input_parcel_layer, 'NEW_SELECTION', query)
+
+    # count the selected features
+    count_type = arcpy.GetCount_management(input_parcel_layer)
+
+    # calculate the type field
+    arcpy.CalculateField_management(input_parcel_layer, field='TYPE', expression=f"'{tag}'")
+
+    # calculate the type field
+    # arcpy.CalculateField_management(parcels_for_modeling_layer, field='SUBTYPE', expression="!class!",
+    #                                 expression_type="PYTHON3")
+
+    #: reclassify triplex-quadplex to apartment
+
+    fields = ['SUBTYPE', 'NOTE', 'class']
+    _reclassify_tri_quad_to_appartment(input_parcel_layer, fields)
+
+    # create the feature class for the parcel type
+    mf2_commons = arcpy.FeatureClassToFeatureClass_conversion(input_parcel_layer, scratch, '_02_mf2_commons')
+
+    #################################
+    # get count from address points
+    #################################
+
+    # summarize address points address_point_count 'ap_count'
+    target_features = mf2_commons
+    join_features = address_points
+    output_features = os.path.join(output_gdb, '_02_multi_family2')
+
+    oug_sj2 = _get_layer_with_address_point_count(target_features, join_features, output_features, 'ap_count')
+
+    #################################
+    # WRAP-UP
+    #################################
+
+    # calculate basebldg field
+    arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1')
+
+    # calculate building_type_id field
+    arcpy.CalculateField_management(oug_sj2, field='building_type_id', expression='2')
+
+    # delete features from working parcels
+    parcels_without_multifamily_singles = arcpy.DeleteFeatures_management(input_parcel_layer)
+
+    # count remaining features
+    arcpy.SelectLayerByAttribute_management(parcels_without_multifamily_singles, 'CLEAR_SELECTION')
+    count_remaining = arcpy.GetCount_management(parcels_without_multifamily_singles)
+
+    # message
+    print(f'{count_type} "{tag}" parcels were selected.\n{count_remaining} parcels remain...')
+
+    return parcels_without_multifamily_singles
+
+
+def evaluate_mobile_home_communities(input_parcel_layer, common_areas_features, scratch, address_points, output_gdb):
+
+    #: Select parcels that have their center in mobile home boundaries or are classified as mobile_home_park
+    #: Set type, subtype
+    #: Copy to scratch fc
+    #: Join adddress points to scratch fc, get count
+    #: Save to _02_mobile_home_park
+
+    tag = 'multi_family'
+    tag2 = 'mobile_home_park'
+
+    # use overlay to select mobile home parks parcels
+    arcpy.SelectLayerByLocation_management(
+        in_layer=input_parcel_layer,
+        overlap_type='HAVE_THEIR_CENTER_IN',
+        select_features=common_areas_features,
+        selection_type='NEW_SELECTION'
+    )
+    query = (" class IN ('mobile_home_park') ")
+    arcpy.SelectLayerByAttribute_management(input_parcel_layer, 'ADD_TO_SELECTION', query)
+
+    # count the selected features
+    count_type = arcpy.GetCount_management(input_parcel_layer)
+
+    # calculate the type field
+    arcpy.CalculateField_management(input_parcel_layer, field='TYPE', expression=f"'{tag}'")
+
+    # calculate the type field
+    arcpy.CalculateField_management(input_parcel_layer, field='SUBTYPE', expression=f"'{tag2}'")
+
+    # create the feature class for the parcel type
+    mobile_home_community_parcels = arcpy.FeatureClassToFeatureClass_conversion(
+        input_parcel_layer, scratch, f'_07a_{tag}'
+    )
+
+    # delete features from working parcels
+    parcels_without_mobile_home_communities = arcpy.DeleteFeatures_management(input_parcel_layer)
+
+    # count remaining features
+    arcpy.SelectLayerByAttribute_management(parcels_without_mobile_home_communities, 'CLEAR_SELECTION')
+    count_remaining = arcpy.GetCount_management(parcels_without_mobile_home_communities)
+
+    # recalc acreage
+    # arcpy.CalculateGeometryAttributes_management(mhp, [['PARCEL_ACRES', 'AREA']], area_unit='ACRES')
+    arcpy.CalculateField_management(mobile_home_community_parcels, 'PARCEL_ACRES', '!SHAPE.area@ACRES!')
+
+    #################################
+    # get count from address points
+    #################################
+
+    # summarize address points address_point_count 'ap_count'
+    target_features = mobile_home_community_parcels
+    join_features = address_points
+    output_features = os.path.join(output_gdb, '_02_mobile_home_park')
+    count_field_name = 'ap_count'
+
+    oug_sj2 = _get_layer_with_address_point_count(target_features, join_features, output_features, count_field_name)
+
+    # calculate basebldg field
+    arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1')
+
+    # message
+    print(f'{count_type} "{tag}" parcels were selected.\n{count_remaining} parcels remain...')
+
+    return parcels_without_mobile_home_communities
+
+
 def davis():
     arcpy.env.overwriteOutput = True
 
@@ -243,6 +630,7 @@ def davis():
     address_pts = '.\\Inputs\\AddressPoints_Davis.gdb\\address_points_davis'
     common_areas = r'.\Inputs\Common_Areas.gdb\Common_Areas_Reviewed'
     davis_extended = r'.\Inputs\davis_extended_simplified.csv'
+    mobile_home_communities = '.\\Inputs\\Mobile_Home_Parks.shp'
 
     # create output gdb
     outputs = '.\\Outputs'
@@ -305,363 +693,27 @@ def davis():
     arcpy.SelectLayerByAttribute_management(common_areas_lyr, 'NEW_SELECTION', query)
     ca_multi_family = arcpy.FeatureClassToFeatureClass_conversion(common_areas_lyr, scratch, '_02e_ca_multi_family')
 
-    ###############
-    # PUD
-    ###############
+    #: Run the evaluations
+    #: PUDs
+    parcels_without_puds = evaluate_pud(parcels_for_modeling_layer, ca_pud, scratch, address_pts_no_base, gdb)
 
-    #: Join centroids of intersecting parcels to PUD boundaries => oug_sj (_03a_pud_sj)
-    #: Use spatial join to set various fields
-    #: Save count of centroids to parcel_count
-    #: Update fields in oug_sj
-    #: Join address points to output of first join => oug_sj2 (_02_pud)
-    #: Save count of address points to ap_count
-    #: From main parcel layer, delete parcels that have their center in, or are completely within, oug_sj2
-    #: Update fields in oug_sj2
-
-    tag = 'single_family'  #: TYPE_WFRC
-    tag2 = 'pud'  #: SUBTYPE_WFRC
-
-    pud_centroids = _create_centroids_within_common_area(
-        parcels_for_modeling_layer, ca_pud, os.path.join(scratch, '_03a_pud_centroids')
+    #: Condos and other multi-parcel, multi-family dwellings
+    parcels_without_condos = evaluate_multi_family_with_common_area(
+        parcels_without_puds, ca_multi_family, scratch, address_pts_no_base, gdb
     )
 
-    # recalc acreage
-    arcpy.CalculateField_management(ca_pud, 'PARCEL_ACRES', '!SHAPE.area@ACRES!')
+    #: Single family dwellings
+    parcels_without_single_family = evaluate_single_family(parcels_without_condos, gdb)
 
-    #==================================================
-    # summarize units attributes within pud areas
-    #==================================================
-
-    #: TODO: implement as a series of dataframe ops instead of arcpy methods?
-
-    # use spatial join to summarize market value & acreage from centroids
-    target_features = ca_pud
-    join_features = pud_centroids
-    output_features = os.path.join(scratch, '_03a_pud_sj')
-
-    #: Use the proper statistics when combining attributes from the PUD parcel centroids into the common area parcel
-    fields = {
-        'TOTAL_MKT_VALUE': 'Sum',
-        'LAND_MKT_VALUE': 'Sum',
-        'BLDG_SQFT': 'Sum',
-        'FLOORS_CNT': 'Mean',
-        'BUILT_YR': 'Mode',
-        'BUILT_YR2': 'Max',
-    }
-
-    fieldmappings = _build_field_mapping(ca_pud, pud_centroids, fields)
-
-    # run the spatial join, use 'Join_Count' for number of units
-    oug_sj = arcpy.SpatialJoin_analysis(
-        target_features,
-        join_features,
-        output_features,
-        'JOIN_ONE_TO_ONE',
-        'KEEP_ALL',
-        fieldmappings,
-        match_option='INTERSECT'
+    #: Apartments, duplexes, other single-parcel, mutli-family dwellings
+    parcels_without_apartments = evaluate_multi_family_single_parcles(
+        parcels_without_single_family, scratch, address_pts_no_base, gdb
     )
 
-    # calculate the type field
-    arcpy.CalculateField_management(oug_sj, field='TYPE', expression=f"'{tag}'")
-
-    arcpy.CalculateField_management(oug_sj, field='SUBTYPE', expression=f"'{tag2}'")
-
-    # rename join_count
-    arcpy.CalculateField_management(oug_sj, field='parcel_count', expression='!Join_Count!')
-
-    arcpy.DeleteField_management(oug_sj, 'Join_Count')
-
-    #################################
-    # get count from address points
-    #################################
-    #: TODO: replace w/ summarize within?
-
-    # summarize address points address_point_count 'ap_count'
-    target_features = oug_sj
-    join_features = address_pts_no_base
-    output_features = os.path.join(gdb, '_02_pud')
-    count_field_name = 'ap_count'
-
-    oug_sj2 = _get_layer_with_address_point_count(target_features, join_features, output_features, count_field_name)
-
-    #################################
-    # WRAP-UP
-    #################################
-
-    parcels_for_modeling_layer, count_type, count_remaining = _remove_analyzed_features(
-        parcels_for_modeling_layer, oug_sj2
+    #: Mobile home communities
+    parcels_without_mobile_homes = evaluate_mobile_home_communities(
+        parcels_without_apartments, mobile_home_communities, scratch, address_pts_no_base, gdb
     )
-
-    _update_year_built(oug_sj2, ['BUILT_YR', 'BUILT_YR2'])
-
-    # calculate basebldg field
-    arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1')
-
-    # calculate building_type_id field
-    arcpy.CalculateField_management(oug_sj2, field='building_type_id', expression='1')
-
-    # message
-    print(f'{count_type} "{tag}" parcels were selected.\n{count_remaining} parcels remain...')
-
-    ###############
-    # multi family  (Generally condos or other things with common areas)
-    ###############
-
-    #: Join centroids of intersecting parcels to PUD boundaries => oug_sj (_03b_mf_sj)
-    #: Save count of centroids to parcel_count
-    #: Join address points to output of first join => oug_sj2 (_02_multi_family)
-    #: Save count of address points to ap_count
-    #: From main parcel layer, delete parcels that have their center in, or are completely within, oug_sj2
-    #: Update fields in oug_sj2
-
-    tag = 'multi_family'
-
-    mf_centroids = _create_centroids_within_common_area(
-        parcels_for_modeling_layer, ca_multi_family, os.path.join(scratch, '_03a_mf_centroids')
-    )
-
-    # recalc acreage
-    arcpy.CalculateField_management(ca_multi_family, 'PARCEL_ACRES', '!SHAPE.area@ACRES!')
-
-    #==================================================
-    # summarize units attributes within pud areas
-    #==================================================
-
-    # use spatial join to summarize market value & acreage
-    target_features = ca_multi_family
-    join_features = mf_centroids
-    output_features = os.path.join(scratch, '_03b_mf_sj')
-
-    #: Use the proper statistics when combining attributes from the PUD parcel centroids into the common area parcel
-    fields = {
-        'TOTAL_MKT_VALUE': 'Sum',
-        'LAND_MKT_VALUE': 'Sum',
-        'BLDG_SQFT': 'Sum',
-        'FLOORS_CNT': 'Mean',
-        'BUILT_YR': 'Mode',
-        'BUILT_YR2': 'Max',
-    }
-
-    fieldmappings = _build_field_mapping(ca_multi_family, mf_centroids, fields)
-
-    # run the spatial join, use 'Join_Count' for number of units
-    oug_sj = arcpy.SpatialJoin_analysis(
-        target_features, join_features, output_features, 'JOIN_ONE_TO_ONE', 'KEEP_ALL', fieldmappings, 'INTERSECT'
-    )
-
-    # calculate the type field
-    arcpy.CalculateField_management(oug_sj, field='TYPE', expression=f"'{tag}'")
-
-    # rename join_count
-    arcpy.CalculateField_management(oug_sj, field='parcel_count', expression='!Join_Count!')
-
-    arcpy.DeleteField_management(oug_sj, 'Join_Count')
-
-    #################################
-    # get count from address points
-    #################################
-
-    # summarize address points address_point_count 'ap_count'
-    target_features = oug_sj
-    join_features = address_pts_no_base
-    output_features = os.path.join(gdb, '_02_multi_family')
-    count_field_name = 'ap_count'
-
-    oug_sj2 = _get_layer_with_address_point_count(target_features, join_features, output_features, count_field_name)
-
-    #################################
-    # WRAP-UP
-    #################################
-
-    parcels_for_modeling_layer, count_type, count_remaining = _remove_analyzed_features(
-        parcels_for_modeling_layer, oug_sj2
-    )
-
-    # update year built with max if mode is 0
-    _update_year_built(oug_sj2, ['BUILT_YR', 'BUILT_YR2'])
-
-    # calculate basebldg field
-    arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1')
-
-    # calculate building_type_id field
-    arcpy.CalculateField_management(oug_sj2, field='building_type_id', expression='2')
-
-    # message
-    print(f'{count_type} "{tag}" parcels were selected.\n{count_remaining} parcels remain...')
-
-    #: Categorize parcels using info from extended descriptions
-    ################
-    # single_family
-    ################
-
-    #: Query out 'single_family' parcels from main parcel feature class
-    #: Update type, subtype
-    #: save to _02_single_family
-    #: Delete queried parcels from main parcel layer
-
-    query = (" class IN ('single_family') ")
-    tag = 'single_family'
-
-    # select the features
-    arcpy.SelectLayerByAttribute_management(parcels_for_modeling_layer, 'NEW_SELECTION', query)
-
-    # count the selected features
-    count_type = arcpy.GetCount_management(parcels_for_modeling_layer)
-
-    # calculate the type field
-    arcpy.CalculateField_management(parcels_for_modeling_layer, field='TYPE', expression=f"'{tag}'")
-
-    arcpy.CalculateField_management(parcels_for_modeling_layer, field='SUBTYPE', expression=f"'{tag}'")
-
-    # create the feature class for the parcel type
-    single_family = arcpy.FeatureClassToFeatureClass_conversion(parcels_for_modeling_layer, gdb, f'_02_{tag}')
-
-    # calculate basebldg field
-    arcpy.CalculateField_management(os.path.join(gdb, f'_02_{tag}'), field='basebldg', expression='1')
-
-    # calculate building_type_id field
-    arcpy.CalculateField_management(os.path.join(gdb, f'_02_{tag}'), field='building_type_id', expression='1')
-
-    # delete features from working parcels
-    parcels_for_modeling_layer = arcpy.DeleteFeatures_management(parcels_for_modeling_layer)
-
-    # count remaining features
-    arcpy.SelectLayerByAttribute_management(parcels_for_modeling_layer, 'CLEAR_SELECTION')
-    count_remaining = arcpy.GetCount_management(parcels_for_modeling_layer)
-
-    # message
-    print(f'{count_type} "{tag}" parcels were selected.\n{count_remaining} parcels remain...')
-
-    ################
-    # Multi-Family (non-common-area, using classification in parcel data)
-    ################
-
-    #: Query out various multi-family parcels from main parcel feature class
-    #: Update type, subtype
-    #: Spatially join address points to queried parcels, calculate count
-    #: save to _02_multi_family2
-
-    query = (" class IN ('multi_family', 'duplex','apartment', 'townhome', 'triplex-quadplex') ")
-    tag = 'multi_family'
-
-    # select the features
-    arcpy.SelectLayerByAttribute_management(parcels_for_modeling_layer, 'NEW_SELECTION', query)
-
-    # count the selected features
-    count_type = arcpy.GetCount_management(parcels_for_modeling_layer)
-
-    # calculate the type field
-    arcpy.CalculateField_management(parcels_for_modeling_layer, field='TYPE', expression=f"'{tag}'")
-
-    # calculate the type field
-    # arcpy.CalculateField_management(parcels_for_modeling_layer, field='SUBTYPE', expression="!class!",
-    #                                 expression_type="PYTHON3")
-
-    #: reclassify triplex-quadplex to apartment
-
-    fields = ['SUBTYPE', 'NOTE', 'class']
-    _reclassify_tri_quad_to_appartment(parcels_for_modeling_layer, fields)
-
-    # create the feature class for the parcel type
-    mf2_commons = arcpy.FeatureClassToFeatureClass_conversion(parcels_for_modeling_layer, scratch, '_02_mf2_commons')
-
-    #################################
-    # get count from address points
-    #################################
-
-    # summarize address points address_point_count 'ap_count'
-    target_features = mf2_commons
-    join_features = address_pts_no_base
-    output_features = os.path.join(gdb, '_02_multi_family2')
-
-    oug_sj2 = _get_layer_with_address_point_count(target_features, join_features, output_features, 'ap_count')
-
-    #################################
-    # WRAP-UP
-    #################################
-
-    # calculate basebldg field
-    arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1')
-
-    # calculate building_type_id field
-    arcpy.CalculateField_management(oug_sj2, field='building_type_id', expression='2')
-
-    # delete features from working parcels
-    parcels_for_modeling_layer = arcpy.DeleteFeatures_management(parcels_for_modeling_layer)
-
-    # count remaining features
-    arcpy.SelectLayerByAttribute_management(parcels_for_modeling_layer, 'CLEAR_SELECTION')
-    count_remaining = arcpy.GetCount_management(parcels_for_modeling_layer)
-
-    # message
-    print(f'{count_type} "{tag}" parcels were selected.\n{count_remaining} parcels remain...')
-
-    ##########################
-    # mobile home parks
-    ##########################
-
-    #: Select parcels that have their center in mobile home boundaries or are classified as mobile_home_park
-    #: Set type, subtype
-    #: Copy to scratch fc
-    #: Join adddress points to scratch fc, get count
-    #: Save to _02_mobile_home_park
-
-    tag = 'multi_family'
-    tag2 = 'mobile_home_park'
-
-    # use overlay to select mobile home parks parcels
-    mobile_home_parks = '.\\Inputs\\Mobile_Home_Parks.shp'
-    arcpy.SelectLayerByLocation_management(
-        in_layer=parcels_for_modeling_layer,
-        overlap_type='HAVE_THEIR_CENTER_IN',
-        select_features=mobile_home_parks,
-        selection_type='NEW_SELECTION'
-    )
-    query = (" class IN ('mobile_home_park') ")
-    arcpy.SelectLayerByAttribute_management(parcels_for_modeling_layer, 'ADD_TO_SELECTION', query)
-
-    # count the selected features
-    count_type = arcpy.GetCount_management(parcels_for_modeling_layer)
-
-    # calculate the type field
-    arcpy.CalculateField_management(parcels_for_modeling_layer, field='TYPE', expression=f"'{tag}'")
-
-    # calculate the type field
-    arcpy.CalculateField_management(parcels_for_modeling_layer, field='SUBTYPE', expression=f"'{tag2}'")
-
-    # create the feature class for the parcel type
-    mhp = arcpy.FeatureClassToFeatureClass_conversion(parcels_for_modeling_layer, scratch, f'_07a_{tag}')
-
-    # delete features from working parcels
-    parcels_for_modeling_layer = arcpy.DeleteFeatures_management(parcels_for_modeling_layer)
-
-    # count remaining features
-    arcpy.SelectLayerByAttribute_management(parcels_for_modeling_layer, 'CLEAR_SELECTION')
-    count_remaining = arcpy.GetCount_management(parcels_for_modeling_layer)
-
-    # recalc acreage
-    # arcpy.CalculateGeometryAttributes_management(mhp, [['PARCEL_ACRES', 'AREA']], area_unit='ACRES')
-    arcpy.CalculateField_management(mhp, 'PARCEL_ACRES', '!SHAPE.area@ACRES!')
-
-    #################################
-    # get count from address points
-    #################################
-
-    # summarize address points address_point_count 'ap_count'
-    target_features = mhp
-    join_features = address_pts_no_base
-    output_features = os.path.join(gdb, '_02_mobile_home_park')
-    count_field_name = 'ap_count'
-
-    oug_sj2 = _get_layer_with_address_point_count(target_features, join_features, output_features, count_field_name)
-
-    # calculate basebldg field
-    arcpy.CalculateField_management(oug_sj2, field='basebldg', expression='1')
-
-    # message
-    print(f'{count_type} "{tag}" parcels were selected.\n{count_remaining} parcels remain...')
-
     #
     #
     #
