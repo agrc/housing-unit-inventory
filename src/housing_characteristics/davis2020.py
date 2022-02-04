@@ -2,10 +2,10 @@ import os
 
 import arcpy
 import pandas as pd
-
 # import numpy as np
 # from arcgis import GIS
-# from arcgis.features import GeoAccessor, GeoSeriesAccessor
+from arcgis.features import GeoAccessor, GeoSeriesAccessor
+from arcgis.geometry import Geometry
 
 #: TODO:
 #:      Do as much in data frames as possible
@@ -242,6 +242,39 @@ def _reclassify_tri_quad_to_appartment(layer, fields):
             cursor.updateRow(row)
 
 
+def evalute_pud_df(input_parcel_layer, common_area_features, address_points):
+    #: Summarize specific fields of parcels whose center is in the common area with specific stats for each field
+    #: Count number of address points in the common area parcel
+    #: BUILT_YR should be most common or latest (if most common is 0)
+
+    # fields = {
+    #     'TOTAL_MKT_VALUE': 'Sum',
+    #     'LAND_MKT_VALUE': 'Sum',
+    #     'BLDG_SQFT': 'Sum',
+    #     'FLOORS_CNT': 'Mean',
+    #     'BUILT_YR': 'Mode',
+    #     'BUILT_YR2': 'Max',
+    # }
+
+    #: arcgis.geometry.get_area, .contains, .centroid
+
+    #: The parcels data frame should probably be created outside the function (including centroid column) and passed in
+    parcel_df = pd.DataFrame.spatial.from_featureclass(input_parcel_layer)
+    common_area_df = pd.DataFrame.spatial.from_featureclass(common_area_features)
+    address_points_df = pd.DataFrame.spatial.from_featureclass(address_points)
+
+    parcel_df['CENTROIDS'] = parcel_df['SHAPE'].apply(
+        lambda shape: Geometry({
+            'x': shape.centroid[0],
+            'y': shape.centroid[1],
+            'spatialReference': shape.spatial_reference
+        })
+    )
+
+    parcel_df.set_geometry('CENTROIDS')
+    parcel_df.spatial.join()
+
+
 def evaluate_pud(input_parcel_layer, common_areas_features, scratch, address_points, output_gdb):
     """Run the PUD process.
 
@@ -271,6 +304,10 @@ def evaluate_pud(input_parcel_layer, common_areas_features, scratch, address_poi
     #: Save count of address points to ap_count
     #: From main parcel layer, delete parcels that have their center in, or are completely within, oug_sj2
     #: Update fields in oug_sj2
+
+    #: Summarize specific fields of parcels whose center is in the common area with specific stats for each field
+    #: Count number of address points in the common area parcel
+    #: BUILT_YR should be most common or latest (if most common is 0)
 
     tag = 'single_family'  #: TYPE_WFRC
     tag2 = 'pud'  #: SUBTYPE_WFRC
@@ -761,12 +798,18 @@ def davis():
     #                              'LAND_MKT_VALUE', 'PARCEL_ACRES', 'HOUSE_CNT', 'parcel_count', 'ap_count', 'BLDG_SQFT',
     #                              'FLOORS_CNT','BUILT_YR', 'des_all','NAME','NewSA', 'SHAPE']].copy()
 
-    rf_merged_df = rf_merged_df.rename(columns={'NAME': 'CITY'})
-    rf_merged_df = rf_merged_df.rename(columns={'NewSA': 'SUBREGION'})
+    #: Rename columns
+    rf_merged_df = rf_merged_df.rename(columns={
+        'NAME': 'CITY',
+        'NewSA': 'SUBREGION',
+        'parcel_count': 'PARCEL_COUNT',
+    })
 
     # calc note column using property class
+    #: TODO: Convert to fillna?
     #: 'NOTE' is not null if we already reclassified tri/quadplex to apartment
-    rf_merged_df.loc[(rf_merged_df['NOTE'].isnull()), 'NOTE'] = rf_merged_df['des_all']
+    # rf_merged_df.loc[(rf_merged_df['NOTE'].isnull()), 'NOTE'] = rf_merged_df['des_all']
+    rf_merged_df['NOTE'].fillna(rf_merged_df['des_all'], in_place=True)
 
     # convert unit count columns to int
     rf_merged_df.loc[(rf_merged_df['HOUSE_CNT'].isnull()), 'HOUSE_CNT'] = 0
@@ -814,9 +857,6 @@ def davis():
 
     # remove data points with zero units
     rf_merged_df = rf_merged_df[~(rf_merged_df['UNIT_COUNT'] == 0) & ~(rf_merged_df['HOUSE_CNT'] == 0)].copy()
-
-    # Final ordering and subsetting of fields
-    rf_merged_df = rf_merged_df.rename(columns={'parcel_count': 'PARCEL_COUNT'})
 
     # Final ordering and subsetting of fields
     rf_merged_df = rf_merged_df[[
