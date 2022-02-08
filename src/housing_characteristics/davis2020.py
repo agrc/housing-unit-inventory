@@ -46,10 +46,13 @@ def _get_parcels_in_modelling_area(parcels, area_boundary, scratch):
     return parcels_for_modeling_layer
 
 
-def _dissolve_duplicate_parcels(parcels_for_modeling_layer, scratch):
+def _dissolve_duplicate_parcels(parcels_for_modeling_layer):
     # dissolve on parcel id,summarizing attributes in various ways
+    parcels_dissolved_fc = 'memory/dissolved'
+    if arcpy.Exists(parcels_dissolved_fc):
+        arcpy.management.Delete(parcels_dissolved_fc)
     parcels_dissolved = arcpy.management.Dissolve(
-        parcels_for_modeling_layer, os.path.join(scratch, '_00_parcels_dissolved'), 'PARCEL_ID', [
+        parcels_for_modeling_layer, parcels_dissolved_fc, 'PARCEL_ID', [
             ['PARCEL_ID', 'COUNT'],
             ['TAXEXEMPT_TYPE', 'FIRST'],
             ['TOTAL_MKT_VALUE', 'SUM'],
@@ -89,7 +92,7 @@ def _dissolve_duplicate_parcels(parcels_for_modeling_layer, scratch):
     # remove parcels without parcel ids
     # parcels_dissolved_sdf = parcels_dissolved_sdf[parcels_dissolved_sdf['PARCEL_ID'].isnull() == False].copy()
     # parcels_dissolved_sdf = parcels_dissolved_sdf[parcels_dissolved_sdf['PARCEL_ID'].notnull()].copy()
-    parcels_dissolved_sdf.dropna(subset='PARCEL_ID', inplace=True)
+    parcels_dissolved_sdf.dropna(subset=['PARCEL_ID'], inplace=True)
 
     return parcels_dissolved_sdf
 
@@ -134,6 +137,18 @@ def _remove_empty_geomtries(layer):
                 print(f'Feature OID {oid} has missing area or length but not both')
 
     return layer
+
+
+def _remove_empty_geometries_dataframe(dfs, shape_field='SHAPE'):
+    """Drop any rows (in place) in a spatially enabled dataframe that have na values in shape_field
+
+    Args:
+        dfs (list<spatially enabled DataFrame>): List of dataframes to clean
+        shape_field (str, optional): Field to check for empty geometries. Defaults to 'SHAPE'.
+    """
+
+    for df in dfs:
+        df.dropna(subset=[shape_field], inplace=True)
 
 
 def _build_field_mapping(target, join, fields):
@@ -242,6 +257,28 @@ def _reclassify_tri_quad_to_appartment(layer, fields):
             cursor.updateRow(row)
 
 
+def _change_geometry(dataframe, to_new_geometry_column, current_geometry_name):
+    """Swap between spatially-enabled data frame shape columns.
+
+    Copies new column to 'SHAPE' and resets the geometry and spatial index to support operations that expect the
+    geometry column to be 'SHAPE'. Saves the existing 'SHAPE' data to a new column so that you can swap back later.
+    Edits the dataframe in place, does not create a new copy.
+
+    Args:
+        dataframe (spatially enabled DataFrame): The dataframe to swap geometries. Should have an existing 'SHAPE'
+        geometry column.
+        to_new_geometry_column (str): The the new column in df to use for geometry. Will be copied over to 'SHAPE'.
+        current_geometry_name (str): A name for the column to copy the existing 'SHAPE' column to for future reuse.
+    """
+    #: WARNING: if you do this twice with the same geometry, you may overwrite the other column and lose it forever.
+    #: I haven't tested that yet.
+
+    dataframe[current_geometry_name] = dataframe['SHAPE']
+    dataframe['SHAPE'] = dataframe[to_new_geometry_column]
+    dataframe.spatial.set_geometry('SHAPE')
+    dataframe.spatial.sindex(reset=True)  #: not sure how necessary this is, but for safety's sake
+
+
 def evalute_pud_df(input_parcel_layer, common_area_features, address_points):
     #: Summarize specific fields of parcels whose center is in the common area with specific stats for each field
     #: Count number of address points in the common area parcel
@@ -259,9 +296,12 @@ def evalute_pud_df(input_parcel_layer, common_area_features, address_points):
     #: arcgis.geometry.get_area, .contains, .centroid
 
     #: The parcels data frame should probably be created outside the function (including centroid column) and passed in
-    parcel_df = pd.DataFrame.spatial.from_featureclass(input_parcel_layer)
+    # parcel_df = pd.DataFrame.spatial.from_featureclass(input_parcel_layer)
+    parcel_df = _dissolve_duplicate_parcels(input_parcel_layer)
     common_area_df = pd.DataFrame.spatial.from_featureclass(common_area_features)
     address_points_df = pd.DataFrame.spatial.from_featureclass(address_points)
+
+    common_area_type_field = 'TYPE'
 
     parcel_df['CENTROIDS'] = parcel_df['SHAPE'].apply(
         lambda shape: Geometry({
@@ -270,15 +310,16 @@ def evalute_pud_df(input_parcel_layer, common_area_features, address_points):
             'spatialReference': shape.spatial_reference
         })
     )
+    _remove_empty_geometries_dataframe([parcel_df, common_area_df])
 
-    parcel_df.set_geometry('CENTROIDS')
-    parcel_df.spatial.join()
+    _change_geometry(parcel_df, 'CENTROIDS', 'POLYS')
+    pud_parcels_df = parcel_df.spatial.join(common_area_df, 'inner', 'within')
 
 
 def evaluate_pud(input_parcel_layer, common_areas_features, scratch, address_points, output_gdb):
     """Run the PUD process.
 
-    Saves analyzed PUD parcels to ouput gdb/_02_pud feature class and passes the original parcel layer without the PUD
+    Saves analyzed PUD parcels to output gdb/_02_pud feature class and passes the original parcel layer without the PUD
     parcels for further analysis
 
     Args:
@@ -704,7 +745,7 @@ def davis():
     parcels_in_study_area = _get_parcels_in_modelling_area(parcels, taz_shp, scratch)
 
     #: Dissolve duplicate parcel ids
-    parcels_dissolved_sdf = _dissolve_duplicate_parcels(parcels_in_study_area, scratch)
+    parcels_dissolved_sdf = _dissolve_duplicate_parcels(parcels_in_study_area)
 
     # Load Extended Descriptions - be sure to format ACCOUNTNO column as text in excel first
     #: NOTE: this parcels_for_modeling_layer is completely independent of the earlier one.
