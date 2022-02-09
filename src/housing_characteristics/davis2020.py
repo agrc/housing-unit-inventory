@@ -290,6 +290,7 @@ def _change_geometry(dataframe, to_new_geometry_column, current_geometry_name):
 
 def evalute_pud_df(parcels_df, common_area_df, address_points_df):
     #: Summarize specific fields of parcels that intersect the common area with specific stats for each field
+    #:      Save summaries to common area parcels
     #: Count number of address points in the common area parcel
     #: BUILT_YR should be most common or latest (if most common is 0)
 
