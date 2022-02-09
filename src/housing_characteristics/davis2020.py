@@ -47,6 +47,7 @@ def _get_parcels_in_modelling_area(parcels, area_boundary, scratch):
 
 
 def _dissolve_duplicate_parcels(parcels_for_modeling_layer):
+    #: TODO: rename '_clean_parcels' because that's what it does
     # dissolve on parcel id,summarizing attributes in various ways
     parcels_dissolved_fc = 'memory/dissolved'
     if arcpy.Exists(parcels_dissolved_fc):
@@ -69,9 +70,9 @@ def _dissolve_duplicate_parcels(parcels_for_modeling_layer):
     )
 
     # rename columns
-    #: moves OBJECTID to first column
-    parcels_dissolved_sdf = pd.DataFrame.spatial.from_featureclass(parcels_dissolved)
-    parcels_dissolved_sdf.columns = [
+    #: moves OBJECTID, COUNT_PARCEL_ID
+    parcels_dissolved_df = pd.DataFrame.spatial.from_featureclass(parcels_dissolved)
+    parcels_dissolved_df.columns = [
         'OBJECTID',
         'PARCEL_ID',
         'COUNT_PARCEL_ID',
@@ -89,12 +90,10 @@ def _dissolve_duplicate_parcels(parcels_for_modeling_layer):
         'SHAPE',
     ]
 
-    # remove parcels without parcel ids
-    # parcels_dissolved_sdf = parcels_dissolved_sdf[parcels_dissolved_sdf['PARCEL_ID'].isnull() == False].copy()
-    # parcels_dissolved_sdf = parcels_dissolved_sdf[parcels_dissolved_sdf['PARCEL_ID'].notnull()].copy()
-    parcels_dissolved_sdf.dropna(subset=['PARCEL_ID'], inplace=True)
+    #: Remove parcels without parcel ids or empty geometries
+    parcels_dissolved_df.dropna(subset=['PARCEL_ID', 'SHAPE'], inplace=True)
 
-    return parcels_dissolved_sdf
+    return parcels_dissolved_df
 
 
 def _join_extended_parcel_info(info_csv, parcels_dissolved_sdf, scratch):
@@ -114,6 +113,15 @@ def _join_extended_parcel_info(info_csv, parcels_dissolved_sdf, scratch):
     return parcels_for_modeling_layer
 
 
+def _read_extra_info_into_dataframe(info_csv, csv_join_field, csv_join_field_type, pad_length, csv_fields):
+    csv_df = (
+        pd.read_csv(info_csv, dtype={csv_join_field: csv_join_field_type}) \
+            .assign(**{csv_join_field: lambda df: df[csv_join_field.zfill(pad_length)]})  #: Pad join field
+    )
+
+    return csv_df[csv_fields].copy()
+
+
 def _add_fields(layer, fields):
 
     for field, field_type in fields.items():
@@ -122,6 +130,7 @@ def _add_fields(layer, fields):
     return layer
 
 
+#: done with pandas instead
 def _remove_empty_geomtries(layer):
 
     #: According to Esri, a geometry is empty if area and/or length are emtpy/0.
@@ -279,8 +288,8 @@ def _change_geometry(dataframe, to_new_geometry_column, current_geometry_name):
     dataframe.spatial.sindex(reset=True)  #: not sure how necessary this is, but for safety's sake
 
 
-def evalute_pud_df(input_parcel_layer, common_area_features, address_points):
-    #: Summarize specific fields of parcels whose center is in the common area with specific stats for each field
+def evalute_pud_df(parcels_df, common_area_df, address_points_df):
+    #: Summarize specific fields of parcels that intersect the common area with specific stats for each field
     #: Count number of address points in the common area parcel
     #: BUILT_YR should be most common or latest (if most common is 0)
 
@@ -295,25 +304,9 @@ def evalute_pud_df(input_parcel_layer, common_area_features, address_points):
 
     #: arcgis.geometry.get_area, .contains, .centroid
 
-    #: The parcels data frame should probably be created outside the function (including centroid column) and passed in
-    # parcel_df = pd.DataFrame.spatial.from_featureclass(input_parcel_layer)
-    parcel_df = _dissolve_duplicate_parcels(input_parcel_layer)
-    common_area_df = pd.DataFrame.spatial.from_featureclass(common_area_features)
-    address_points_df = pd.DataFrame.spatial.from_featureclass(address_points)
-
-    common_area_type_field = 'TYPE'
-
-    parcel_df['CENTROIDS'] = parcel_df['SHAPE'].apply(
-        lambda shape: Geometry({
-            'x': shape.centroid[0],
-            'y': shape.centroid[1],
-            'spatialReference': shape.spatial_reference
-        })
-    )
-    _remove_empty_geometries_dataframe([parcel_df, common_area_df])
-
-    _change_geometry(parcel_df, 'CENTROIDS', 'POLYS')
-    pud_parcels_df = parcel_df.spatial.join(common_area_df, 'inner', 'within')
+    pud_parcels_df = parcels_df.spatial.join(common_area_df, 'inner', 'intersect')
+    #: TODO: work on these groupby/sums. Probably need to test it first.
+    pud_parcels_df['TOTAL_MKT_VALUE'] = pud_parcels_df.groupby('PARCEL_ID')['TOTAL_MKT_VALUE'].sum()
 
 
 def evaluate_pud(input_parcel_layer, common_areas_features, scratch, address_points, output_gdb):
@@ -711,6 +704,72 @@ def _add_area_attribute(target_features, area_features, output_features):
     )
 
     return rf_merged
+
+
+# def _get_common_areas_as_df(common_areas_fc, type_field, common_area_name):
+
+
+def davis_by_dataframe():
+    arcpy.env.overwriteOutput = True
+
+    #: Inputs
+    taz_shp = '.\\Inputs\\TAZ.shp'
+    parcels_fc = '.\\Inputs\\Davis_County_LIR_Parcels.gdb\\Parcels_Davis_LIR_UTM12'
+    address_pts = '.\\Inputs\\AddressPoints_Davis.gdb\\address_points_davis'
+    common_areas_fc = r'.\Inputs\Common_Areas.gdb\Common_Areas_Reviewed'
+    extended_info_csv = r'.\Inputs\davis_extended_simplified.csv'
+    mobile_home_communities = '.\\Inputs\\Mobile_Home_Parks.shp'
+
+    # create output gdb
+    outputs = '.\\Outputs'
+    gdb = os.path.join(outputs, 'classes_HUI.gdb')
+    if not arcpy.Exists(gdb):
+        arcpy.CreateFileGDB_management(outputs, 'classes_HUI.gdb')
+
+    scratch = os.path.join(outputs, 'scratch_HUI.gdb')
+    if not arcpy.Exists(scratch):
+        arcpy.CreateFileGDB_management(outputs, 'scratch_HUI.gdb')
+
+    #: Address points (used later)
+    address_pts_no_base = _get_non_base_addr_points(address_pts, scratch)
+
+    #: Prep Main Parcel Layer
+    # select parcels within modeling area
+    # parcels_in_study_area = _get_parcels_in_modelling_area(parcels, taz_shp, scratch)
+
+    #: Dissolve duplicate parcel ids
+    parcels_cleaned_df = _dissolve_duplicate_parcels(parcels_fc)
+
+    #: Add second built year field for handling mode/max built year values
+    #: May not need this, may be able to handle 0 in BUILT_YR during the analysis phase rather than doing it later
+    parcels_cleaned_df['BUILT_YR2'] = parcels_cleaned_df['BUILT_YR']
+
+    # Load Extended Descriptions - be sure to format ACCOUNTNO column as text in excel first
+    # parcels_for_modeling_layer = _join_extended_parcel_info(davis_extended, parcels_cleaned_df, scratch)
+
+    extra_data_df = _read_extra_info_into_dataframe(
+        extended_info_csv, 'ACCOUNTNO', str, 9, ['ACCOUNTNO', 'des_all', 'class']
+    )
+    parcels_merged_df = parcels_cleaned_df.merge(extra_data_df, left_on='PARCEL_ID', right_on='ACCOUNTNO', how='left')
+
+    #: Fields can just be added as dataframe columns when needed
+    # fields = {
+    #     'TYPE': 'TEXT',
+    #     'SUBTYPE': 'TEXT',
+    #     'NOTE': 'TEXT',
+    #     'BUILT_YR2': 'SHORT',
+    # }
+    # parcels_for_modeling_layer = _add_fields(parcels_for_modeling_layer, fields)
+
+    # get a count of all parcels
+    count_all = parcels_merged_df.shape[0]
+    print(f'# initial parcels in modeling area:\n {count_all}')
+
+    common_areas_df = pd.DataFrame.spatial.from_featureclass(common_areas_fc)
+    pud_common_areas_df = common_areas_df[common_areas_df['SUBTYPE_WFRC'] == 'pud']
+    pud_common_areas_df['IS_OUG'] = 1
+    multi_family_common_areas_df = common_areas_df[common_areas_df['TYPE_WFRC'] == 'multi_family']
+    multi_family_common_areas_df['IS_OUG'] = 1
 
 
 def davis():
