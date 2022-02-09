@@ -2,7 +2,7 @@
 # -*- encoding: utf-8 -*-
 """
 setup.py
-A module that installs housing-characteristics as a module
+A module that installs housing-unit-inventory as a module
 """
 from glob import glob
 from os.path import basename, splitext
@@ -10,13 +10,13 @@ from os.path import basename, splitext
 from setuptools import find_packages, setup
 
 setup(
-    name='ugrc-housing-characteristics',
+    name='ugrc-housing-unit-inventory',
     version='1.0.0',
     license='',
-    description='Analyze the housing characteristics of a county or other geography',
+    description='Analyze the housing inventory of a county or other geography',
     author='Josh Reynolds, WFRC; Jake Adams, UGRC',
     author_email='jdadams@utah.gov',
-    url='https://github.com/agrc/housing-characteristics',
+    url='https://github.com/agrc/housing-unit-inventory',
     packages=find_packages('src'),
     package_dir={'': 'src'},
     py_modules=[splitext(basename(path))[0] for path in glob('src/*.py')],
@@ -29,7 +29,7 @@ setup(
         'Topic :: Utilities',
     ],
     project_urls={
-        'Issue Tracker': 'https://github.com/agrc/housing-characteristics/issues',
+        'Issue Tracker': 'https://github.com/agrc/housing-unit-inventory/issues',
     },
     keywords=['gis'],
     install_requires=[
@@ -55,6 +55,6 @@ setup(
         'pytest-runner',
     ],
     entry_points={'console_scripts': [
-        'housing-characteristics = housing_characteristics.main:process',
+        'housing-unit-inventory = housing_unit-inventory.main:process',
     ]},
 )
