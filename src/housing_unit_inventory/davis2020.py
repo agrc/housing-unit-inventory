@@ -199,6 +199,35 @@ def _create_centroids_within_common_area(parcels, common_areas, output):
     return centroids
 
 
+def _add_centroids_to_parcel_df(parcels_df, join_field):
+    memory_parcels = 'memory/parcels'
+    memory_centroids = 'memory/centroids'
+
+    for featureclass in [memory_centroids, memory_parcels]:
+        if arcpy.Exists(featureclass):
+            arcpy.management.Delete(featureclass)
+
+    parcels_df.spatial.to_featureclass(memory_parcels)
+    arcpy.management.FeatureToPoint(memory_parcels, memory_centroids, 'INSIDE')
+    centroids_df = (
+        pd.DataFrame.spatial.from_featureclass(memory_centroids)[[join_field.lower(), 'SHAPE']].rename(
+            columns={
+                'SHAPE': 'CENTROIDS',
+                join_field.lower(): join_field
+            }
+        )  #: feature class lowercases the columns
+        .assign(**{join_field: lambda df: df[join_field].astype(str)})  #: ensure it's a str for join
+    )
+
+    joined_df = parcels_df.join(centroids_df, on=join_field, how='left')
+
+    blank_centroids = joined_df['CENTROIDS'].isna().sum()
+    if blank_centroids:
+        print(f'{blank_centroids} blank centroids!')
+
+    return joined_df
+
+
 def _get_layer_with_address_point_count(target_features, join_features, output_features, count_field_name):
 
     fieldmappings = arcpy.FieldMappings()
@@ -291,6 +320,7 @@ def _change_geometry(dataframe, to_new_geometry_column, current_geometry_name):
 def evalute_pud_df(parcels_df, common_area_df, address_points_df):
     #: Summarize specific fields of parcels that intersect the common area with specific stats for each field
     #:      Save summaries to common area parcels
+    #:      Need to convert parcels to centroids to ensure spatial join is accurate
     #: Count number of address points in the common area parcel
     #: BUILT_YR should be most common or latest (if most common is 0)
 
@@ -305,9 +335,17 @@ def evalute_pud_df(parcels_df, common_area_df, address_points_df):
 
     #: arcgis.geometry.get_area, .contains, .centroid
 
-    pud_parcels_df = parcels_df.spatial.join(common_area_df, 'inner', 'intersect')
-    #: TODO: work on these groupby/sums. Probably need to test it first.
-    pud_parcels_df['TOTAL_MKT_VALUE'] = pud_parcels_df.groupby('PARCEL_ID')['TOTAL_MKT_VALUE'].sum()
+    #: Round trip parcels through arcpy to get centroids
+    _change_geometry(parcels_df, 'CENTROIDS', 'POLYS')
+
+    pud_parcels_df = common_area_df.spatial.join(parcels_df, 'inner', 'contains')
+
+    total_mkt_value_sum_series = pud_parcels_df.groupby('PARCEL_ID')['TOTAL_MKT_VALUE'].sum()
+    land_mkt_value_sum_series = pud_parcels_df.groupby('PARCEL_ID')['LAND_MKT_VALUE'].sum()
+    bldg_sqft_sum_series = pud_parcels_df.groupby('PARCEL_ID')['BLDG_SQFT'].sum()
+    total_mkt_value_sum_series = pud_parcels_df.groupby('PARCEL_ID')['TOTAL_MKT_VALUE'].sum()
+
+    #: TODO: merge sums back into pud_parcels_df
 
 
 def evaluate_pud(input_parcel_layer, common_areas_features, scratch, address_points, output_gdb):
@@ -753,6 +791,8 @@ def davis_by_dataframe():
     )
     parcels_merged_df = parcels_cleaned_df.merge(extra_data_df, left_on='PARCEL_ID', right_on='ACCOUNTNO', how='left')
 
+    parcels_with_centroids_df = _add_centroids_to_parcel_df(parcels_merged_df, 'PARCEL_ID')
+
     #: Fields can just be added as dataframe columns when needed
     # fields = {
     #     'TYPE': 'TEXT',
@@ -763,7 +803,7 @@ def davis_by_dataframe():
     # parcels_for_modeling_layer = _add_fields(parcels_for_modeling_layer, fields)
 
     # get a count of all parcels
-    count_all = parcels_merged_df.shape[0]
+    count_all = parcels_with_centroids_df.shape[0]
     print(f'# initial parcels in modeling area:\n {count_all}')
 
     common_areas_df = pd.DataFrame.spatial.from_featureclass(common_areas_fc)
