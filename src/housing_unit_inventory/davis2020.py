@@ -317,7 +317,19 @@ def _change_geometry(dataframe, to_new_geometry_column, current_geometry_name):
     dataframe.spatial.sindex(reset=True)  #: not sure how necessary this is, but for safety's sake
 
 
-def evalute_pud_df(parcels_df, common_area_df, address_points_df):
+#: TestMe
+def _get_proper_built_yr_value_series(parcels_df, index_col, built_yr_col):
+    built_yr_mode_series = parcels_df.groupby(index_col)[built_yr_col].agg(pd.Series.mode)
+    built_yr_max_series = parcels_df.groupby(index_col)[built_yr_col].max()
+    built_yr_df = pd.DataFrame({'mode': built_yr_mode_series, 'max': built_yr_max_series})
+    built_yr_df[built_yr_col] = built_yr_df['mode']
+    built_yr_df.loc[built_yr_df[built_yr_col] == 0, built_yr_col] == built_yr_df['max']
+
+    return built_yr_df[built_yr_col]
+
+
+def evalute_pud_df(parcels_df, common_area_df, address_points_df, index_col='PARCEL_ID'):
+
     #: Summarize specific fields of parcels that intersect the common area with specific stats for each field
     #:      Save summaries to common area parcels
     #:      Need to convert parcels to centroids to ensure spatial join is accurate
@@ -340,12 +352,20 @@ def evalute_pud_df(parcels_df, common_area_df, address_points_df):
 
     pud_parcels_df = common_area_df.spatial.join(parcels_df, 'inner', 'contains')
 
-    total_mkt_value_sum_series = pud_parcels_df.groupby('PARCEL_ID')['TOTAL_MKT_VALUE'].sum()
-    land_mkt_value_sum_series = pud_parcels_df.groupby('PARCEL_ID')['LAND_MKT_VALUE'].sum()
-    bldg_sqft_sum_series = pud_parcels_df.groupby('PARCEL_ID')['BLDG_SQFT'].sum()
-    total_mkt_value_sum_series = pud_parcels_df.groupby('PARCEL_ID')['TOTAL_MKT_VALUE'].sum()
+    total_mkt_value_sum_series = pud_parcels_df.groupby(index_col)['TOTAL_MKT_VALUE'].sum()
+    land_mkt_value_sum_series = pud_parcels_df.groupby(index_col)['LAND_MKT_VALUE'].sum()
+    bldg_sqft_sum_series = pud_parcels_df.groupby(index_col)['BLDG_SQFT'].sum()
+    floors_cnt_mean_series = pud_parcels_df.groupby(index_col)['FLOORS_CNT'].mean()
+    built_yr_series = _get_proper_built_yr_value_series(pud_parcels_df, index_col, 'BUILT_YR')
 
-    #: TODO: merge sums back into pud_parcels_df
+    evaluated_pud_parcels = pd.concat([
+        common_area_df.set_index(index_col),
+        total_mkt_value_sum_series,
+        land_mkt_value_sum_series,
+        bldg_sqft_sum_series,
+        floors_cnt_mean_series,
+        built_yr_series,
+    ])
 
 
 def evaluate_pud(input_parcel_layer, common_areas_features, scratch, address_points, output_gdb):
