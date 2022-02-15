@@ -55,6 +55,6 @@ setup(
         'pytest-runner',
     ],
     entry_points={'console_scripts': [
-        'housing-unit-inventory = housing_unit-inventory.main:process',
+        'hui = housing_unit_inventory.main:process',
     ]},
 )

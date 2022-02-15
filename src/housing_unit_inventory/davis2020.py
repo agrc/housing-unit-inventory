@@ -323,7 +323,7 @@ def _get_proper_built_yr_value_series(parcels_df, index_col, built_yr_col):
     built_yr_max_series = parcels_df.groupby(index_col)[built_yr_col].max()
     built_yr_df = pd.DataFrame({'mode': built_yr_mode_series, 'max': built_yr_max_series})
     built_yr_df[built_yr_col] = built_yr_df['mode']
-    built_yr_df.loc[built_yr_df[built_yr_col] == 0, built_yr_col] == built_yr_df['max']
+    built_yr_df.loc[built_yr_df[built_yr_col] == 0, built_yr_col] = built_yr_df['max']
 
     return built_yr_df[built_yr_col]
 
