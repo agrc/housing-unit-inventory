@@ -317,10 +317,32 @@ def _change_geometry(dataframe, to_new_geometry_column, current_geometry_name):
     dataframe.spatial.sindex(reset=True)  #: not sure how necessary this is, but for safety's sake
 
 
-#: TestMe
 def _get_proper_built_yr_value_series(parcels_df, index_col, built_yr_col):
-    built_yr_mode_series = parcels_df.groupby(index_col)[built_yr_col].agg(pd.Series.mode)
-    built_yr_max_series = parcels_df.groupby(index_col)[built_yr_col].max()
+    """Return either the most common yearbuilt or the max if the common is 0
+
+    Args:
+        parcels_df (pd.DataFrame.spatial): The parcels data
+        index_col (str): The primary key of the parcel table (usually a parcel number/id)
+        built_yr_col (str): The column holding the built year as an integar/float
+
+    Returns:
+        pd.Series: A series of the built year, indexed by the unique values in index_col
+    """
+
+    parcels_grouped = parcels_df.groupby(index_col)
+
+    #: Set mode to 0 to start with
+    built_yr_mode_series = pd.Series(data=0, index=parcels_grouped.groups.keys(), name=built_yr_col)
+    built_yr_mode_series.index.name = index_col
+    #: If we can get a single mode value, use that instead
+    try:
+        built_yr_mode_series = parcels_grouped[built_yr_col].agg(pd.Series.mode)
+    #: If there are multiple modes, .mode returns them all and .agg complains there isn't a single value
+    except ValueError as error:
+        if str(error) == 'Must produce aggregated value':
+            pass
+
+    built_yr_max_series = parcels_grouped[built_yr_col].max()
     built_yr_df = pd.DataFrame({'mode': built_yr_mode_series, 'max': built_yr_max_series})
     built_yr_df[built_yr_col] = built_yr_df['mode']
     built_yr_df.loc[built_yr_df[built_yr_col] == 0, built_yr_col] = built_yr_df['max']
@@ -358,7 +380,7 @@ def evalute_pud_df(parcels_df, common_area_df, address_points_df, index_col='PAR
     floors_cnt_mean_series = pud_parcels_df.groupby(index_col)['FLOORS_CNT'].mean()
     built_yr_series = _get_proper_built_yr_value_series(pud_parcels_df, index_col, 'BUILT_YR')
 
-    evaluated_pud_parcels = pd.concat([
+    evaluated_pud_parcels_df = pd.concat([
         common_area_df.set_index(index_col),
         total_mkt_value_sum_series,
         land_mkt_value_sum_series,
@@ -366,6 +388,9 @@ def evalute_pud_df(parcels_df, common_area_df, address_points_df, index_col='PAR
         floors_cnt_mean_series,
         built_yr_series,
     ])
+
+    evaluated_pud_parcels_df['TYPE'] = 'single_family'
+    evaluated_pud_parcels_df['SUBTYPE'] = 'pud'
 
 
 def evaluate_pud(input_parcel_layer, common_areas_features, scratch, address_points, output_gdb):
