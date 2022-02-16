@@ -14,3 +14,21 @@ class TestHelperMethods:
         test_series = pd.Series(data=[5, 7], index=[1, 2], name='BUILT_YR')
         test_series.index.name = 'PARCEL_ID'
         tm.assert_series_equal(built_yr_series, test_series)
+
+    def test_get_proper_built_yr_value_series_zeroes_gets_max(self, mocker):
+        test_parcels_df = pd.DataFrame({'PARCEL_ID': [1, 1, 1, 2], 'BUILT_YR': [0, 0, 6, 7]})
+
+        built_yr_series = davis2020._get_proper_built_yr_value_series(test_parcels_df, 'PARCEL_ID', 'BUILT_YR')
+
+        test_series = pd.Series(data=[6, 7], index=[1, 2], name='BUILT_YR')
+        test_series.index.name = 'PARCEL_ID'
+        tm.assert_series_equal(built_yr_series, test_series)
+
+    def test_get_proper_built_yr_value_series_multiple_modes_gets_max(self, mocker):
+        test_parcels_df = pd.DataFrame({'PARCEL_ID': [1, 1, 1, 2], 'BUILT_YR': [4, 5, 6, 7]})
+
+        built_yr_series = davis2020._get_proper_built_yr_value_series(test_parcels_df, 'PARCEL_ID', 'BUILT_YR')
+
+        test_series = pd.Series(data=[6, 7], index=[1, 2], name='BUILT_YR')
+        test_series.index.name = 'PARCEL_ID'
+        tm.assert_series_equal(built_yr_series, test_series)
