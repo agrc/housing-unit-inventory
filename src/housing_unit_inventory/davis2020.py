@@ -113,15 +113,6 @@ def _join_extended_parcel_info(info_csv, parcels_dissolved_sdf, scratch):
     return parcels_for_modeling_layer
 
 
-def _read_extra_info_into_dataframe(info_csv, csv_join_field, csv_join_field_type, pad_length, csv_fields):
-    csv_df = (
-        pd.read_csv(info_csv, dtype={csv_join_field: csv_join_field_type}) \
-            .assign(**{csv_join_field: lambda df: df[csv_join_field.zfill(pad_length)]})  #: Pad join field
-    )
-
-    return csv_df[csv_fields].copy()
-
-
 def _add_fields(layer, fields):
 
     for field, field_type in fields.items():
@@ -199,35 +190,6 @@ def _create_centroids_within_common_area(parcels, common_areas, output):
     return centroids
 
 
-def _add_centroids_to_parcel_df(parcels_df, join_field):
-    memory_parcels = 'memory/parcels'
-    memory_centroids = 'memory/centroids'
-
-    for featureclass in [memory_centroids, memory_parcels]:
-        if arcpy.Exists(featureclass):
-            arcpy.management.Delete(featureclass)
-
-    parcels_df.spatial.to_featureclass(memory_parcels)
-    arcpy.management.FeatureToPoint(memory_parcels, memory_centroids, 'INSIDE')
-    centroids_df = (
-        pd.DataFrame.spatial.from_featureclass(memory_centroids)[[join_field.lower(), 'SHAPE']].rename(
-            columns={
-                'SHAPE': 'CENTROIDS',
-                join_field.lower(): join_field
-            }
-        )  #: feature class lowercases the columns
-        .assign(**{join_field: lambda df: df[join_field].astype(str)})  #: ensure it's a str for join
-    )
-
-    joined_df = parcels_df.join(centroids_df, on=join_field, how='left')
-
-    blank_centroids = joined_df['CENTROIDS'].isna().sum()
-    if blank_centroids:
-        print(f'{blank_centroids} blank centroids!')
-
-    return joined_df
-
-
 def _get_layer_with_address_point_count(target_features, join_features, output_features, count_field_name):
 
     fieldmappings = arcpy.FieldMappings()
@@ -293,104 +255,6 @@ def _reclassify_tri_quad_to_appartment(layer, fields):
                 row[1] = row[2]
 
             cursor.updateRow(row)
-
-
-def _change_geometry(dataframe, to_new_geometry_column, current_geometry_name):
-    """Swap between spatially-enabled data frame shape columns.
-
-    Copies new column to 'SHAPE' and resets the geometry and spatial index to support operations that expect the
-    geometry column to be 'SHAPE'. Saves the existing 'SHAPE' data to a new column so that you can swap back later.
-    Edits the dataframe in place, does not create a new copy.
-
-    Args:
-        dataframe (spatially enabled DataFrame): The dataframe to swap geometries. Should have an existing 'SHAPE'
-        geometry column.
-        to_new_geometry_column (str): The the new column in df to use for geometry. Will be copied over to 'SHAPE'.
-        current_geometry_name (str): A name for the column to copy the existing 'SHAPE' column to for future reuse.
-    """
-    #: WARNING: if you do this twice with the same geometry, you may overwrite the other column and lose it forever.
-    #: I haven't tested that yet.
-
-    dataframe[current_geometry_name] = dataframe['SHAPE']
-    dataframe['SHAPE'] = dataframe[to_new_geometry_column]
-    dataframe.spatial.set_geometry('SHAPE')
-    dataframe.spatial.sindex(reset=True)  #: not sure how necessary this is, but for safety's sake
-
-
-def _get_proper_built_yr_value_series(parcels_df, index_col, built_yr_col):
-    """Return either the most common yearbuilt or the max if the common is 0
-
-    Args:
-        parcels_df (pd.DataFrame.spatial): The parcels data
-        index_col (str): The primary key of the parcel table (usually a parcel number/id)
-        built_yr_col (str): The column holding the built year as an integar/float
-
-    Returns:
-        pd.Series: A series of the built year, indexed by the unique values in index_col
-    """
-
-    parcels_grouped = parcels_df.groupby(index_col)
-
-    #: Set mode to 0 to start with
-    built_yr_mode_series = pd.Series(data=0, index=parcels_grouped.groups.keys(), name=built_yr_col)
-    built_yr_mode_series.index.name = index_col
-    #: If we can get a single mode value, use that instead
-    try:
-        built_yr_mode_series = parcels_grouped[built_yr_col].agg(pd.Series.mode)
-    #: If there are multiple modes, .mode returns them all and .agg complains there isn't a single value
-    except ValueError as error:
-        if str(error) == 'Must produce aggregated value':
-            pass
-
-    built_yr_max_series = parcels_grouped[built_yr_col].max()
-    built_yr_df = pd.DataFrame({'mode': built_yr_mode_series, 'max': built_yr_max_series})
-    built_yr_df[built_yr_col] = built_yr_df['mode']
-    built_yr_df.loc[built_yr_df[built_yr_col] == 0, built_yr_col] = built_yr_df['max']
-
-    return built_yr_df[built_yr_col]
-
-
-def evalute_pud_df(parcels_df, common_area_df, address_points_df, index_col='PARCEL_ID'):
-
-    #: Summarize specific fields of parcels that intersect the common area with specific stats for each field
-    #:      Save summaries to common area parcels
-    #:      Need to convert parcels to centroids to ensure spatial join is accurate
-    #: Count number of address points in the common area parcel
-    #: BUILT_YR should be most common or latest (if most common is 0)
-
-    # fields = {
-    #     'TOTAL_MKT_VALUE': 'Sum',
-    #     'LAND_MKT_VALUE': 'Sum',
-    #     'BLDG_SQFT': 'Sum',
-    #     'FLOORS_CNT': 'Mean',
-    #     'BUILT_YR': 'Mode',
-    #     'BUILT_YR2': 'Max',
-    # }
-
-    #: arcgis.geometry.get_area, .contains, .centroid
-
-    #: Round trip parcels through arcpy to get centroids
-    _change_geometry(parcels_df, 'CENTROIDS', 'POLYS')
-
-    pud_parcels_df = common_area_df.spatial.join(parcels_df, 'inner', 'contains')
-
-    total_mkt_value_sum_series = pud_parcels_df.groupby(index_col)['TOTAL_MKT_VALUE'].sum()
-    land_mkt_value_sum_series = pud_parcels_df.groupby(index_col)['LAND_MKT_VALUE'].sum()
-    bldg_sqft_sum_series = pud_parcels_df.groupby(index_col)['BLDG_SQFT'].sum()
-    floors_cnt_mean_series = pud_parcels_df.groupby(index_col)['FLOORS_CNT'].mean()
-    built_yr_series = _get_proper_built_yr_value_series(pud_parcels_df, index_col, 'BUILT_YR')
-
-    evaluated_pud_parcels_df = pd.concat([
-        common_area_df.set_index(index_col),
-        total_mkt_value_sum_series,
-        land_mkt_value_sum_series,
-        bldg_sqft_sum_series,
-        floors_cnt_mean_series,
-        built_yr_series,
-    ])
-
-    evaluated_pud_parcels_df['TYPE'] = 'single_family'
-    evaluated_pud_parcels_df['SUBTYPE'] = 'pud'
 
 
 def evaluate_pud(input_parcel_layer, common_areas_features, scratch, address_points, output_gdb):
@@ -791,71 +655,6 @@ def _add_area_attribute(target_features, area_features, output_features):
 
 
 # def _get_common_areas_as_df(common_areas_fc, type_field, common_area_name):
-
-
-def davis_by_dataframe():
-    arcpy.env.overwriteOutput = True
-
-    #: Inputs
-    taz_shp = '.\\Inputs\\TAZ.shp'
-    parcels_fc = '.\\Inputs\\Davis_County_LIR_Parcels.gdb\\Parcels_Davis_LIR_UTM12'
-    address_pts = '.\\Inputs\\AddressPoints_Davis.gdb\\address_points_davis'
-    common_areas_fc = r'.\Inputs\Common_Areas.gdb\Common_Areas_Reviewed'
-    extended_info_csv = r'.\Inputs\davis_extended_simplified.csv'
-    mobile_home_communities = '.\\Inputs\\Mobile_Home_Parks.shp'
-
-    # create output gdb
-    outputs = '.\\Outputs'
-    gdb = os.path.join(outputs, 'classes_HUI.gdb')
-    if not arcpy.Exists(gdb):
-        arcpy.CreateFileGDB_management(outputs, 'classes_HUI.gdb')
-
-    scratch = os.path.join(outputs, 'scratch_HUI.gdb')
-    if not arcpy.Exists(scratch):
-        arcpy.CreateFileGDB_management(outputs, 'scratch_HUI.gdb')
-
-    #: Address points (used later)
-    address_pts_no_base = _get_non_base_addr_points(address_pts, scratch)
-
-    #: Prep Main Parcel Layer
-    # select parcels within modeling area
-    # parcels_in_study_area = _get_parcels_in_modelling_area(parcels, taz_shp, scratch)
-
-    #: Dissolve duplicate parcel ids
-    parcels_cleaned_df = _dissolve_duplicate_parcels(parcels_fc)
-
-    #: Add second built year field for handling mode/max built year values
-    #: May not need this, may be able to handle 0 in BUILT_YR during the analysis phase rather than doing it later
-    parcels_cleaned_df['BUILT_YR2'] = parcels_cleaned_df['BUILT_YR']
-
-    # Load Extended Descriptions - be sure to format ACCOUNTNO column as text in excel first
-    # parcels_for_modeling_layer = _join_extended_parcel_info(davis_extended, parcels_cleaned_df, scratch)
-
-    extra_data_df = _read_extra_info_into_dataframe(
-        extended_info_csv, 'ACCOUNTNO', str, 9, ['ACCOUNTNO', 'des_all', 'class']
-    )
-    parcels_merged_df = parcels_cleaned_df.merge(extra_data_df, left_on='PARCEL_ID', right_on='ACCOUNTNO', how='left')
-
-    parcels_with_centroids_df = _add_centroids_to_parcel_df(parcels_merged_df, 'PARCEL_ID')
-
-    #: Fields can just be added as dataframe columns when needed
-    # fields = {
-    #     'TYPE': 'TEXT',
-    #     'SUBTYPE': 'TEXT',
-    #     'NOTE': 'TEXT',
-    #     'BUILT_YR2': 'SHORT',
-    # }
-    # parcels_for_modeling_layer = _add_fields(parcels_for_modeling_layer, fields)
-
-    # get a count of all parcels
-    count_all = parcels_with_centroids_df.shape[0]
-    print(f'# initial parcels in modeling area:\n {count_all}')
-
-    common_areas_df = pd.DataFrame.spatial.from_featureclass(common_areas_fc)
-    pud_common_areas_df = common_areas_df[common_areas_df['SUBTYPE_WFRC'] == 'pud']
-    pud_common_areas_df['IS_OUG'] = 1
-    multi_family_common_areas_df = common_areas_df[common_areas_df['TYPE_WFRC'] == 'multi_family']
-    multi_family_common_areas_df['IS_OUG'] = 1
 
 
 def davis():
