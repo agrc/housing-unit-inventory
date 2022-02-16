@@ -145,14 +145,10 @@ def dissolve_duplicate_parcels(parcels_for_modeling_layer):
     return parcels_dissolved_df
 
 
-#: TODO: Update me
-def get_non_base_addr_points(address_pts, scratch):
+def get_non_base_addr_points(address_pts_fc, type_column_name='PtType', base_address_value='BASE ADDRESS'):
     # get address points without base address point
-    address_pts_lyr = arcpy.MakeFeatureLayer_management(address_pts, 'address_pts_lyr')
-    query = (''' PtType <> 'BASE ADDRESS' ''')
-    arcpy.SelectLayerByAttribute_management(address_pts_lyr, 'NEW_SELECTION', query)
-    address_pts_no_base = arcpy.FeatureClassToFeatureClass_conversion(
-        address_pts_lyr, scratch, '_00_address_pts_no_base'
-    )
-
-    return address_pts_no_base
+    address_pts_no_base_df = (
+        pd.DataFrame.spatial.from_featureclass(address_pts_fc) \
+        .query(f'{type_column_name} != @base_address_value')
+        )
+    return address_pts_no_base_df

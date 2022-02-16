@@ -73,7 +73,8 @@ def davis_by_dataframe():
         arcpy.CreateFileGDB_management(outputs, 'scratch_HUI.gdb')
 
     #: Address points (used later)
-    address_pts_no_base = helpers.get_non_base_addr_points(address_pts, scratch)
+    # address_pts_no_base = helpers.get_non_base_addr_points(address_pts, scratch)
+    address_pts_no_base = pd.DataFrame.spatial.from_featureclass(address_pts)
 
     #: Prep Main Parcel Layer
     # select parcels within modeling area
