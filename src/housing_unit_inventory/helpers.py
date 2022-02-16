@@ -146,6 +146,17 @@ def dissolve_duplicate_parcels(parcels_for_modeling_layer):
 
 
 def get_non_base_addr_points(address_pts_fc, type_column_name='PtType', base_address_value='BASE ADDRESS'):
+    """Get address points that aren't a base address (ie, main, non-unit address for an apartment building)
+
+    Args:
+        address_pts_fc (str): Address point feature class
+        type_column_name (str, optional): Field that defines the points' types. Defaults to 'PtType'.
+        base_address_value (str, optional): The value indicating a base address. Defaults to 'BASE ADDRESS'.
+
+    Returns:
+        pd.DataFrame.spatial: A spatial dataframe without any base addresses
+    """
+
     # get address points without base address point
     address_pts_no_base_df = (
         pd.DataFrame.spatial.from_featureclass(address_pts_fc) \
