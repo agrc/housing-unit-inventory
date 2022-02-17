@@ -7,6 +7,17 @@ from arcgis.geometry import Geometry
 
 from housing_unit_inventory import helpers
 
+#: TYPE (and SUBTYPE)
+#:  single-family
+#:      single-family
+#:      pud
+#:  multi-family
+#:      duplex
+#:      townhome
+#:      apartment
+#:      multi-family
+#:      mobile_home_park
+
 
 def evalute_pud_df(parcels_df, common_area_df, common_area_key_col, address_points_df) -> pd.DataFrame.spatial:
 
@@ -60,14 +71,11 @@ def evalute_pud_df(parcels_df, common_area_df, common_area_key_col, address_poin
         address_count_series,
     ])
 
-    evaluated_pud_parcels_df['TYPE'] = 'single_family'
-    evaluated_pud_parcels_df['SUBTYPE'] = 'pud'
-    evaluated_pud_parcels_df['basebldg'] = '1'
-    evaluated_pud_parcels_df['building_type_id'] = '1'
+    evaluated_common_area_parcels_with_types_df = helpers.set_common_area_types(evaluated_pud_parcels_df)
 
     #: TODO: implement some sort of count tracking. Maybe a separate data frame consisting of just the parcel ids, removing matching ones on each pass?
 
-    return evaluated_pud_parcels_df
+    return evaluated_common_area_parcels_with_types_df
 
 
 def davis_by_dataframe():
@@ -125,14 +133,20 @@ def davis_by_dataframe():
     count_all = parcels_with_centroids_df.shape[0]
     print(f'# initial parcels in modeling area:\n {count_all}')
 
+    #: These get a little dicey- puds/multi family are dq'd out, and their parcels are removed from the analysis.
+    #: I really want to change this so that each category has an appropriate dq.
     common_area_key = 'common_area_key'
     common_areas_df = pd.DataFrame.spatial.from_featureclass(common_areas_fc)
     common_areas_df[common_area_key] = common_areas_df['OBJECTID']
-    pud_common_areas_df = common_areas_df[common_areas_df['SUBTYPE_WFRC'] == 'pud']
-    pud_common_areas_df['IS_OUG'] = 1
-    multi_family_common_areas_df = common_areas_df[common_areas_df['TYPE_WFRC'] == 'multi_family']
-    multi_family_common_areas_df['IS_OUG'] = 1
+    # pud_common_areas_df = common_areas_df[common_areas_df['SUBTYPE_WFRC'] == 'pud']
+    # pud_common_areas_df['IS_OUG'] = 1
+    # multi_family_common_areas_df = common_areas_df[common_areas_df['TYPE_WFRC'] == 'multi_family']
+    # multi_family_common_areas_df['IS_OUG'] = 1
+
+    common_areas_subset_df = common_areas_df[(common_areas_df['SUBTYPE_WFRC'] == 'pud') |
+                                             (common_areas_df['TYPE_WFRC'] == 'multi_family')]
+    common_areas_subset_df['IS_OUG'] = 1
 
     pud_features_df = evalute_pud_df(
-        parcels_with_centroids_df, pud_common_areas_df, common_area_key, address_pts_no_base_df
+        parcels_with_centroids_df, common_areas_subset_df, common_area_key, address_pts_no_base_df
     )

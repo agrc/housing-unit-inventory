@@ -511,6 +511,7 @@ def evaluate_multi_family_single_parcles(input_parcel_layer, scratch, address_po
 
     #: Query out various multi-family parcels from main parcel feature class
     #: Update type, subtype
+    #:      subtype comes from 'class' attribute, tri-quad changed to apartment but saved in NOTE column
     #: Spatially join address points to queried parcels, calculate count
     #: save to _02_multi_family2
 

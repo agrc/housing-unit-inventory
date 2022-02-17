@@ -163,3 +163,22 @@ def get_non_base_addr_points(address_pts_fc, type_column_name='PtType', base_add
         .query(f'{type_column_name} != @base_address_value')
         )
     return address_pts_no_base_df
+
+
+def set_common_area_types(evaluated_df):
+
+    evaluated_df['TYPE'] = ''
+    evaluated_df['SUBTYPE'] = ''
+    evaluated_df['basebldg'] = ''
+    evaluated_df['building_type_id'] = ''
+
+    evaluated_df.loc[evaluated_df['SUBTYPE_WFRC'] == 'pud', 'TYPE'] = 'single_family'
+    evaluated_df.loc[evaluated_df['SUBTYPE_WFRC'] == 'pud', 'SUBTYPE'] = 'pud'
+    evaluated_df.loc[evaluated_df['SUBTYPE_WFRC'] == 'pud', 'basebldg'] = '1'
+    evaluated_df.loc[evaluated_df['SUBTYPE_WFRC'] == 'pud', 'building_type_id'] = '1'
+
+    evaluated_df.loc[evaluated_df['TYPE_WFRC'] == 'multi_family', 'TYPE'] = 'multi_family'
+    evaluated_df.loc[evaluated_df['TYPE_WFRC'] == 'multi_family', 'basebldg'] = '1'
+    evaluated_df.loc[evaluated_df['TYPE_WFRC'] == 'multi_family', 'building_type_id'] = '2'
+
+    return evaluated_df

@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from arcgis.features import GeoAccessor, GeoSeriesAccessor
 from arcgis.geometry import Geometry
@@ -51,3 +52,27 @@ class TestNoBaseAddress:
         test_df = pd.DataFrame({'id': [0, 1, 3], 'PtType': ['', '', '']}, index=[0, 1, 3])
 
         tm.assert_frame_equal(output_df, test_df)
+
+
+class TestCommonAreaTypes:
+
+    def test_set_common_area_types(self):
+        test_data_df = pd.DataFrame({
+            'id': [1, 2, 3],
+            'TYPE_WFRC': ['single_family', 'multi_family', 'multi_family'],
+            'SUBTYPE_WFRC': ['pud', '', ''],
+        })
+
+        with_types_df = helpers.set_common_area_types(test_data_df)
+
+        test_results_df = pd.DataFrame({
+            'id': [1, 2, 3],
+            'TYPE_WFRC': ['single_family', 'multi_family', 'multi_family'],
+            'SUBTYPE_WFRC': ['pud', '', ''],
+            'TYPE': ['single_family', 'multi_family', 'multi_family'],
+            'SUBTYPE': ['pud', '', ''],
+            'basebldg': ['1', '1', '1'],
+            'building_type_id': ['1', '2', '2'],
+        })
+
+        tm.assert_frame_equal(with_types_df, test_results_df)
