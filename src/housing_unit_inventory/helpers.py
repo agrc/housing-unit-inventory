@@ -101,6 +101,7 @@ def dissolve_duplicate_parcels(parcels_for_modeling_layer):
     parcels_dissolved_fc = 'memory/dissolved'
     if arcpy.Exists(parcels_dissolved_fc):
         arcpy.management.Delete(parcels_dissolved_fc)
+
     parcels_dissolved = arcpy.management.Dissolve(
         parcels_for_modeling_layer, parcels_dissolved_fc, 'PARCEL_ID', [
             ['PARCEL_ID', 'COUNT'],

@@ -467,7 +467,7 @@ def evaluate_multi_family_with_common_area(
 
 def evaluate_single_family(input_parcel_layer, output_gdb):
     #: Query out 'single_family' parcels from main parcel feature class
-    #: Update type, subtype
+    #: Update type, subtype ('single_family'), basebldg, building_type_id (1)
     #: save to _02_single_family
     #: Delete queried parcels from main parcel layer
 

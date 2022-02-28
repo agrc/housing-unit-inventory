@@ -71,11 +71,25 @@ def evalute_pud_df(parcels_df, common_area_df, common_area_key_col, address_poin
         address_count_series,
     ])
 
+    #: Set type, subtype, basebldg, building_type_id
     evaluated_common_area_parcels_with_types_df = helpers.set_common_area_types(evaluated_pud_parcels_df)
 
     #: TODO: implement some sort of count tracking. Maybe a separate data frame consisting of just the parcel ids, removing matching ones on each pass?
 
     return evaluated_common_area_parcels_with_types_df
+
+
+def evaluate_single_family_df(parcels_df) -> pd.DataFrame.spatial:
+    #: Query out 'single_family' parcels from main parcel feature class
+    #: Update type, subtype ('single_family'), basebldg, building_type_id (1)
+
+    single_family_parcels_df = parcels_df[parcels_df['class'] == 'single_family'].copy()
+    single_family_parcels_df['TYPE'] = 'single_family'
+    single_family_parcels_df['SUBTYPE'] = 'single_family'
+    single_family_parcels_df['basebldg'] = '1'
+    single_family_parcels_df['building_type_id'] = '1'
+
+    return single_family_parcels_df
 
 
 def davis_by_dataframe():
@@ -138,10 +152,6 @@ def davis_by_dataframe():
     common_area_key = 'common_area_key'
     common_areas_df = pd.DataFrame.spatial.from_featureclass(common_areas_fc)
     common_areas_df[common_area_key] = common_areas_df['OBJECTID']
-    # pud_common_areas_df = common_areas_df[common_areas_df['SUBTYPE_WFRC'] == 'pud']
-    # pud_common_areas_df['IS_OUG'] = 1
-    # multi_family_common_areas_df = common_areas_df[common_areas_df['TYPE_WFRC'] == 'multi_family']
-    # multi_family_common_areas_df['IS_OUG'] = 1
 
     common_areas_subset_df = common_areas_df[(common_areas_df['SUBTYPE_WFRC'] == 'pud') |
                                              (common_areas_df['TYPE_WFRC'] == 'multi_family')]
@@ -150,3 +160,5 @@ def davis_by_dataframe():
     pud_features_df = evalute_pud_df(
         parcels_with_centroids_df, common_areas_subset_df, common_area_key, address_pts_no_base_df
     )
+
+    single_family_features_df = evaluate_single_family_df(parcels_with_centroids_df)
