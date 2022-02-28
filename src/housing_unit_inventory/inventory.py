@@ -42,7 +42,9 @@ def evalute_pud_df(parcels_df, common_area_df, common_area_key_col, address_poin
 
     #: Convert parcels to centroids and join them to common area polygons
     helpers.change_geometry(parcels_df, 'CENTROIDS', 'POLYS')
-    pud_parcels_df = common_area_df.spatial.join(parcels_df, 'inner', 'contains')
+    pud_parcels_df = common_area_df.spatial.join(
+        parcels_df, 'inner', 'contains'
+    )  #: Does inner join only get the parcels that are
 
     #: use groupby to summarize the parcel attributes
     #: each series should be indexed by the common_area_key_col
@@ -90,6 +92,29 @@ def evaluate_single_family_df(parcels_df) -> pd.DataFrame.spatial:
     single_family_parcels_df['building_type_id'] = '1'
 
     return single_family_parcels_df
+
+
+def evaluate_multi_family_single_parcel_df(parcels_df, address_pts_df) -> pd.DataFrame.spatial:
+    #: Query out various multi-family parcels from main parcel feature class
+    #: Update type, subtype
+    #:      subtype comes from 'class' attribute, tri-quad changed to apartment but saved in NOTE column
+    #: Spatially join address points to queried parcels, calculate count
+
+    mf_single_parcels_df = parcels_df[parcels_df['class'].isin([
+        'multi_family', 'duplex', 'apartment', 'townhome', 'triplex-quadplex'
+    ])].copy()
+    mf_single_parcels_df['TYPE'] = 'multi_family'
+    mf_single_parcels_df['basebldg'] = '1'
+    mf_single_parcels_df['building_type_id'] = '2'
+
+    mf_single_parcels_subtypes_df = helpers.set_multi_family_single_parcel_subtypes(mf_single_parcels_df)
+    mf_addr_pt_counts_series = helpers.get_address_point_count_series(
+        mf_single_parcels_subtypes_df, address_pts_df, 'PARCEL_ID'
+    )
+
+    mf_with_addr_counts_df = mf_single_parcels_subtypes_df.merge(mf_addr_pt_counts_series, how='left', on='PARCEL_ID')
+
+    return mf_with_addr_counts_df
 
 
 def davis_by_dataframe():
@@ -157,8 +182,13 @@ def davis_by_dataframe():
                                              (common_areas_df['TYPE_WFRC'] == 'multi_family')]
     common_areas_subset_df['IS_OUG'] = 1
 
+    #: TODO: we may need to remove the parcels evaluated for common areas because everything else is based on the 'class' attribute
     pud_features_df = evalute_pud_df(
         parcels_with_centroids_df, common_areas_subset_df, common_area_key, address_pts_no_base_df
     )
 
     single_family_features_df = evaluate_single_family_df(parcels_with_centroids_df)
+
+    multi_family_single_parcel_features_df = evaluate_multi_family_single_parcel_df(
+        parcels_with_centroids_df, address_pts_no_base_df
+    )

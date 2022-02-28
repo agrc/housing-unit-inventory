@@ -1,4 +1,5 @@
 import arcpy
+import numpy as np
 import pandas as pd
 
 
@@ -8,7 +9,7 @@ def get_proper_built_yr_value_series(parcels_df, index_col, built_yr_col):
     Args:
         parcels_df (pd.DataFrame.spatial): The parcels data
         index_col (str): The primary key of the parcel table (usually a parcel number/id)
-        built_yr_col (str): The column holding the built year as an integar/float
+        built_yr_col (str): The column holding the built year as an integer/float
 
     Returns:
         pd.Series: A series of the built year, indexed by the unique values in index_col
@@ -183,3 +184,22 @@ def set_common_area_types(evaluated_df):
     evaluated_df.loc[evaluated_df['TYPE_WFRC'] == 'multi_family', 'building_type_id'] = '2'
 
     return evaluated_df
+
+
+def set_multi_family_single_parcel_subtypes(evaluated_df):
+    #: SUBTYPE = class unless class == 'triplex-quadplex', in which case it becomes 'apartment' and NOTE becomes tri-quad
+
+    evaluated_df['SUBTYPE'] = np.where(evaluated_df['class'] != 'triplex-quadplex', evaluated_df['class'], 'apartment')
+    evaluated_df['NOTES'] = np.where(evaluated_df['class'] != 'triplex-quadplex', '', evaluated_df['class'])
+
+    return evaluated_df
+
+
+def get_address_point_count_series(parcels_df, address_points_df, key_col):
+    address_count_series = (
+        parcels_df.spatial.join(address_points_df, 'left', 'contains') \
+        .groupby(key_col)['SHAPE'].count() \
+        .rename('ap_count')
+    )
+
+    return address_count_series
