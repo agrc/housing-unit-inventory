@@ -159,7 +159,9 @@ def davis_by_dataframe():
 
     parcels_with_centroids_df = helpers.add_centroids_to_parcel_df(parcels_merged_df, 'PARCEL_ID')
 
-    davis_field_mapping = {'class': 'parcel_type'}
+    davis_field_mapping = {
+        'class': 'parcel_type',
+    }
     standardized_parcels_df = helpers.standardize_fields(parcels_with_centroids_df, davis_field_mapping)
 
     #: Fields can just be added as dataframe columns when needed

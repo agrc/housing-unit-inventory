@@ -1,3 +1,5 @@
+import warnings
+
 import arcpy
 import numpy as np
 import pandas as pd
@@ -189,8 +191,10 @@ def set_common_area_types(evaluated_df):
 def set_multi_family_single_parcel_subtypes(evaluated_df):
     #: SUBTYPE = class unless class == 'triplex-quadplex', in which case it becomes 'apartment' and NOTE becomes tri-quad
 
-    evaluated_df['SUBTYPE'] = np.where(evaluated_df['class'] != 'triplex-quadplex', evaluated_df['class'], 'apartment')
-    evaluated_df['NOTES'] = np.where(evaluated_df['class'] != 'triplex-quadplex', '', evaluated_df['class'])
+    evaluated_df['SUBTYPE'] = np.where(
+        evaluated_df['parcel_type'] != 'triplex-quadplex', evaluated_df['parcel_type'], 'apartment'
+    )
+    evaluated_df['NOTES'] = np.where(evaluated_df['parcel_type'] != 'triplex-quadplex', '', evaluated_df['parcel_type'])
 
     return evaluated_df
 
@@ -226,3 +230,42 @@ def standardize_fields(parcels_df, field_mapping):
     renamed_df = parcels_df.rename(columns=field_mapping)
 
     return renamed_df
+
+
+def classify_owned_unit_grouping(parcels_with_centroids_df, common_areas_df, common_area_key):
+    """Find parcels whose centroids are within the common areas and assign their parcel_type to owned_unit_grouping.
+
+    Raises a UserWarning if the number of rows after the spatial join of parcel centroids within common areas is
+    different than the original number of parcel rows, or if there are duplicate parcel ids in the joined data (could
+    indicate overlapping common area geometries.)
+
+    Args:
+        parcels_with_centroids_df (pd.DataFrame.spatial): The parcels dataset with centroids shapes in the 'CENTROIDS'
+        column.
+        common_areas_df (pd.DataFrame.spatial): Common area boundaries.
+        common_area_key (str): Column that is used as a primary key for the common area geometries.
+
+    Returns:
+        pd.DataFrame.spatial: Parcels with owned unit grouping parcels assigned the proper parcel_type
+    """
+
+    #: TODO: is it better to join the oug parcels back to the main parcel dataframe rather than modify it with a spatial join? are we losing/gaining features that way? Should we test for that? Shouldn't 'left' ensure we always have at least as many as we started with?
+
+    change_geometry(parcels_with_centroids_df, 'CENTROIDS', 'POLYS')
+    oug_join_centroids_df = parcels_with_centroids_df.spatial.join(common_areas_df, 'left', 'within')
+
+    if oug_join_centroids_df.shape[0] != parcels_with_centroids_df.shape[0]:
+        warnings.warn(
+            f'Different number of features in joined dataframe ({oug_join_centroids_df.shape[0]}) than in original '
+            f'parcels ({parcels_with_centroids_df.shape[0]})'
+        )
+
+    dup_parcel_ids = oug_join_centroids_df[oug_join_centroids_df.duplicated(subset=['PARCEL_ID'], keep=False)]
+    if dup_parcel_ids.shape[0]:
+        warnings.warn(f'{dup_parcel_ids.shape[0]} duplicate parcels found in join; check common areas for overlaps')
+
+    oug_parcels_mask = oug_join_centroids_df[common_area_key].notna()
+    oug_join_centroids_df.loc[oug_parcels_mask, 'parcel_type'] = 'owned_unit_grouping'
+    change_geometry(oug_join_centroids_df, 'POLYS', 'CENTROIDS')
+
+    return oug_join_centroids_df.copy()
