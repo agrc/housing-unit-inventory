@@ -12,14 +12,14 @@ class TestSingleFamily:
     def test_evaluate_single_family_df_sets_proper_columns(self):
         test_data_df = pd.DataFrame({
             'id': [1, 2, 3],
-            'class': ['single_family', 'single_family', 'single_family'],
+            'parcel_type': ['single_family', 'single_family', 'single_family'],
         })
 
         with_types_df = inventory.evaluate_single_family_df(test_data_df)
 
         test_results_df = pd.DataFrame({
             'id': [1, 2, 3],
-            'class': ['single_family', 'single_family', 'single_family'],
+            'parcel_type': ['single_family', 'single_family', 'single_family'],
             'TYPE': ['single_family', 'single_family', 'single_family'],
             'SUBTYPE': ['single_family', 'single_family', 'single_family'],
             'basebldg': ['1', '1', '1'],
@@ -31,14 +31,14 @@ class TestSingleFamily:
     def test_evaluate_single_family_df_only_gets_single_family(self):
         test_data_df = pd.DataFrame({
             'id': [1, 2, 3],
-            'class': ['single_family', 'industrial', 'multi_family'],
+            'parcel_type': ['single_family', 'industrial', 'multi_family'],
         })
 
         with_types_df = inventory.evaluate_single_family_df(test_data_df)
 
         test_results_df = pd.DataFrame({
             'id': [1],
-            'class': ['single_family'],
+            'parcel_type': ['single_family'],
             'TYPE': ['single_family'],
             'SUBTYPE': ['single_family'],
             'basebldg': ['1'],
@@ -53,7 +53,7 @@ class TestMultiFamilySingleParcel:
     def test_evaluate_multi_family_single_parcel_df_merges_addr_data(self, mocker):
         test_parcels_df = pd.DataFrame({
             'PARCEL_ID': [10, 11],
-            'class': ['apartment', 'apartment'],
+            'parcel_type': ['apartment', 'apartment'],
             'SHAPE': ['parcel_shape_10', 'parcel_shape_11'],
         })
 
@@ -74,7 +74,7 @@ class TestMultiFamilySingleParcel:
 
         test_results_df = pd.DataFrame({
             'PARCEL_ID': [10, 11],
-            'class': ['apartment', 'apartment'],
+            'parcel_type': ['apartment', 'apartment'],
             'SHAPE': ['parcel_shape_10', 'parcel_shape_11'],
             'TYPE': ['multi_family', 'multi_family'],
             'basebldg': ['1', '1'],
@@ -89,7 +89,7 @@ class TestMultiFamilySingleParcel:
     def test_evaluate_multi_family_single_parcel_df_ignores_single_family(self, mocker):
         test_parcels_df = pd.DataFrame({
             'PARCEL_ID': [10, 11, 12],
-            'class': ['apartment', 'single_family', 'apartment'],
+            'parcel_type': ['apartment', 'single_family', 'apartment'],
             'SHAPE': ['parcel_shape_10', 'parcel_shape_11', 'parcel_shape_12'],
         })
 
@@ -105,7 +105,7 @@ class TestMultiFamilySingleParcel:
 
         test_results_df = pd.DataFrame({
             'PARCEL_ID': [10, 12],
-            'class': ['apartment', 'apartment'],
+            'parcel_type': ['apartment', 'apartment'],
             'SHAPE': ['parcel_shape_10', 'parcel_shape_12'],
             'TYPE': ['multi_family', 'multi_family'],
             'basebldg': ['1', '1'],
