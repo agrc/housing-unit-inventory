@@ -85,7 +85,7 @@ def evaluate_single_family_df(parcels_df) -> pd.DataFrame.spatial:
     #: Query out 'single_family' parcels from main parcel feature class
     #: Update type, subtype ('single_family'), basebldg, building_type_id (1)
 
-    single_family_parcels_df = parcels_df[parcels_df['class'] == 'single_family'].copy()
+    single_family_parcels_df = parcels_df[parcels_df['parcel_type'] == 'single_family'].copy()
     single_family_parcels_df['TYPE'] = 'single_family'
     single_family_parcels_df['SUBTYPE'] = 'single_family'
     single_family_parcels_df['basebldg'] = '1'
@@ -97,10 +97,10 @@ def evaluate_single_family_df(parcels_df) -> pd.DataFrame.spatial:
 def evaluate_multi_family_single_parcel_df(parcels_df, address_pts_df) -> pd.DataFrame.spatial:
     #: Query out various multi-family parcels from main parcel feature class
     #: Update type, subtype
-    #:      subtype comes from 'class' attribute, tri-quad changed to apartment but saved in NOTE column
+    #:      subtype comes from 'parcel_type' attribute, tri-quad changed to apartment but saved in NOTE column
     #: Spatially join address points to queried parcels, calculate count
 
-    mf_single_parcels_df = parcels_df[parcels_df['class'].isin([
+    mf_single_parcels_df = parcels_df[parcels_df['parcel_type'].isin([
         'multi_family', 'duplex', 'apartment', 'townhome', 'triplex-quadplex'
     ])].copy()
     mf_single_parcels_df['TYPE'] = 'multi_family'
@@ -159,6 +159,9 @@ def davis_by_dataframe():
 
     parcels_with_centroids_df = helpers.add_centroids_to_parcel_df(parcels_merged_df, 'PARCEL_ID')
 
+    davis_field_mapping = {'class': 'parcel_type'}
+    standardized_parcels_df = helpers.standardize_fields(parcels_with_centroids_df, davis_field_mapping)
+
     #: Fields can just be added as dataframe columns when needed
     # fields = {
     #     'TYPE': 'TEXT',
@@ -169,7 +172,7 @@ def davis_by_dataframe():
     # parcels_for_modeling_layer = _add_fields(parcels_for_modeling_layer, fields)
 
     # get a count of all parcels
-    count_all = parcels_with_centroids_df.shape[0]
+    count_all = standardized_parcels_df.shape[0]
     print(f'# initial parcels in modeling area:\n {count_all}')
 
     #: These get a little dicey- puds/multi family are dq'd out, and their parcels are removed from the analysis.
@@ -184,11 +187,11 @@ def davis_by_dataframe():
 
     #: TODO: we may need to remove the parcels evaluated for common areas because everything else is based on the 'class' attribute
     pud_features_df = evalute_pud_df(
-        parcels_with_centroids_df, common_areas_subset_df, common_area_key, address_pts_no_base_df
+        standardized_parcels_df, common_areas_subset_df, common_area_key, address_pts_no_base_df
     )
 
-    single_family_features_df = evaluate_single_family_df(parcels_with_centroids_df)
+    single_family_features_df = evaluate_single_family_df(standardized_parcels_df)
 
     multi_family_single_parcel_features_df = evaluate_multi_family_single_parcel_df(
-        parcels_with_centroids_df, address_pts_no_base_df
+        standardized_parcels_df, address_pts_no_base_df
     )

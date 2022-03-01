@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 from arcgis.features import GeoAccessor, GeoSeriesAccessor
 from arcgis.geometry import Geometry
 from pandas import testing as tm
@@ -140,3 +141,51 @@ class TestCommonAreaTypes:
         })
 
         tm.assert_frame_equal(with_types_df, test_results_df)
+
+
+class TestDataCleaning:
+
+    def test_standardize_fields_renames_all_fields(self):
+        parcels_df = pd.DataFrame({
+            'account_no': [1, 2, 3],
+            'type': ['sf', 'mf', 'condo'],
+        })
+
+        field_mapping = {
+            'account_no': 'PARCEL_ID',
+            'type': 'class',
+        }
+
+        renamed_df = helpers.standardize_fields(parcels_df, field_mapping)
+
+        assert list(renamed_df.columns) == ['PARCEL_ID', 'class']
+
+    def test_standardize_fields_renames_some_fields(self):
+        parcels_df = pd.DataFrame({
+            'account_no': [1, 2, 3],
+            'class': ['sf', 'mf', 'condo'],
+        })
+
+        field_mapping = {
+            'account_no': 'PARCEL_ID',
+        }
+
+        renamed_df = helpers.standardize_fields(parcels_df, field_mapping)
+
+        assert list(renamed_df.columns) == ['PARCEL_ID', 'class']
+
+    def test_standardize_fields_raises_exception_for_missing_field(self):
+        parcels_df = pd.DataFrame({
+            'account_no': [1, 2, 3],
+            'type': ['sf', 'mf', 'condo'],
+        })
+
+        field_mapping = {
+            'account_no': 'PARCEL_ID',
+            'TYPE': 'class',
+        }
+
+        with pytest.raises(ValueError) as exception_info:
+            renamed_df = helpers.standardize_fields(parcels_df, field_mapping)
+
+            assert 'Field TYPE not found in parcels dataset.' in str(exception_info)

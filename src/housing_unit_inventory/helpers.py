@@ -203,3 +203,26 @@ def get_address_point_count_series(parcels_df, address_points_df, key_col):
     )
 
     return address_count_series
+
+
+def standardize_fields(parcels_df, field_mapping):
+    """Rename county-specific fields to standardized names based on field_mapping
+
+    Args:
+        parcels_df (pd.DataFrame.spatial): Dataframe of parcels with county-specific names
+        field_mapping (dict): Mapping of county-specific field names to standardized names ({'account_no': 'PARCEL_ID'})
+
+    Raises:
+        ValueError: If a county-specific field name from field_mapping is not found in parcels_df.columns
+
+    Returns:
+        pd.DataFrame.spatial: Parcels dataframe with renamed fields
+    """
+
+    for original_name in field_mapping.keys():
+        if original_name not in parcels_df.columns:
+            raise ValueError(f'Field {original_name} not found in parcels dataset.')
+
+    renamed_df = parcels_df.rename(columns=field_mapping)
+
+    return renamed_df
