@@ -19,7 +19,9 @@ from housing_unit_inventory import helpers
 #:      mobile_home_park
 
 
-def evalute_pud_df(parcels_df, common_area_df, common_area_key_col, address_points_df) -> pd.DataFrame.spatial:
+def evalute_owned_unit_groupings_df(
+    parcels_df, common_area_df, common_area_key_col, address_points_df
+) -> pd.DataFrame.spatial:
 
     #: common_area_key_col: a unique key (probably just a copied ObjectID?) for all the common areas
 
@@ -40,29 +42,31 @@ def evalute_pud_df(parcels_df, common_area_df, common_area_key_col, address_poin
 
     #: arcgis.geometry.get_area, .contains, .centroid
 
-    #: Convert parcels to centroids and join them to common area polygons
-    helpers.change_geometry(parcels_df, 'CENTROIDS', 'POLYS')
-    pud_parcels_df = common_area_df.spatial.join(
-        parcels_df, 'inner', 'contains'
-    )  #: Does inner join only get the parcels that are
+    # #: Convert parcels to centroids and join them to common area polygons
+    # helpers.change_geometry(parcels_df, 'CENTROIDS', 'POLYS')
+    # pud_parcels_df = common_area_df.spatial.join(
+    #     parcels_df, 'inner', 'contains'
+    # )  #: Does inner join only get the parcels that are
+
+    oug_parcels_df = parcels_df[parcels_df['parcel_type'] == 'owned_unit_grouping'].copy()
 
     #: use groupby to summarize the parcel attributes
     #: each series should be indexed by the common_area_key_col
-    parcels_grouped_by_pud_id = pud_parcels_df.groupby(common_area_key_col)
-    total_mkt_value_sum_series = parcels_grouped_by_pud_id['TOTAL_MKT_VALUE'].sum()
-    land_mkt_value_sum_series = parcels_grouped_by_pud_id['LAND_MKT_VALUE'].sum()
-    bldg_sqft_sum_series = parcels_grouped_by_pud_id['BLDG_SQFT'].sum()
-    floors_cnt_mean_series = parcels_grouped_by_pud_id['FLOORS_CNT'].mean()
-    built_yr_series = helpers.get_proper_built_yr_value_series(pud_parcels_df, common_area_key_col, 'BUILT_YR')
-    parcel_count_series = parcels_grouped_by_pud_id['SHAPE'].count().rename('parcel_count')
+    parcels_grouped_by_oug_id = oug_parcels_df.groupby(common_area_key_col)
+    total_mkt_value_sum_series = parcels_grouped_by_oug_id['TOTAL_MKT_VALUE'].sum()
+    land_mkt_value_sum_series = parcels_grouped_by_oug_id['LAND_MKT_VALUE'].sum()
+    bldg_sqft_sum_series = parcels_grouped_by_oug_id['BLDG_SQFT'].sum()
+    floors_cnt_mean_series = parcels_grouped_by_oug_id['FLOORS_CNT'].mean()
+    built_yr_series = helpers.get_proper_built_yr_value_series(oug_parcels_df, common_area_key_col, 'BUILT_YR')
+    parcel_count_series = parcels_grouped_by_oug_id['SHAPE'].count().rename('parcel_count')
     address_count_series = (
-        pud_parcels_df.spatial.join(address_points_df, 'left', 'contains') \
+        oug_parcels_df.spatial.join(address_points_df, 'left', 'contains') \
         .groupby(common_area_key_col)['SHAPE'].count() \
         .rename('ap_count')
     )
 
     #: Merge all our new info to the common area polygons, using the common_area_key_col as the df index
-    evaluated_pud_parcels_df = pd.concat([
+    evaluated_oug_parcels_df = pd.concat([
         common_area_df.set_index(common_area_key_col),
         total_mkt_value_sum_series,
         land_mkt_value_sum_series,
@@ -74,11 +78,11 @@ def evalute_pud_df(parcels_df, common_area_df, common_area_key_col, address_poin
     ])
 
     #: Set type, subtype, basebldg, building_type_id
-    evaluated_common_area_parcels_with_types_df = helpers.set_common_area_types(evaluated_pud_parcels_df)
+    evaluated_oug_parcels_with_types_df = helpers.set_common_area_types(evaluated_oug_parcels_df)
 
     #: TODO: implement some sort of count tracking. Maybe a separate data frame consisting of just the parcel ids, removing matching ones on each pass?
 
-    return evaluated_common_area_parcels_with_types_df
+    return evaluated_oug_parcels_with_types_df
 
 
 def evaluate_single_family_df(parcels_df) -> pd.DataFrame.spatial:
@@ -139,6 +143,7 @@ def davis_by_dataframe():
         arcpy.CreateFileGDB_management(outputs, 'scratch_HUI.gdb')
 
     #: Address points (used later)
+    #: TODO: Do we need to be filtering out the non-base addresses?
     # address_pts_no_base = helpers.get_non_base_addr_points(address_pts, scratch)
     address_pts_no_base_df = pd.DataFrame.spatial.from_featureclass(address_pts)
 
@@ -177,23 +182,23 @@ def davis_by_dataframe():
     count_all = standardized_parcels_df.shape[0]
     print(f'# initial parcels in modeling area:\n {count_all}')
 
-    #: These get a little dicey- puds/multi family are dq'd out, and their parcels are removed from the analysis.
-    #: I really want to change this so that each category has an appropriate dq.
     common_area_key = 'common_area_key'
     common_areas_df = pd.DataFrame.spatial.from_featureclass(common_areas_fc)
     common_areas_df[common_area_key] = common_areas_df['OBJECTID']
-
     common_areas_subset_df = common_areas_df[(common_areas_df['SUBTYPE_WFRC'] == 'pud') |
                                              (common_areas_df['TYPE_WFRC'] == 'multi_family')]
     common_areas_subset_df['IS_OUG'] = 1
 
-    #: TODO: we may need to remove the parcels evaluated for common areas because everything else is based on the 'class' attribute
-    pud_features_df = evalute_pud_df(
-        standardized_parcels_df, common_areas_subset_df, common_area_key, address_pts_no_base_df
+    classified_parcels_df = helpers.classify_owned_unit_grouping(
+        standardized_parcels_df, common_areas_subset_df, common_area_key
     )
 
-    single_family_features_df = evaluate_single_family_df(standardized_parcels_df)
+    oug_features_df = evalute_owned_unit_groupings_df(
+        classified_parcels_df, common_areas_subset_df, common_area_key, address_pts_no_base_df
+    )
+
+    single_family_features_df = evaluate_single_family_df(classified_parcels_df)
 
     multi_family_single_parcel_features_df = evaluate_multi_family_single_parcel_df(
-        standardized_parcels_df, address_pts_no_base_df
+        classified_parcels_df, address_pts_no_base_df
     )
