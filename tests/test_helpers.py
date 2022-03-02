@@ -351,6 +351,260 @@ class TestDataCleaning:
         assert record[0].message.args[0] == '2 duplicate parcels found in join; check common areas for overlaps'
 
 
+class TestClassifyFromArea:
+
+    def test_classify_from_area_properly_classifies(self, mocker):
+        test_parcels_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+        })
+
+        test_common_areas_df = pd.DataFrame({
+            'common_area_key': [1],
+            'SHAPE': ['addr_shape_1'],
+        })
+
+        joined_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+            'common_area_key': [1, 1]
+        })
+
+        join_method_mock = mocker.MagicMock()
+        join_method_mock.return_value = joined_df
+
+        mocker.patch.object(pd.DataFrame.spatial, 'join', new=join_method_mock)
+        mocker.patch('housing_unit_inventory.helpers.change_geometry')
+
+        classify_info = ('common_area_key', 'parcel_type', 'owned_unit_grouping')
+        oug_parcels = helpers.classify_from_area(test_parcels_df, test_common_areas_df, classify_info)
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+            'common_area_key': [1, 1],
+            'parcel_type': ['owned_unit_grouping', 'owned_unit_grouping']
+        })
+
+        tm.assert_frame_equal(oug_parcels, test_df)
+
+    def test_classify_from_area_doesnt_classify_non_matching(self, mocker):
+        test_parcels_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+        })
+
+        test_common_areas_df = pd.DataFrame({
+            'common_area_key': [1],
+            'SHAPE': ['addr_shape_1'],
+        })
+
+        joined_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+            'common_area_key': [1, np.nan]
+        })
+
+        join_method_mock = mocker.MagicMock()
+        join_method_mock.return_value = joined_df
+
+        mocker.patch.object(pd.DataFrame.spatial, 'join', new=join_method_mock)
+        mocker.patch('housing_unit_inventory.helpers.change_geometry')
+
+        classify_info = ('common_area_key', 'parcel_type', 'owned_unit_grouping')
+        oug_parcels = helpers.classify_from_area(test_parcels_df, test_common_areas_df, classify_info)
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+            'common_area_key': [1, np.nan],
+            'parcel_type': ['owned_unit_grouping', np.nan]
+        })
+
+        tm.assert_frame_equal(oug_parcels, test_df)
+
+    def test_classify_from_area_raises_warning_on_more_rows_after_join(self, mocker):
+        test_parcels_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+        })
+
+        test_common_areas_df = pd.DataFrame({
+            'common_area_key': [1],
+            'SHAPE': ['addr_shape_1'],
+        })
+
+        joined_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12, np.nan],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2', np.nan],
+            'common_area_key': [1, 1, 1]
+        })
+
+        join_method_mock = mocker.MagicMock()
+        join_method_mock.return_value = joined_df
+
+        mocker.patch.object(pd.DataFrame.spatial, 'join', new=join_method_mock)
+        mocker.patch('housing_unit_inventory.helpers.change_geometry')
+
+        with pytest.warns(UserWarning) as record:
+            classify_info = ('common_area_key', 'parcel_type', 'owned_unit_grouping')
+            oug_parcels = helpers.classify_from_area(test_parcels_df, test_common_areas_df, classify_info)
+        assert record[0].message.args[
+            0] == 'Different number of features in joined dataframe (3) than in original parcels (2)'
+
+    def test_classify_from_area_raises_warning_on_fewer_rows_after_join(self, mocker):
+        test_parcels_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+        })
+
+        test_common_areas_df = pd.DataFrame({
+            'common_area_key': [1],
+            'SHAPE': ['addr_shape_1'],
+        })
+
+        joined_df = pd.DataFrame({
+            'PARCEL_ID': [11],
+            'SHAPE': ['parcel_shape_1'],
+            'common_area_key': [1],
+        })
+
+        join_method_mock = mocker.MagicMock()
+        join_method_mock.return_value = joined_df
+
+        mocker.patch.object(pd.DataFrame.spatial, 'join', new=join_method_mock)
+        mocker.patch('housing_unit_inventory.helpers.change_geometry')
+
+        with pytest.warns(UserWarning) as record:
+            classify_info = ('common_area_key', 'parcel_type', 'owned_unit_grouping')
+            oug_parcels = helpers.classify_from_area(test_parcels_df, test_common_areas_df, classify_info)
+        assert record[0].message.args[
+            0] == 'Different number of features in joined dataframe (1) than in original parcels (2)'
+
+    def test_classify_from_area_raises_warning_on_more_duplicate_parcel_ids_after_join(self, mocker):
+        test_parcels_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+        })
+
+        test_common_areas_df = pd.DataFrame({
+            'common_area_key': [1],
+            'SHAPE': ['addr_shape_1'],
+        })
+
+        joined_df = pd.DataFrame({
+            'PARCEL_ID': [11, 11],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_1'],
+            'common_area_key': [1, 1]
+        })
+
+        join_method_mock = mocker.MagicMock()
+        join_method_mock.return_value = joined_df
+
+        mocker.patch.object(pd.DataFrame.spatial, 'join', new=join_method_mock)
+        mocker.patch('housing_unit_inventory.helpers.change_geometry')
+
+        with pytest.warns(UserWarning) as record:
+            classify_info = ('common_area_key', 'parcel_type', 'owned_unit_grouping')
+            oug_parcels = helpers.classify_from_area(test_parcels_df, test_common_areas_df, classify_info)
+        assert record[0].message.args[0] == '2 duplicate parcels found in join; check areas features for overlaps'
+
+    def test_classify_from_area_raises_error_on_missing_classify_info(self, mocker):
+        test_parcels_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+        })
+
+        test_common_areas_df = pd.DataFrame({
+            'common_area_key': [1],
+            'SHAPE': ['addr_shape_1'],
+        })
+
+        joined_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+            'common_area_key': [1, 1]
+        })
+
+        join_method_mock = mocker.MagicMock()
+        join_method_mock.return_value = joined_df
+
+        mocker.patch.object(pd.DataFrame.spatial, 'join', new=join_method_mock)
+        mocker.patch('housing_unit_inventory.helpers.change_geometry')
+
+        with pytest.raises(ValueError) as error:
+            classify_info = ('common_area_key', 'parcel_type')
+            oug_parcels = helpers.classify_from_area(test_parcels_df, test_common_areas_df, classify_info)
+        assert 'classify_info should be (areas_unique_key_column, classify_column, classify_value)' in str(error.value)
+
+    def test_classify_from_area_ignores_empty_classify_info(self, mocker):
+        test_parcels_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+        })
+
+        test_common_areas_df = pd.DataFrame({
+            'common_area_key': [1],
+            'SHAPE': ['addr_shape_1'],
+        })
+
+        joined_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+            'common_area_key': [1, 1]
+        })
+
+        join_method_mock = mocker.MagicMock()
+        join_method_mock.return_value = joined_df
+
+        mocker.patch.object(pd.DataFrame.spatial, 'join', new=join_method_mock)
+        mocker.patch('housing_unit_inventory.helpers.change_geometry')
+
+        oug_parcels = helpers.classify_from_area(test_parcels_df, test_common_areas_df)
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+            'common_area_key': [1, 1],
+        })
+
+        tm.assert_frame_equal(oug_parcels, test_df)
+
+    def test_classify_from_area_adds_area_info_from_join(self, mocker):
+        test_parcels_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+        })
+
+        test_common_areas_df = pd.DataFrame({
+            'common_area_key': [1],
+            'SHAPE': ['addr_shape_1'],
+            'NAME': ['city1'],
+        })
+
+        joined_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+            'common_area_key': [1, 1],
+            'NAME': ['city1', 'city1'],
+        })
+
+        join_method_mock = mocker.MagicMock()
+        join_method_mock.return_value = joined_df
+
+        mocker.patch.object(pd.DataFrame.spatial, 'join', new=join_method_mock)
+        mocker.patch('housing_unit_inventory.helpers.change_geometry')
+
+        oug_parcels = helpers.classify_from_area(test_parcels_df, test_common_areas_df)
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+            'common_area_key': [1, 1],
+            'NAME': ['city1', 'city1'],
+        })
+
+        tm.assert_frame_equal(oug_parcels, test_df)
+
+
 class TestFinalMergingAndCleaning:
 
     def test_concat_evaluated_dataframes_merges_normally(self):

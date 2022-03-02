@@ -326,3 +326,35 @@ def concat_evaluated_dataframes(dataframes, new_index='PARCEL_ID'):
     concated_dataframes = pd.concat(dataframes).set_index(new_index, verify_integrity=True)
 
     return concated_dataframes
+
+
+def classify_from_area(parcels_with_centroids_df, area_df, classify_info=()):
+
+    change_geometry(parcels_with_centroids_df, 'CENTROIDS', 'POLYS')
+    oug_join_centroids_df = parcels_with_centroids_df.spatial.join(area_df, 'left', 'within')
+
+    if oug_join_centroids_df.shape[0] != parcels_with_centroids_df.shape[0]:
+        warnings.warn(
+            f'Different number of features in joined dataframe ({oug_join_centroids_df.shape[0]}) than in original '
+            f'parcels ({parcels_with_centroids_df.shape[0]})'
+        )
+
+    dup_parcel_ids = oug_join_centroids_df[oug_join_centroids_df.duplicated(subset=['PARCEL_ID'], keep=False)]
+    if dup_parcel_ids.shape[0]:
+        warnings.warn(f'{dup_parcel_ids.shape[0]} duplicate parcels found in join; check areas features for overlaps')
+
+    if classify_info:
+        #: Make sure we've got all the necessary classification info
+        try:
+            areas_unique_key_column, classify_column, classify_value = classify_info
+        except ValueError as error:
+            raise ValueError(
+                'classify_info should be (areas_unique_key_column, classify_column, classify_value)'
+            ) from error
+
+        oug_parcels_mask = oug_join_centroids_df[areas_unique_key_column].notna()
+        oug_join_centroids_df.loc[oug_parcels_mask, classify_column] = classify_value
+
+    change_geometry(oug_join_centroids_df, 'POLYS', 'CENTROIDS')
+
+    return oug_join_centroids_df.copy()
