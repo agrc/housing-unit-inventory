@@ -154,6 +154,8 @@ def davis_by_dataframe():
     common_areas_fc = r'.\Inputs\Common_Areas.gdb\Common_Areas_Reviewed'
     extended_info_csv = r'.\Inputs\davis_extended_simplified.csv'
     mobile_home_communities = '.\\Inputs\\Mobile_Home_Parks.shp'
+    cities = r'.\Inputs\Cities.shp'
+    subcounties = r'.\Inputs\SubCountyArea_2019.shp'
 
     # create output gdb
     outputs = '.\\Outputs'
@@ -212,16 +214,18 @@ def davis_by_dataframe():
                                              (common_areas_df['TYPE_WFRC'] == 'multi_family')]
     common_areas_subset_df['IS_OUG'] = 1
 
-    parcels_with_oug_df = helpers.classify_owned_unit_grouping(
-        standardized_parcels_df, common_areas_subset_df, common_area_key
+    common_area_classify_info = (common_area_key, 'parcel_type', 'owned_unit_grouping')
+    parcels_with_oug_df = helpers.classify_from_area(
+        standardized_parcels_df, common_areas_subset_df, common_area_classify_info
     )
 
     mobile_home_key = 'mobile_home_key'
     mobile_home_communities_df = pd.DataFrame.spatial.from_featureclass(mobile_home_communities)
     mobile_home_communities_df[mobile_home_key] = mobile_home_communities_df['OBJECTID']
 
-    classified_parcels_df = helpers.classify_mobile_home_communities(
-        parcels_with_oug_df, mobile_home_communities_df, mobile_home_key
+    mobile_home_classify_info = (common_area_key, 'parcel_type', 'mobile_home_park')
+    classified_parcels_df = helpers.classify_from_area(
+        parcels_with_oug_df, mobile_home_communities_df, mobile_home_classify_info
     )
 
     oug_features_df = evalute_owned_unit_groupings_df(
@@ -238,11 +242,15 @@ def davis_by_dataframe():
         classified_parcels_df, address_pts_no_base_df
     )
 
-    evaluated_dfs = helpers.concat_evaluated_dataframes([
+    evaluated_parcels_df = helpers.concat_evaluated_dataframes([
         oug_features_df,
         single_family_features_df,
         multi_family_single_parcel_features_df,
         mobile_home_communities_features_df,
     ])
 
+    cities_df = pd.DataFrame.spatial.from_featureclass(cities)
+    parcels_with_cities_df = helpers.classify_from_area(evaluated_parcels_df, cities_df)
 
+    subcounties_df = pd.DataFrame.spatial.from_featureclass(subcounties)
+    parcels_with_subcounties_df = helpers.classify_from_area(parcels_with_cities_df, subcounties_df)

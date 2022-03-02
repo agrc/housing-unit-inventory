@@ -232,83 +232,6 @@ def standardize_fields(parcels_df, field_mapping):
     return renamed_df
 
 
-def classify_owned_unit_grouping(parcels_with_centroids_df, common_areas_df, common_area_key):
-    """Find parcels whose centroids are within the common areas and assign their parcel_type to owned_unit_grouping.
-
-    Raises a UserWarning if the number of rows after the spatial join of parcel centroids within common areas is
-    different than the original number of parcel rows, or if there are duplicate parcel ids in the joined data (could
-    indicate overlapping common area geometries.)
-
-    Args:
-        parcels_with_centroids_df (pd.DataFrame.spatial): The parcels dataset with centroids shapes in the 'CENTROIDS'
-        column.
-        common_areas_df (pd.DataFrame.spatial): Common area boundaries.
-        common_area_key (str): Column that is used as a primary key for the common area geometries.
-
-    Returns:
-        pd.DataFrame.spatial: Parcels with owned unit grouping parcels assigned the proper parcel_type
-    """
-
-    #: TODO: is it better to join the oug parcels back to the main parcel dataframe rather than modify it with a spatial join? are we losing/gaining features that way? Should we test for that? Shouldn't 'left' ensure we always have at least as many as we started with?
-
-    change_geometry(parcels_with_centroids_df, 'CENTROIDS', 'POLYS')
-    oug_join_centroids_df = parcels_with_centroids_df.spatial.join(common_areas_df, 'left', 'within')
-
-    if oug_join_centroids_df.shape[0] != parcels_with_centroids_df.shape[0]:
-        warnings.warn(
-            f'Different number of features in joined dataframe ({oug_join_centroids_df.shape[0]}) than in original '
-            f'parcels ({parcels_with_centroids_df.shape[0]})'
-        )
-
-    dup_parcel_ids = oug_join_centroids_df[oug_join_centroids_df.duplicated(subset=['PARCEL_ID'], keep=False)]
-    if dup_parcel_ids.shape[0]:
-        warnings.warn(f'{dup_parcel_ids.shape[0]} duplicate parcels found in join; check common areas for overlaps')
-
-    oug_parcels_mask = oug_join_centroids_df[common_area_key].notna()
-    oug_join_centroids_df.loc[oug_parcels_mask, 'parcel_type'] = 'owned_unit_grouping'
-    change_geometry(oug_join_centroids_df, 'POLYS', 'CENTROIDS')
-
-    return oug_join_centroids_df.copy()
-
-
-def classify_mobile_home_communities(parcels_with_centroids_df, mobile_home_communities_df, mobile_home_key):
-    """Find all parcels whose centers are within mobile home communities and classify their parcel_type
-
-    Raises a UserWarning if the number of rows after the spatial join of parcel centroids within mobile home communities is different than the original number of parcel rows, or if there are duplicate parcel ids in the
-    joined data (could indicate overlapping mobile home community geometries.)
-
-    Args:
-        parcels_with_centroids_df (pd.DataFrame.spatial): Parcels dataframe with CENTROIDS column
-        mobile_home_communities_df (pd.DataFrame.spatial): Mobile home communities boundaries
-        mobile_home_key (str): Unique key for mobile home communities data
-
-    Returns:
-        pd.DataFrame.spatial: Parcels data with mobile home parcels set in parcel_type
-    """
-
-    #: TODO: Wouldn't it be nice to merge this with owned unit groupings? it's copy-pasted anyways...
-    change_geometry(parcels_with_centroids_df, 'CENTROIDS', 'POLYS')
-    mhc_join_centroids_df = parcels_with_centroids_df.spatial.join(mobile_home_communities_df, 'left', 'within')
-
-    if mhc_join_centroids_df.shape[0] != parcels_with_centroids_df.shape[0]:
-        warnings.warn(
-            f'Different number of features in joined dataframe ({mhc_join_centroids_df.shape[0]}) than in original '
-            f'parcels ({parcels_with_centroids_df.shape[0]})'
-        )
-
-    dup_parcel_ids = mhc_join_centroids_df[mhc_join_centroids_df.duplicated(subset=['PARCEL_ID'], keep=False)]
-    if dup_parcel_ids.shape[0]:
-        warnings.warn(
-            f'{dup_parcel_ids.shape[0]} duplicate parcels found in join; check mobile home communities for overlaps'
-        )
-
-    mhc_parcels_mask = mhc_join_centroids_df[mobile_home_key].notna()
-    mhc_join_centroids_df.loc[mhc_parcels_mask, 'parcel_type'] = 'mobile_home_park'
-    change_geometry(mhc_join_centroids_df, 'POLYS', 'CENTROIDS')
-
-    return mhc_join_centroids_df.copy()
-
-
 def concat_evaluated_dataframes(dataframes, new_index='PARCEL_ID'):
     """Concatenate dataframes along the index and reset the index to new_index
 
@@ -329,6 +252,26 @@ def concat_evaluated_dataframes(dataframes, new_index='PARCEL_ID'):
 
 
 def classify_from_area(parcels_with_centroids_df, area_df, classify_info=()):
+    """Spatial join of parcels whose centers are withhin areas, with optional custom classification
+
+    Performs a left spatial join of parcels to areas, attempting to ensure all parcels are returned whether they are
+    inside the areas or not.
+
+    Raises a UserWarning if the number of rows after the spatial join of parcel centroids within the areas is
+    different than the original number of parcel rows, or if there are duplicate parcel ids in the joined data (could
+    indicate overlapping area geometries.)
+
+    Args:
+        parcels_with_centroids_df (pd.DataFrame.spatial): The parcels dataset with centroid shapes in the 'CENTROIDS' column.
+        area_df (pd.DataFrame.spatial): Areas to use for joining and classification. Should contain any fields to be joined as well as (optionally) a unique key column for classification.
+        classify_info (tuple, optional): Information for custom classification: (areas_unique_key_column, classify_column, classify_value). Defaults to ().
+
+    Raises:
+        ValueError: If three values are not passed in classify_info
+
+    Returns:
+        pd.DataFrame.spatial: Parcels with area info joined spatially and optional classification added.
+    """
 
     change_geometry(parcels_with_centroids_df, 'CENTROIDS', 'POLYS')
     oug_join_centroids_df = parcels_with_centroids_df.spatial.join(area_df, 'left', 'within')
