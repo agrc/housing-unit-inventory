@@ -307,3 +307,22 @@ def classify_mobile_home_communities(parcels_with_centroids_df, mobile_home_comm
     change_geometry(mhc_join_centroids_df, 'POLYS', 'CENTROIDS')
 
     return mhc_join_centroids_df.copy()
+
+
+def concat_evaluated_dataframes(dataframes, new_index='PARCEL_ID'):
+    """Concatenate dataframes along the index and reset the index to new_index
+
+    Args:
+        dataframes (List<pd.DataFrame>): Dataframes to concatenate
+        new_index (str, optional): Column to uses as new Index. Defaults to 'PARCEL_ID'.
+
+    Raises:
+        ValueError: If the keys in new_index are not unique
+
+    Returns:
+        pd.DataFrame: Concatenated, reindexed dataframe
+    """
+
+    concated_dataframes = pd.concat(dataframes).set_index(new_index, verify_integrity=True)
+
+    return concated_dataframes

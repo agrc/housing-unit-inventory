@@ -349,3 +349,31 @@ class TestDataCleaning:
             oug_parcels = helpers.classify_owned_unit_grouping(test_parcels_df, test_common_areas_df, 'common_area_key')
 
         assert record[0].message.args[0] == '2 duplicate parcels found in join; check common areas for overlaps'
+
+
+class TestFinalMergingAndCleaning:
+
+    def test_concat_evaluated_dataframes_merges_normally(self):
+        df1 = pd.DataFrame({'PARCEL_ID': [1, 2, 3], 'DATA': ['a', 'b', 'c']})
+
+        df2 = pd.DataFrame({'PARCEL_ID': [4, 5, 6], 'DATA': ['d', 'e', 'f']})
+
+        concat_df = helpers.concat_evaluated_dataframes([df1, df2])
+
+        test_df = pd.DataFrame(
+            {'DATA': ['a', 'b', 'c', 'd', 'e', 'f']},
+            index=[1, 2, 3, 4, 5, 6],
+        )
+        test_df.index.name = 'PARCEL_ID'
+
+        tm.assert_frame_equal(concat_df, test_df)
+
+    def test_concat_evaluated_dataframes_raises_error_on_duplicate_index_values(self):
+        df1 = pd.DataFrame({'PARCEL_ID': [1, 2, 3], 'DATA': ['a', 'b', 'c']})
+
+        df2 = pd.DataFrame({'PARCEL_ID': [4, 5, 3], 'DATA': ['d', 'e', 'f']})
+
+        with pytest.raises(ValueError) as error:
+            concat_df = helpers.concat_evaluated_dataframes([df1, df2])
+
+        assert 'Index has duplicate keys:' in str(error.value)

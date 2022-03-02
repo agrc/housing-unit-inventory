@@ -237,3 +237,12 @@ def davis_by_dataframe():
     mobile_home_communities_features_df = evaluate_mobile_home_communities_df(
         classified_parcels_df, address_pts_no_base_df
     )
+
+    evaluated_dfs = helpers.concat_evaluated_dataframes([
+        oug_features_df,
+        single_family_features_df,
+        multi_family_single_parcel_features_df,
+        mobile_home_communities_features_df,
+    ])
+
+
