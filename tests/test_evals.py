@@ -116,3 +116,32 @@ class TestMultiFamilySingleParcel:
         })
 
         tm.assert_frame_equal(evaluated_df, test_results_df)
+
+    def test_evaluate_mobile_home_communities_df_merges_addr_data(self, mocker):
+        test_parcels_df = pd.DataFrame({
+            'PARCEL_ID': [10, 11],
+            'parcel_type': ['mobile_home_park', 'mobile_home_park'],
+            'SHAPE': ['parcel_shape_10', 'parcel_shape_11'],
+        })
+
+        addr_pt_count_series = pd.Series(data=[2, 2], index=[10, 11], name='ap_count')
+        addr_pt_count_series.index.name = 'PARCEL_ID'
+
+        addr_pt_function_mock = mocker.MagicMock()
+        addr_pt_function_mock.return_value = addr_pt_count_series
+
+        mocker.patch('housing_unit_inventory.helpers.get_address_point_count_series', new=addr_pt_function_mock)
+
+        evaluated_df = inventory.evaluate_mobile_home_communities_df(test_parcels_df, mocker.Mock())
+
+        test_results_df = pd.DataFrame({
+            'PARCEL_ID': [10, 11],
+            'parcel_type': ['mobile_home_park', 'mobile_home_park'],
+            'SHAPE': ['parcel_shape_10', 'parcel_shape_11'],
+            'TYPE': ['multi_family', 'multi_family'],
+            'SUBTYPE': ['mobile_home_park', 'mobile_home_park'],
+            'basebldg': ['1', '1'],
+            'ap_count': [2, 2],
+        })
+
+        tm.assert_frame_equal(evaluated_df, test_results_df)

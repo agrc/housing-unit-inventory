@@ -41,7 +41,10 @@ class TestYearBuilt:
 class TestAddresses:
 
     def test_get_non_base_addr_points_with_non_base_addrs(self, mocker):
-        test_df = pd.DataFrame({'id': [0, 1, 2, 3], 'PtType': ['', '', 'BASE ADDRESS', '']})
+        test_df = pd.DataFrame({
+            'id': [0, 1, 2, 3],
+            'PtType': ['', '', 'BASE ADDRESS', ''],
+        })
         from_featureclass_mock = mocker.Mock()
         from_featureclass_mock.return_value = test_df
         mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass', new=from_featureclass_mock)
@@ -50,7 +53,10 @@ class TestAddresses:
 
         output_df = helpers.get_non_base_addr_points(mock_fc)
 
-        test_df = pd.DataFrame({'id': [0, 1, 3], 'PtType': ['', '', '']}, index=[0, 1, 3])
+        test_df = pd.DataFrame({
+            'id': [0, 1, 3],
+            'PtType': ['', '', ''],
+        }, index=[0, 1, 3])
 
         tm.assert_frame_equal(output_df, test_df)
 

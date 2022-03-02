@@ -59,13 +59,12 @@ def evalute_owned_unit_groupings_df(
     floors_cnt_mean_series = parcels_grouped_by_oug_id['FLOORS_CNT'].mean()
     built_yr_series = helpers.get_proper_built_yr_value_series(oug_parcels_df, common_area_key_col, 'BUILT_YR')
     parcel_count_series = parcels_grouped_by_oug_id['SHAPE'].count().rename('parcel_count')
-    address_count_series = (
-        oug_parcels_df.spatial.join(address_points_df, 'left', 'contains') \
-        .groupby(common_area_key_col)['SHAPE'].count() \
-        .rename('ap_count')
+    address_count_series = helpers.get_address_point_count_series(
+        oug_parcels_df, address_points_df, common_area_key_col
     )
 
     #: Merge all our new info to the common area polygons, using the common_area_key_col as the df index
+    #: TODO: Do we need to change common_area_df.set_index to oug_parcels_df.set_index?
     evaluated_oug_parcels_df = pd.concat([
         common_area_df.set_index(common_area_key_col),
         total_mkt_value_sum_series,
@@ -85,6 +84,8 @@ def evalute_owned_unit_groupings_df(
     return evaluated_oug_parcels_with_types_df
 
 
+#: TODO: combine these three into one method, passing a list for parcel_type and using .isin(), passing a dict for
+#: type/subtype/etc assignments, and a boolean for address counts (need to figure out mf/sf subtypes helper method)
 def evaluate_single_family_df(parcels_df) -> pd.DataFrame.spatial:
     #: Query out 'single_family' parcels from main parcel feature class
     #: Update type, subtype ('single_family'), basebldg, building_type_id (1)
@@ -119,6 +120,28 @@ def evaluate_multi_family_single_parcel_df(parcels_df, address_pts_df) -> pd.Dat
     mf_with_addr_counts_df = mf_single_parcels_subtypes_df.merge(mf_addr_pt_counts_series, how='left', on='PARCEL_ID')
 
     return mf_with_addr_counts_df
+
+
+def evaluate_mobile_home_communities_df(parcels_df, address_pts_df) -> pd.DataFrame.spatial:
+    #: Select parcels that have their center in mobile home boundaries or are classified as mobile_home_park
+    #: Set type ='multi_family', subtype = 'mobile_home_park'
+    #: Count addresses in area
+
+    mobile_home_communities_parcels_df = parcels_df[parcels_df['parcel_type'] == 'mobile_home_park']
+
+    mobile_home_communities_parcels_df['TYPE'] = 'multi_family'
+    mobile_home_communities_parcels_df['SUBTYPE'] = 'mobile_home_park'
+    mobile_home_communities_parcels_df['basebldg'] = '1'
+
+    mhc_addr_pt_counts_series = helpers.get_address_point_count_series(
+        mobile_home_communities_parcels_df, address_pts_df, 'PARCEL_ID'
+    )
+
+    mhc_with_addr_counts_df = mobile_home_communities_parcels_df.merge(
+        mhc_addr_pt_counts_series, how='left', on='PARCEL_ID'
+    )
+
+    return mhc_with_addr_counts_df
 
 
 def davis_by_dataframe():
@@ -189,8 +212,16 @@ def davis_by_dataframe():
                                              (common_areas_df['TYPE_WFRC'] == 'multi_family')]
     common_areas_subset_df['IS_OUG'] = 1
 
-    classified_parcels_df = helpers.classify_owned_unit_grouping(
+    parcels_with_oug_df = helpers.classify_owned_unit_grouping(
         standardized_parcels_df, common_areas_subset_df, common_area_key
+    )
+
+    mobile_home_key = 'mobile_home_key'
+    mobile_home_communities_df = pd.DataFrame.spatial.from_featureclass(mobile_home_communities)
+    mobile_home_communities_df[mobile_home_key] = mobile_home_communities_df['OBJECTID']
+
+    classified_parcels_df = helpers.classify_mobile_home_communities(
+        parcels_with_oug_df, mobile_home_communities_df, mobile_home_key
     )
 
     oug_features_df = evalute_owned_unit_groupings_df(
@@ -200,5 +231,9 @@ def davis_by_dataframe():
     single_family_features_df = evaluate_single_family_df(classified_parcels_df)
 
     multi_family_single_parcel_features_df = evaluate_multi_family_single_parcel_df(
+        classified_parcels_df, address_pts_no_base_df
+    )
+
+    mobile_home_communities_features_df = evaluate_mobile_home_communities_df(
         classified_parcels_df, address_pts_no_base_df
     )

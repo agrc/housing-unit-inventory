@@ -269,3 +269,29 @@ def classify_owned_unit_grouping(parcels_with_centroids_df, common_areas_df, com
     change_geometry(oug_join_centroids_df, 'POLYS', 'CENTROIDS')
 
     return oug_join_centroids_df.copy()
+
+
+def classify_mobile_home_communities(parcels_with_centroids_df, mobile_home_communities_df, mobile_home_key):
+
+    #: TODO: Wouldn't it be nice to merge this with owned unit groupings? it's copy-pasted anyways...
+
+    change_geometry(parcels_with_centroids_df, 'CENTROIDS', 'POLYS')
+    mhc_join_centroids_df = parcels_with_centroids_df.spatial.join(mobile_home_communities_df, 'left', 'within')
+
+    if mhc_join_centroids_df.shape[0] != parcels_with_centroids_df.shape[0]:
+        warnings.warn(
+            f'Different number of features in joined dataframe ({mhc_join_centroids_df.shape[0]}) than in original '
+            f'parcels ({parcels_with_centroids_df.shape[0]})'
+        )
+
+    dup_parcel_ids = mhc_join_centroids_df[mhc_join_centroids_df.duplicated(subset=['PARCEL_ID'], keep=False)]
+    if dup_parcel_ids.shape[0]:
+        warnings.warn(
+            f'{dup_parcel_ids.shape[0]} duplicate parcels found in join; check mobile home communities for overlaps'
+        )
+
+    mhc_parcels_mask = mhc_join_centroids_df[mobile_home_key].notna()
+    mhc_join_centroids_df.loc[mhc_parcels_mask, 'parcel_type'] = 'mobile_home_park'
+    change_geometry(mhc_join_centroids_df, 'POLYS', 'CENTROIDS')
+
+    return mhc_join_centroids_df.copy()
