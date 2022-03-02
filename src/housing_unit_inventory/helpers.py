@@ -194,7 +194,7 @@ def set_multi_family_single_parcel_subtypes(evaluated_df):
     evaluated_df['SUBTYPE'] = np.where(
         evaluated_df['parcel_type'] != 'triplex-quadplex', evaluated_df['parcel_type'], 'apartment'
     )
-    evaluated_df['NOTES'] = np.where(evaluated_df['parcel_type'] != 'triplex-quadplex', '', evaluated_df['parcel_type'])
+    evaluated_df['NOTE'] = np.where(evaluated_df['parcel_type'] != 'triplex-quadplex', '', evaluated_df['parcel_type'])
 
     return evaluated_df
 
@@ -203,7 +203,7 @@ def get_address_point_count_series(parcels_df, address_points_df, key_col):
     address_count_series = (
         parcels_df.spatial.join(address_points_df, 'left', 'contains') \
         .groupby(key_col)['SHAPE'].count() \
-        .rename('ap_count')
+        .rename('UNIT_COUNT')
     )
 
     return address_count_series
@@ -301,3 +301,16 @@ def classify_from_area(parcels_with_centroids_df, area_df, classify_info=()):
     change_geometry(oug_join_centroids_df, 'POLYS', 'CENTROIDS')
 
     return oug_join_centroids_df.copy()
+
+
+def update_unit_count(parcels_df):
+
+    # fix single family (non-pud)
+    parcels_df.loc[(parcels_df['UNIT_COUNT'] == 0) & (parcels_df['SUBTYPE'] == 'single_family'), 'UNIT_COUNT'] = 1
+
+    # fix duplex
+    parcels_df.loc[(parcels_df['SUBTYPE'] == 'duplex'), 'UNIT_COUNT'] = 2
+
+    # fix triplex-quadplex
+    parcels_df.loc[(parcels_df['UNIT_COUNT'] < parcels_df['HOUSE_CNT']) & (parcels_df['NOTE'] == 'triplex-quadplex'),
+                   'UNIT_COUNT'] = parcels_df['HOUSE_CNT']

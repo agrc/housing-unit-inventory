@@ -21,21 +21,30 @@ LIR parcels. Uses these fields:
 
 Duplicate OIDs are dissolved on parcel ID, adding the following field:
 
-- 'COUNT_PARCEL_ID'
+- 'COUNT_PARCEL_ID' (not used)
 
 Adds the following fields for analysis:
 
 - 'TYPE'
 - 'SUBTYPE'
-- 'NOTE'
-- 'BUILT_YR2'
+- 'NOTE'            Stores triplex-quadplex designation for unit count use, everything else gets description from assesor
+- 'UNIT_COUNT'      Oug parcels get # of addr pts, sf parcels get 1, duplex get 2, tri/quad get HOUSE_CNT
+- 'BUILT_DECADE'    Mathematically created
+- 'COUNTY'          hardcoded
 
 ## Extended Parcel Info
 
 From Assesor. For davis, joins between AccountNo and Parcel ID.
 
-- class: The detailed description of the parcel (sf, apartment, mobile home, etc)
-- notes: Carried over but not used?
+- class             The detailed description of the parcel (sf, apartment, mobile home, etc)
+- des_all           Copied to NOTE field for non tri/quad parcels
+
+## Other info
+
+From UGRC/MPOs
+
+- CITY              From spatially-joined city boundaries.
+- SUBREGION         From spatially-joined subcounty boundaries (MPO/county), used to identify similar areas.
 
 ## Address Points
 

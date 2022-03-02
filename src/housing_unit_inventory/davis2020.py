@@ -245,6 +245,7 @@ def _remove_analyzed_features(layer, selecting_features):
 
 
 def _reclassify_tri_quad_to_appartment(layer, fields):
+    #: SUBTYPE, NOTE, class
     with arcpy.da.UpdateCursor(layer, fields) as cursor:
         for row in cursor:
             if row[2] in ['duplex', 'apartment', 'townhome', 'multi_family']:
@@ -812,6 +813,8 @@ def davis():
     # fix duplex
     rf_merged_df.loc[(rf_merged_df['SUBTYPE'] == 'duplex'), 'UNIT_COUNT'] = 2
 
+    #: NOTE: SUBTYPE should never be triplex-quadplex due to moving that value to note. As written, I don't think this
+    #: does anything
     # fix triplex-quadplex
     rf_merged_df.loc[(rf_merged_df['UNIT_COUNT'] < rf_merged_df['HOUSE_CNT']) &
                      (rf_merged_df['SUBTYPE'] == 'triplex-quadplex'), 'UNIT_COUNT'] = rf_merged_df['HOUSE_CNT']

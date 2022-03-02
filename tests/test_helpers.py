@@ -86,7 +86,7 @@ class TestAddresses:
             test_parcels_df, test_address_pts_df, 'parcel_oid'
         )
 
-        test_series = pd.Series(data=[1, 2], index=[11, 12], name='ap_count')
+        test_series = pd.Series(data=[1, 2], index=[11, 12], name='UNIT_COUNT')
         test_series.index.name = 'parcel_oid'
         tm.assert_series_equal(spatial_join_results_series, test_series)
 
@@ -126,7 +126,7 @@ class TestCommonAreaTypes:
             'id': [1, 2, 3, 4],
             'parcel_type': ['multi_family', 'duplex', 'apartment', 'townhome'],
             'SUBTYPE': ['multi_family', 'duplex', 'apartment', 'townhome'],
-            'NOTES': ['', '', '', '']
+            'NOTE': ['', '', '', '']
         })
 
         tm.assert_frame_equal(with_types_df, test_results_df)
@@ -143,7 +143,7 @@ class TestCommonAreaTypes:
             'id': [1],
             'parcel_type': ['triplex-quadplex'],
             'SUBTYPE': ['apartment'],
-            'NOTES': ['triplex-quadplex'],
+            'NOTE': ['triplex-quadplex'],
         })
 
         tm.assert_frame_equal(with_types_df, test_results_df)
@@ -477,3 +477,108 @@ class TestFinalMergingAndCleaning:
             concat_df = helpers.concat_evaluated_dataframes([df1, df2])
 
         assert 'Index has duplicate keys:' in str(error.value)
+
+    def test_update_unit_count_fixes_single_family(self):
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2],
+            'SUBTYPE': ['single_family', 'single_family'],
+            'UNIT_COUNT': [1, 0],
+            'NOTE': ['', ''],
+            'HOUSE_CNT': [1, 1],
+        })
+
+        helpers.update_unit_count(parcels_df)
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2],
+            'SUBTYPE': ['single_family', 'single_family'],
+            'UNIT_COUNT': [1, 1],
+            'NOTE': ['', ''],
+            'HOUSE_CNT': [1, 1],
+        })
+
+        tm.assert_frame_equal(parcels_df, test_df)
+
+    def test_update_unit_count_fixes_duplex(self):
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2],
+            'SUBTYPE': ['duplex', 'duplex'],
+            'UNIT_COUNT': [1, 2],
+            'NOTE': ['', ''],
+            'HOUSE_CNT': [1, 1],
+        })
+
+        helpers.update_unit_count(parcels_df)
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2],
+            'SUBTYPE': ['duplex', 'duplex'],
+            'UNIT_COUNT': [2, 2],
+            'NOTE': ['', ''],
+            'HOUSE_CNT': [1, 1],
+        })
+
+        tm.assert_frame_equal(parcels_df, test_df)
+
+    def test_update_unit_count_fixes_tri_quad(self):
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2],
+            'SUBTYPE': ['apartment', 'apartment'],
+            'NOTE': ['triplex-quadplex', 'triplex-quadplex'],
+            'UNIT_COUNT': [1, 4],
+            'HOUSE_CNT': [3, 4],
+        })
+
+        helpers.update_unit_count(parcels_df)
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2],
+            'SUBTYPE': ['apartment', 'apartment'],
+            'NOTE': ['triplex-quadplex', 'triplex-quadplex'],
+            'UNIT_COUNT': [3, 4],
+            'HOUSE_CNT': [3, 4],
+        })
+
+        tm.assert_frame_equal(parcels_df, test_df)
+
+    def test_update_unit_count_fixes_everything(self):
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2, 3],
+            'SUBTYPE': ['single_family', 'duplex', 'apartment'],
+            'NOTE': ['', '', 'triplex-quadplex'],
+            'UNIT_COUNT': [0, 1, 1],
+            'HOUSE_CNT': [42, 42, 4],
+        })
+
+        helpers.update_unit_count(parcels_df)
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2, 3],
+            'SUBTYPE': ['single_family', 'duplex', 'apartment'],
+            'NOTE': ['', '', 'triplex-quadplex'],
+            'UNIT_COUNT': [1, 2, 4],
+            'HOUSE_CNT': [42, 42, 4],
+        })
+
+        tm.assert_frame_equal(parcels_df, test_df)
+
+    def test_update_unit_count_fixes_nothing(self):
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2, 3],
+            'SUBTYPE': ['single_family', 'duplex', 'apartment'],
+            'NOTE': ['', '', 'triplex-quadplex'],
+            'UNIT_COUNT': [1, 2, 4],
+            'HOUSE_CNT': [42, 42, 4],
+        })
+
+        helpers.update_unit_count(parcels_df)
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2, 3],
+            'SUBTYPE': ['single_family', 'duplex', 'apartment'],
+            'NOTE': ['', '', 'triplex-quadplex'],
+            'UNIT_COUNT': [1, 2, 4],
+            'HOUSE_CNT': [42, 42, 4],
+        })
+
+        tm.assert_frame_equal(parcels_df, test_df)

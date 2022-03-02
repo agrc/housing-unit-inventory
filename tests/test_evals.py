@@ -80,7 +80,7 @@ class TestMultiFamilySingleParcel:
             'basebldg': ['1', '1'],
             'building_type_id': ['2', '2'],
             'SUBTYPE': ['apartment', 'apartment'],
-            'NOTES': ['', ''],
+            'NOTE': ['', ''],
             'ap_count': [2, 2],
         })
 
@@ -111,7 +111,7 @@ class TestMultiFamilySingleParcel:
             'basebldg': ['1', '1'],
             'building_type_id': ['2', '2'],
             'SUBTYPE': ['apartment', 'apartment'],
-            'NOTES': ['', ''],
+            'NOTE': ['', ''],
             'ap_count': [np.nan, np.nan],
         })
 

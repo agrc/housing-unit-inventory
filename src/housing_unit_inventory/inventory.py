@@ -58,7 +58,7 @@ def evalute_owned_unit_groupings_df(
     bldg_sqft_sum_series = parcels_grouped_by_oug_id['BLDG_SQFT'].sum()
     floors_cnt_mean_series = parcels_grouped_by_oug_id['FLOORS_CNT'].mean()
     built_yr_series = helpers.get_proper_built_yr_value_series(oug_parcels_df, common_area_key_col, 'BUILT_YR')
-    parcel_count_series = parcels_grouped_by_oug_id['SHAPE'].count().rename('parcel_count')
+    parcel_count_series = parcels_grouped_by_oug_id['SHAPE'].count().rename('PARCEL_COUNT')
     address_count_series = helpers.get_address_point_count_series(
         oug_parcels_df, address_points_df, common_area_key_col
     )
@@ -157,6 +157,10 @@ def davis_by_dataframe():
     cities = r'.\Inputs\Cities.shp'
     subcounties = r'.\Inputs\SubCountyArea_2019.shp'
 
+    #: Output
+    output_fc = r'c:\gis\projects\housinginventory\housinginventory.gdb\davis2020_1'
+    output_csv = r'c:\gis\projects\housinginventory\davis2020_1.csv'
+
     # create output gdb
     outputs = '.\\Outputs'
     gdb = os.path.join(outputs, 'classes_HUI.gdb')
@@ -179,9 +183,7 @@ def davis_by_dataframe():
     #: Dissolve duplicate parcel ids
     parcels_cleaned_df = helpers.dissolve_duplicate_parcels(parcels_fc)
 
-    # Load Extended Descriptions - be sure to format ACCOUNTNO column as text in excel first
-    # parcels_for_modeling_layer = _join_extended_parcel_info(davis_extended, parcels_cleaned_df, scratch)
-
+    #: Load Extended Descriptions - be sure to format ACCOUNTNO column as text in excel first
     extra_data_df = helpers.read_extra_info_into_dataframe(
         extended_info_csv, 'ACCOUNTNO', str, 9, ['ACCOUNTNO', 'des_all', 'class']
     )
@@ -194,19 +196,11 @@ def davis_by_dataframe():
     }
     standardized_parcels_df = helpers.standardize_fields(parcels_with_centroids_df, davis_field_mapping)
 
-    #: Fields can just be added as dataframe columns when needed
-    # fields = {
-    #     'TYPE': 'TEXT',
-    #     'SUBTYPE': 'TEXT',
-    #     'NOTE': 'TEXT',
-    #     'BUILT_YR2': 'SHORT',
-    # }
-    # parcels_for_modeling_layer = _add_fields(parcels_for_modeling_layer, fields)
-
-    # get a count of all parcels
+    #: Get a count of all parcels
     count_all = standardized_parcels_df.shape[0]
-    print(f'# initial parcels in modeling area:\n {count_all}')
+    print(f'Initial parcels in modeling area:\t {count_all}')
 
+    #: Classify parcels within common areas
     common_area_key = 'common_area_key'
     common_areas_df = pd.DataFrame.spatial.from_featureclass(common_areas_fc)
     common_areas_df[common_area_key] = common_areas_df['OBJECTID']
@@ -219,6 +213,7 @@ def davis_by_dataframe():
         standardized_parcels_df, common_areas_subset_df, common_area_classify_info
     )
 
+    #: Classify parcels within mobile home communities
     mobile_home_key = 'mobile_home_key'
     mobile_home_communities_df = pd.DataFrame.spatial.from_featureclass(mobile_home_communities)
     mobile_home_communities_df[mobile_home_key] = mobile_home_communities_df['OBJECTID']
@@ -228,6 +223,7 @@ def davis_by_dataframe():
         parcels_with_oug_df, mobile_home_communities_df, mobile_home_classify_info
     )
 
+    #: Run the evaluations
     oug_features_df = evalute_owned_unit_groupings_df(
         classified_parcels_df, common_areas_subset_df, common_area_key, address_pts_no_base_df
     )
@@ -242,6 +238,7 @@ def davis_by_dataframe():
         classified_parcels_df, address_pts_no_base_df
     )
 
+    #: Merge the evaluated parcels into one dataframe
     evaluated_parcels_df = helpers.concat_evaluated_dataframes([
         oug_features_df,
         single_family_features_df,
@@ -249,8 +246,42 @@ def davis_by_dataframe():
         mobile_home_communities_features_df,
     ])
 
+    #: Add city and sub-county info
     cities_df = pd.DataFrame.spatial.from_featureclass(cities)
     parcels_with_cities_df = helpers.classify_from_area(evaluated_parcels_df, cities_df)
 
     subcounties_df = pd.DataFrame.spatial.from_featureclass(subcounties)
-    parcels_with_subcounties_df = helpers.classify_from_area(parcels_with_cities_df, subcounties_df)
+    final_parcels_df = helpers.classify_from_area(parcels_with_cities_df, subcounties_df)
+
+    #: Rename fields from city/subcounties
+    final_parcels_df.rename(columns={
+        'NAME': 'CITY',
+        'NewSA': 'SUBREGION',
+    }, inplace=True)
+
+    #: Clean up some nulls
+    final_parcels_df['NOTE'].fillna(final_parcels_df['des_all'], in_place=True)
+    final_parcels_df['HOUSE_CNT'] = final_parcels_df['HOUSE_CNT'].fillna(0).astype(int)
+    final_parcels_df['UNIT_COUNT'] = final_parcels_df['UNIT_COUNT'].fillna(0).astype(int)
+
+    helpers.update_unit_count(final_parcels_df)
+
+    #: Decade is floor division by 10, then multiply by 10
+    final_parcels_df['BUILT_DECADE'] = final_parcels_df['BUILT_YR'] // 10 * 10
+
+    final_parcels_df['COUNTY'] = 'DAVIS'
+
+    # remove data points with zero units
+    final_parcels_df = final_parcels_df[(final_parcels_df['UNIT_COUNT'] > 0) |
+                                        (final_parcels_df['HOUSE_CNT'] > 0)].copy()
+
+    final_fields = [
+        'OBJECTID', 'PARCEL_ID', 'TYPE', 'SUBTYPE', 'NOTE', 'IS_OUG', 'CITY', 'SUBREGION', 'COUNTY', 'UNIT_COUNT',
+        'PARCEL_COUNT', 'FLOORS_CNT', 'PARCEL_ACRES', 'BLDG_SQFT', 'TOTAL_MKT_VALUE', 'BUILT_YR', 'BUILT_DECADE',
+        'SHAPE'
+    ]
+
+    output_df = final_parcels_df.reindex(columns=final_fields)
+
+    output_df.spatial.to_featureclass(output_fc)
+    output_df.drop(columns=['SHAPE']).to_csv(output_csv)
