@@ -272,9 +272,21 @@ def classify_owned_unit_grouping(parcels_with_centroids_df, common_areas_df, com
 
 
 def classify_mobile_home_communities(parcels_with_centroids_df, mobile_home_communities_df, mobile_home_key):
+    """Find all parcels whose centers are within mobile home communities and classify their parcel_type
+
+    Raises a UserWarning if the number of rows after the spatial join of parcel centroids within mobile home communities is different than the original number of parcel rows, or if there are duplicate parcel ids in the
+    joined data (could indicate overlapping mobile home community geometries.)
+
+    Args:
+        parcels_with_centroids_df (pd.DataFrame.spatial): Parcels dataframe with CENTROIDS column
+        mobile_home_communities_df (pd.DataFrame.spatial): Mobile home communities boundaries
+        mobile_home_key (str): Unique key for mobile home communities data
+
+    Returns:
+        pd.DataFrame.spatial: Parcels data with mobile home parcels set in parcel_type
+    """
 
     #: TODO: Wouldn't it be nice to merge this with owned unit groupings? it's copy-pasted anyways...
-
     change_geometry(parcels_with_centroids_df, 'CENTROIDS', 'POLYS')
     mhc_join_centroids_df = parcels_with_centroids_df.spatial.join(mobile_home_communities_df, 'left', 'within')
 
