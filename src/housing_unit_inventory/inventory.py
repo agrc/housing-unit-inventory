@@ -152,7 +152,7 @@ def davis_by_dataframe():
     arcpy.env.overwriteOutput = True
 
     #: Inputs
-    taz_shp = '.\\Inputs\\TAZ.shp'
+    # taz_shp = '.\\Inputs\\TAZ.shp'
     parcels_fc = '.\\Inputs\\Davis_County_LIR_Parcels.gdb\\Parcels_Davis_LIR_UTM12'
     address_pts = '.\\Inputs\\AddressPoints_Davis.gdb\\address_points_davis'
     common_areas_fc = r'.\Inputs\Common_Areas.gdb\Common_Areas_Reviewed'
@@ -275,8 +275,7 @@ def davis_by_dataframe():
     final_parcels_df['BUILT_DECADE'] = final_parcels_df['BUILT_YR'] // 10 * 10
 
     # remove data points with zero units
-    final_parcels_df = final_parcels_df[(final_parcels_df['UNIT_COUNT'] > 0) |
-                                        (final_parcels_df['HOUSE_CNT'] > 0)].copy()
+    helpers.remove_zero_unit_house_counts(final_parcels_df)
 
     final_fields = [
         'OBJECTID', 'PARCEL_ID', 'TYPE', 'SUBTYPE', 'NOTE', 'IS_OUG', 'CITY', 'SUBREGION', 'COUNTY', 'UNIT_COUNT',

@@ -304,6 +304,11 @@ def classify_from_area(parcels_with_centroids_df, area_df, classify_info=()):
 
 
 def update_unit_count(parcels_df):
+    """Update unit counts in-place for single family, duplex, and tri/quad
+
+    Args:
+        parcels_df (pd.DataFrame): The evaluated parcel dataset with UNIT_COUNT, HOUSE_CNT, SUBTYPE, and NOTE columns
+    """
 
     # fix single family (non-pud)
     parcels_df.loc[(parcels_df['UNIT_COUNT'] == 0) & (parcels_df['SUBTYPE'] == 'single_family'), 'UNIT_COUNT'] = 1
@@ -314,3 +319,14 @@ def update_unit_count(parcels_df):
     # fix triplex-quadplex
     parcels_df.loc[(parcels_df['UNIT_COUNT'] < parcels_df['HOUSE_CNT']) & (parcels_df['NOTE'] == 'triplex-quadplex'),
                    'UNIT_COUNT'] = parcels_df['HOUSE_CNT']
+
+
+def remove_zero_unit_house_counts(parcels_df):
+    """Remove any rows in-place that have a 0 in either UNIT_COUNT or HOUSE_CNT
+
+    Args:
+        parcels_df (pd.DataFrame): Parcels dataset with populated UNIT_COUNT and HOUSE_CNT columns
+    """
+
+    rows_with_zeros = parcels_df[(parcels_df['UNIT_COUNT'] == 0) | (parcels_df['HOUSE_CNT'] == 0)]
+    parcels_df.drop(rows_with_zeros.index, inplace=True)

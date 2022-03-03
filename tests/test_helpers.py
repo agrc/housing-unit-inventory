@@ -582,3 +582,20 @@ class TestFinalMergingAndCleaning:
         })
 
         tm.assert_frame_equal(parcels_df, test_df)
+
+    def test_remove_zero_unit_house_counts_all_combos(self):
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2, 3, 4],
+            'UNIT_COUNT': [0, 0, 1, 1],
+            'HOUSE_CNT': [0, 1, 0, 1],
+        })
+
+        helpers.remove_zero_unit_house_counts(parcels_df)
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [4],
+            'UNIT_COUNT': [1],
+            'HOUSE_CNT': [1],
+        }, index=[3])
+
+        tm.assert_frame_equal(parcels_df, test_df)
