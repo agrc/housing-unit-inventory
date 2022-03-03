@@ -1,3 +1,4 @@
+import logging
 import os
 
 import arcpy
@@ -65,6 +66,9 @@ def evalute_owned_unit_groupings_df(
 
     #: Merge all our new info to the common area polygons, using the common_area_key_col as the df index
     #: TODO: Do we need to change common_area_df.set_index to oug_parcels_df.set_index?
+    #: I don't think so... we create new "parcels" based off the oug geometries and get their column values from the
+    #: aggregation methods above. We may need to add a few other columns, though, to amke sure they have any other
+    #: needed info.
     evaluated_oug_parcels_df = pd.concat([
         common_area_df.set_index(common_area_key_col),
         total_mkt_value_sum_series,
@@ -161,34 +165,25 @@ def davis_by_dataframe():
     output_fc = r'c:\gis\projects\housinginventory\housinginventory.gdb\davis2020_1'
     output_csv = r'c:\gis\projects\housinginventory\davis2020_1.csv'
 
-    # create output gdb
-    outputs = '.\\Outputs'
-    gdb = os.path.join(outputs, 'classes_HUI.gdb')
-    if not arcpy.Exists(gdb):
-        arcpy.CreateFileGDB_management(outputs, 'classes_HUI.gdb')
-
-    scratch = os.path.join(outputs, 'scratch_HUI.gdb')
-    if not arcpy.Exists(scratch):
-        arcpy.CreateFileGDB_management(outputs, 'scratch_HUI.gdb')
-
     #: Address points (used later)
-    #: TODO: Do we need to be filtering out the non-base addresses?
-    # address_pts_no_base = helpers.get_non_base_addr_points(address_pts, scratch)
-    address_pts_no_base_df = pd.DataFrame.spatial.from_featureclass(address_pts)
+    address_pts_no_base_df = helpers.get_non_base_addr_points(address_pts)
 
     #: Prep Main Parcel Layer
     # select parcels within modeling area
     # parcels_in_study_area = _get_parcels_in_modelling_area(parcels, taz_shp, scratch)
 
     #: Dissolve duplicate parcel ids
+    logging.debug('Dissolving parcels...')
     parcels_cleaned_df = helpers.dissolve_duplicate_parcels(parcels_fc)
 
     #: Load Extended Descriptions - be sure to format ACCOUNTNO column as text in excel first
+    logging.debug('Merging csv data...')
     extra_data_df = helpers.read_extra_info_into_dataframe(
         extended_info_csv, 'ACCOUNTNO', str, 9, ['ACCOUNTNO', 'des_all', 'class']
     )
     parcels_merged_df = parcels_cleaned_df.merge(extra_data_df, left_on='PARCEL_ID', right_on='ACCOUNTNO', how='left')
 
+    logging.debug('Creating centroid shapes...')
     parcels_with_centroids_df = helpers.add_centroids_to_parcel_df(parcels_merged_df, 'PARCEL_ID')
 
     davis_field_mapping = {
@@ -200,6 +195,7 @@ def davis_by_dataframe():
     count_all = standardized_parcels_df.shape[0]
     print(f'Initial parcels in modeling area:\t {count_all}')
 
+    logging.debug('Classifying OUGs and MHCs...')
     #: Classify parcels within common areas
     common_area_key = 'common_area_key'
     common_areas_df = pd.DataFrame.spatial.from_featureclass(common_areas_fc)
@@ -224,21 +220,26 @@ def davis_by_dataframe():
     )
 
     #: Run the evaluations
+    logging.info('Evaluating owned unit groupings...')
     oug_features_df = evalute_owned_unit_groupings_df(
         classified_parcels_df, common_areas_subset_df, common_area_key, address_pts_no_base_df
     )
 
+    logging.info('Evaluating single family parcels...')
     single_family_features_df = evaluate_single_family_df(classified_parcels_df)
 
+    logging.info('Evaluating multi-family, single-parcel parcels...')
     multi_family_single_parcel_features_df = evaluate_multi_family_single_parcel_df(
         classified_parcels_df, address_pts_no_base_df
     )
 
+    logging.info('Evaluating mobile home communities...')
     mobile_home_communities_features_df = evaluate_mobile_home_communities_df(
         classified_parcels_df, address_pts_no_base_df
     )
 
     #: Merge the evaluated parcels into one dataframe
+    logging.debug('Merging dataframes...')
     evaluated_parcels_df = helpers.concat_evaluated_dataframes([
         oug_features_df,
         single_family_features_df,
@@ -247,11 +248,14 @@ def davis_by_dataframe():
     ])
 
     #: Add city and sub-county info
+    logging.debug('Adding city and subcounty info...')
     cities_df = pd.DataFrame.spatial.from_featureclass(cities)
     parcels_with_cities_df = helpers.classify_from_area(evaluated_parcels_df, cities_df)
 
     subcounties_df = pd.DataFrame.spatial.from_featureclass(subcounties)
     final_parcels_df = helpers.classify_from_area(parcels_with_cities_df, subcounties_df)
+
+    final_parcels_df['COUNTY'] = 'DAVIS'
 
     #: Rename fields from city/subcounties
     final_parcels_df.rename(columns={
@@ -260,6 +264,7 @@ def davis_by_dataframe():
     }, inplace=True)
 
     #: Clean up some nulls
+    logging.debug('Cleaning up final data')
     final_parcels_df['NOTE'].fillna(final_parcels_df['des_all'], in_place=True)
     final_parcels_df['HOUSE_CNT'] = final_parcels_df['HOUSE_CNT'].fillna(0).astype(int)
     final_parcels_df['UNIT_COUNT'] = final_parcels_df['UNIT_COUNT'].fillna(0).astype(int)
@@ -268,8 +273,6 @@ def davis_by_dataframe():
 
     #: Decade is floor division by 10, then multiply by 10
     final_parcels_df['BUILT_DECADE'] = final_parcels_df['BUILT_YR'] // 10 * 10
-
-    final_parcels_df['COUNTY'] = 'DAVIS'
 
     # remove data points with zero units
     final_parcels_df = final_parcels_df[(final_parcels_df['UNIT_COUNT'] > 0) |
@@ -281,7 +284,7 @@ def davis_by_dataframe():
         'SHAPE'
     ]
 
+    logging.info('Writing final data out to disk...')
     output_df = final_parcels_df.reindex(columns=final_fields)
-
     output_df.spatial.to_featureclass(output_fc)
     output_df.drop(columns=['SHAPE']).to_csv(output_csv)
