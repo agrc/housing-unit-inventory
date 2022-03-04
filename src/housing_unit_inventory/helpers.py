@@ -1,4 +1,5 @@
 import warnings
+from datetime import datetime
 
 import arcpy
 import numpy as np
@@ -200,6 +201,17 @@ def set_multi_family_single_parcel_subtypes(evaluated_df):
 
 
 def get_address_point_count_series(parcels_df, address_points_df, key_col):
+    """Add number of intersecting address points as the UNIT_COUNT
+
+    Args:
+        parcels_df (pd.DataFrame.spatial): Parcels dataset
+        address_points_df (pd.DataFrame.spatial): Address point dataset with base addresses filtered out
+        key_col (str): A column in parcels_df that identifies the joined rows that belong to a single source parcel/geometry
+
+    Returns:
+        pd.Series: The count of addresses, named 'UNIT_COUNT' and indexed by key_col
+    """
+
     address_count_series = (
         parcels_df.spatial.join(address_points_df, 'left', 'contains') \
         .groupby(key_col)['SHAPE'].count() \
@@ -322,7 +334,7 @@ def update_unit_count(parcels_df):
 
 
 def remove_zero_unit_house_counts(parcels_df):
-    """Remove any rows in-place that have a 0 in either UNIT_COUNT or HOUSE_CNT
+    """Remove any rows in-place that have a 0 or null in either UNIT_COUNT or HOUSE_CNT
 
     Args:
         parcels_df (pd.DataFrame): Parcels dataset with populated UNIT_COUNT and HOUSE_CNT columns
@@ -330,3 +342,26 @@ def remove_zero_unit_house_counts(parcels_df):
 
     rows_with_zeros = parcels_df[(parcels_df['UNIT_COUNT'] == 0) | (parcels_df['HOUSE_CNT'] == 0)]
     parcels_df.drop(rows_with_zeros.index, inplace=True)
+    parcels_df.dropna(subset=['UNIT_COUNT', 'HOUSE_CNT'], inplace=True)
+
+
+def calculate_built_decade(parcels_df):
+    """Calculate BUILT_DECADE from BUILT_YR in-place
+
+    Raises a UserWarning with the number of rows whose BUILT_YR is before 1846 or after the current year + 2 (yes,
+    there were structures prior to Fort Buenaventura, but I highly doubt any are still in use as housing).
+
+    Args:
+        parcels_df (pd.DataFrame): Parcels dataset with BUILT_YR column
+    """
+
+    this_year = datetime.now().year
+    invalid_built_year_rows = parcels_df[(parcels_df['BUILT_YR'] < 1846) | (parcels_df['BUILT_YR'] > this_year + 2)]
+    if invalid_built_year_rows.shape[0]:
+        warnings.warn(
+            f'{invalid_built_year_rows.shape[0]} parcels have an invald built year (before 1847 or after current '
+            'year plus two)'
+        )
+
+    #: Decade is floor division by 10, then multiply by 10
+    parcels_df['BUILT_DECADE'] = parcels_df['BUILT_YR'] // 10 * 10

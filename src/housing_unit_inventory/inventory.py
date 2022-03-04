@@ -266,13 +266,10 @@ def davis_by_dataframe():
     #: Clean up some nulls
     logging.debug('Cleaning up final data')
     final_parcels_df['NOTE'].fillna(final_parcels_df['des_all'], in_place=True)
-    final_parcels_df['HOUSE_CNT'] = final_parcels_df['HOUSE_CNT'].fillna(0).astype(int)
-    final_parcels_df['UNIT_COUNT'] = final_parcels_df['UNIT_COUNT'].fillna(0).astype(int)
 
     helpers.update_unit_count(final_parcels_df)
 
-    #: Decade is floor division by 10, then multiply by 10
-    final_parcels_df['BUILT_DECADE'] = final_parcels_df['BUILT_YR'] // 10 * 10
+    helpers.calculate_built_decade(final_parcels_df)
 
     # remove data points with zero units
     helpers.remove_zero_unit_house_counts(final_parcels_df)

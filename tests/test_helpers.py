@@ -598,4 +598,73 @@ class TestFinalMergingAndCleaning:
             'HOUSE_CNT': [1],
         }, index=[3])
 
+        tm.assert_frame_equal(parcels_df, test_df, check_dtype=False)
+
+    def test_remove_zero_unit_house_counts_properly_handles_nans(self):
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2, 3, 4],
+            'UNIT_COUNT': [np.nan, np.nan, 1, 1],
+            'HOUSE_CNT': [np.nan, 1, np.nan, 1],
+        })
+
+        helpers.remove_zero_unit_house_counts(parcels_df)
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [4],
+            'UNIT_COUNT': [1],
+            'HOUSE_CNT': [1],
+        }, index=[3])
+
+        tm.assert_frame_equal(parcels_df, test_df, check_dtype=False)
+
+    def test_remove_zero_unit_house_counts_mixed_zeroes_nans(self):
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2, 3, 4],
+            'UNIT_COUNT': [np.nan, 0, 1, 1],
+            'HOUSE_CNT': [0, 1, np.nan, 1],
+        })
+
+        helpers.remove_zero_unit_house_counts(parcels_df)
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [4],
+            'UNIT_COUNT': [1],
+            'HOUSE_CNT': [1],
+        }, index=[3])
+
+        tm.assert_frame_equal(parcels_df, test_df, check_dtype=False)
+
+    def test_calculate_built_decade_variety_of_years(self):
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2, 3, 4],
+            'BUILT_YR': [1851, 1900, 1902, 2022],
+        })
+
+        helpers.calculate_built_decade(parcels_df)
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2, 3, 4],
+            'BUILT_YR': [1851, 1900, 1902, 2022],
+            'BUILT_DECADE': [1850, 1900, 1900, 2020]
+        })
+
         tm.assert_frame_equal(parcels_df, test_df)
+
+    def test_calculate_built_decade_raises_warning_for_invalid_year(self):
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2, 3, 4],
+            'BUILT_YR': [1851, 1900, 198, 2022],
+        })
+        with pytest.warns(UserWarning) as warning:
+            helpers.calculate_built_decade(parcels_df)
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2, 3, 4],
+            'BUILT_YR': [1851, 1900, 198, 2022],
+            'BUILT_DECADE': [1850, 1900, 190, 2020]
+        })
+
+        tm.assert_frame_equal(parcels_df, test_df)
+
+        assert warning[0].message.args[
+            0] == '1 parcels have an invald built year (before 1847 or after current year plus two)'
