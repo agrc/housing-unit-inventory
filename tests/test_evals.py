@@ -117,6 +117,9 @@ class TestMultiFamilySingleParcel:
 
         tm.assert_frame_equal(evaluated_df, test_results_df)
 
+
+class TestMobileHomeCommunities:
+
     def test_evaluate_mobile_home_communities_df_merges_addr_data(self, mocker):
         test_parcels_df = pd.DataFrame({
             'PARCEL_ID': [10, 11],

@@ -189,6 +189,37 @@ def set_common_area_types(evaluated_df):
     return evaluated_df
 
 
+def subset_owned_unit_groupings_from_common_areas(
+    common_areas_fc, common_area_key_column_name, unique_key_column='OBJECTID'
+):
+    """Get PUDs and multi-family parcels from common_areas_fc as a dataframe
+
+    Args:
+        common_areas_fc (str): Path to the common areas featureclass.
+        common_area_key_column_name: Name of column to be created to hold the unique key for each common area.
+        unique_key_column (str, optional): Column holding unique identifier for common areas. Defaults to 'OBJECTID'.
+            Will be copied to new common_area_column_name column.
+
+    Raises:
+        ValueError: If values in unique_key_column are not unique. Because this column is used later to aggregate
+            parcel information, non-unique values will result in improper aggregation and invalid results.
+
+    Returns:
+        pd.DataFrame.spatial: Spatially enabled dataframe of owned unit groupings
+    """
+
+    common_areas_df = pd.DataFrame.spatial.from_featureclass(common_areas_fc)
+    if not common_areas_df[unique_key_column].is_unique:
+        raise ValueError(f'Unique key column {unique_key_column} does not contain unique values.')
+    common_areas_df[common_area_key_column_name] = common_areas_df[unique_key_column]
+
+    common_areas_subset_df = common_areas_df[(common_areas_df['SUBTYPE_WFRC'] == 'pud') |
+                                             (common_areas_df['TYPE_WFRC'] == 'multi_family')]
+    common_areas_subset_df['IS_OUG'] = 1
+
+    return common_areas_subset_df
+
+
 def set_multi_family_single_parcel_subtypes(evaluated_df):
     #: SUBTYPE = class unless class == 'triplex-quadplex', in which case it becomes 'apartment' and NOTE becomes tri-quad
 

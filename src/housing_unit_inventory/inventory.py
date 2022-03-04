@@ -193,16 +193,12 @@ def davis_by_dataframe():
 
     #: Get a count of all parcels
     count_all = standardized_parcels_df.shape[0]
-    print(f'Initial parcels in modeling area:\t {count_all}')
+    logging.info(f'Initial parcels in modeling area:\t {count_all}')
 
     logging.debug('Classifying OUGs and MHCs...')
     #: Classify parcels within common areas
     common_area_key = 'common_area_key'
-    common_areas_df = pd.DataFrame.spatial.from_featureclass(common_areas_fc)
-    common_areas_df[common_area_key] = common_areas_df['OBJECTID']
-    common_areas_subset_df = common_areas_df[(common_areas_df['SUBTYPE_WFRC'] == 'pud') |
-                                             (common_areas_df['TYPE_WFRC'] == 'multi_family')]
-    common_areas_subset_df['IS_OUG'] = 1
+    common_areas_subset_df = helpers.subset_owned_unit_groupings_from_common_areas(common_areas_fc, common_area_key)
 
     common_area_classify_info = (common_area_key, 'parcel_type', 'owned_unit_grouping')
     parcels_with_oug_df = helpers.classify_from_area(
