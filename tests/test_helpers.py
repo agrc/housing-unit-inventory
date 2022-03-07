@@ -192,7 +192,7 @@ class TestCommonAreas:
         tm.assert_frame_equal(with_types_df, test_results_df)
 
 
-class TestDataCleaning:
+class TestDataSetupAndCleaning:
 
     def test_standardize_fields_renames_all_fields(self):
         parcels_df = pd.DataFrame({
@@ -238,6 +238,80 @@ class TestDataCleaning:
             renamed_df = helpers.standardize_fields(parcels_df, field_mapping)
 
             assert 'Field TYPE not found in parcels dataset.' in str(exception_info)
+
+    def test_add_extra_info_from_csv_merges_properly(self, mocker):
+        csv_join_fields = ['ACCOUNTNO', 'class', 'des_all']
+        csv_df = pd.DataFrame({
+            csv_join_fields[0]: ['01', '02', '03'],
+            csv_join_fields[1]: ['foo', 'bar', 'baz'],
+            csv_join_fields[2]: ['fee', 'fi', 'fo']
+        })
+
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': ['01', '02', '03'],
+        })
+
+        from_csv_method_mock = mocker.MagicMock()
+        from_csv_method_mock.return_value = csv_df
+        mocker.patch.object(pd, 'read_csv', new=from_csv_method_mock)
+
+        joined_df = helpers.add_extra_info_from_csv('fake_csv_path', 2, csv_join_fields, parcels_df)
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': ['01', '02', '03'],
+            'ACCOUNTNO': ['01', '02', '03'],
+            'class': ['foo', 'bar', 'baz'],
+            'des_all': ['fee', 'fi', 'fo']
+        })
+
+        tm.assert_frame_equal(joined_df, test_df)
+
+    def test_add_extra_info_from_csv_pads_properly(self, mocker):
+        csv_join_fields = ['ACCOUNTNO', 'class', 'des_all']
+        csv_df = pd.DataFrame({
+            csv_join_fields[0]: ['1', '2', '3'],
+            csv_join_fields[1]: ['foo', 'bar', 'baz'],
+            csv_join_fields[2]: ['fee', 'fi', 'fo']
+        })
+
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': ['01', '02', '03'],
+        })
+
+        from_csv_method_mock = mocker.MagicMock()
+        from_csv_method_mock.return_value = csv_df
+        mocker.patch.object(pd, 'read_csv', new=from_csv_method_mock)
+
+        joined_df = helpers.add_extra_info_from_csv('fake_csv_path', 2, csv_join_fields, parcels_df)
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': ['01', '02', '03'],
+            'ACCOUNTNO': ['01', '02', '03'],
+            'class': ['foo', 'bar', 'baz'],
+            'des_all': ['fee', 'fi', 'fo']
+        })
+
+        tm.assert_frame_equal(joined_df, test_df)
+
+    def test_add_extra_info_from_csv_raises_error_on_non_unique_join_values(self, mocker):
+        csv_join_fields = ['ACCOUNTNO', 'class', 'des_all']
+        csv_df = pd.DataFrame({
+            csv_join_fields[0]: ['1', '2', '2'],
+            csv_join_fields[1]: ['foo', 'bar', 'baz'],
+            csv_join_fields[2]: ['fee', 'fi', 'fo']
+        })
+
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': ['01', '02', '03'],
+        })
+
+        from_csv_method_mock = mocker.MagicMock()
+        from_csv_method_mock.return_value = csv_df
+        mocker.patch.object(pd, 'read_csv', new=from_csv_method_mock)
+
+        with pytest.raises(ValueError) as error:
+            joined_df = helpers.add_extra_info_from_csv('fake_csv_path', 2, csv_join_fields, parcels_df)
+        assert 'Values in csv join field ACCOUNTNO are not unique.' in str(error.value)
 
 
 class TestClassifyFromArea:

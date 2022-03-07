@@ -61,13 +61,36 @@ def change_geometry(dataframe, to_new_geometry_column, current_geometry_name):
     dataframe.spatial.sindex(reset=True)  #: not sure how necessary this is, but for safety's sake
 
 
-def read_extra_info_into_dataframe(info_csv, csv_join_field, csv_join_field_type, pad_length, csv_fields):
-    csv_df = (
-        pd.read_csv(info_csv, dtype={csv_join_field: csv_join_field_type}) \
-            .assign(**{csv_join_field: lambda df: df[csv_join_field.zfill(pad_length)]})  #: Pad join field
-    )
+def add_extra_info_from_csv(info_csv, pad_length, csv_fields, parcels_df, csv_join_field_type=str):
+    """Add extra info from a csv, joining onto parcel's PARCEL_ID
 
-    return csv_df[csv_fields].copy()
+    Args:
+        info_csv (str): Path to csv holding extra info
+        pad_length (int): Width to pad the csv's join field with 0's to match the parcel's PARCEL_ID
+        csv_fields (List<str>): List of fields from the csv to include in the join. The first field in the list will be used as the join field against the parcels' PARCEL_ID.
+        parcels_df (pd.DataFrame): Parcels dataset with a PARCEL_ID column
+        csv_join_field_type (Type, optional): Type the csv's join field should be set. Defaults to str.
+
+    Raises:
+        ValueError: If values in the csv's join column are not unique (raised from pandas' merge validate='m:1' check)
+
+    Returns:
+        pd.DataFrame: Parcels dataset with info from csv merged in.
+    """
+
+    csv_join_field = csv_fields[0]
+    csv_df = pd.read_csv(info_csv, dtype={csv_join_field: csv_join_field_type})
+
+    csv_df[csv_join_field] = csv_df[csv_join_field].str.zfill(pad_length)
+
+    try:
+        parcels_merged_df = parcels_df.merge(
+            csv_df[csv_fields], left_on='PARCEL_ID', right_on=csv_join_field, how='left', validate='m:1'
+        )
+    except pd.errors.MergeError as error:
+        raise ValueError(f'Values in csv join field {csv_join_field} are not unique.') from error
+
+    return parcels_merged_df
 
 
 def add_centroids_to_parcel_df(parcels_df, join_field):

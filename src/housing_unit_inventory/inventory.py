@@ -1,5 +1,4 @@
 import logging
-import os
 
 import arcpy
 import pandas as pd
@@ -7,6 +6,8 @@ from arcgis.features import GeoAccessor, GeoSeriesAccessor
 from arcgis.geometry import Geometry
 
 from housing_unit_inventory import helpers
+
+# import os
 
 #: TYPE (and SUBTYPE)
 #:  single-family
@@ -20,9 +21,7 @@ from housing_unit_inventory import helpers
 #:      mobile_home_park
 
 
-def evalute_owned_unit_groupings_df(
-    parcels_df, common_area_df, common_area_key_col, address_points_df
-) -> pd.DataFrame.spatial:
+def evalute_owned_unit_groupings_df(parcels_df, common_area_key_col, address_points_df) -> pd.DataFrame.spatial:
 
     #: common_area_key_col: a unique key (probably just a copied ObjectID?) for all the common areas
 
@@ -43,12 +42,6 @@ def evalute_owned_unit_groupings_df(
 
     #: arcgis.geometry.get_area, .contains, .centroid
 
-    # #: Convert parcels to centroids and join them to common area polygons
-    # helpers.change_geometry(parcels_df, 'CENTROIDS', 'POLYS')
-    # pud_parcels_df = common_area_df.spatial.join(
-    #     parcels_df, 'inner', 'contains'
-    # )  #: Does inner join only get the parcels that are
-
     oug_parcels_df = parcels_df[parcels_df['parcel_type'] == 'owned_unit_grouping'].copy()
 
     #: use groupby to summarize the parcel attributes
@@ -65,12 +58,9 @@ def evalute_owned_unit_groupings_df(
     )
 
     #: Merge all our new info to the common area polygons, using the common_area_key_col as the df index
-    #: TODO: Do we need to change common_area_df.set_index to oug_parcels_df.set_index?
-    #: I don't think so... we create new "parcels" based off the oug geometries and get their column values from the
-    #: aggregation methods above. We may need to add a few other columns, though, to amke sure they have any other
-    #: needed info.
+    carry_over_fields = ['PARCEL_ID', 'SHAPE', 'CENTROIDS', 'POLYS', common_area_key_col]
     evaluated_oug_parcels_df = pd.concat([
-        common_area_df.set_index(common_area_key_col),
+        parcels_df[carry_over_fields].copy().set_index(common_area_key_col),
         total_mkt_value_sum_series,
         land_mkt_value_sum_series,
         bldg_sqft_sum_series,
@@ -178,10 +168,8 @@ def davis_by_dataframe():
 
     #: Load Extended Descriptions - be sure to format ACCOUNTNO column as text in excel first
     logging.debug('Merging csv data...')
-    extra_data_df = helpers.read_extra_info_into_dataframe(
-        extended_info_csv, 'ACCOUNTNO', str, 9, ['ACCOUNTNO', 'des_all', 'class']
-    )
-    parcels_merged_df = parcels_cleaned_df.merge(extra_data_df, left_on='PARCEL_ID', right_on='ACCOUNTNO', how='left')
+    csv_fields = ['ACCOUNTNO', 'des_all', 'class']
+    parcels_merged_df = helpers.add_extra_info_from_csv(extended_info_csv, 9, csv_fields, parcels_cleaned_df)
 
     logging.debug('Creating centroid shapes...')
     parcels_with_centroids_df = helpers.add_centroids_to_parcel_df(parcels_merged_df, 'PARCEL_ID')
@@ -217,9 +205,7 @@ def davis_by_dataframe():
 
     #: Run the evaluations
     logging.info('Evaluating owned unit groupings...')
-    oug_features_df = evalute_owned_unit_groupings_df(
-        classified_parcels_df, common_areas_subset_df, common_area_key, address_pts_no_base_df
-    )
+    oug_features_df = evalute_owned_unit_groupings_df(classified_parcels_df, common_area_key, address_pts_no_base_df)
 
     logging.info('Evaluating single family parcels...')
     single_family_features_df = evaluate_single_family_df(classified_parcels_df)
