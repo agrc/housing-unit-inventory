@@ -4,7 +4,7 @@ from arcgis.features import GeoAccessor, GeoSeriesAccessor
 from arcgis.geometry import Geometry
 from pandas import testing as tm
 
-from housing_unit_inventory import inventory
+from housing_unit_inventory import evaluations
 
 
 class TestSingleFamily:
@@ -15,7 +15,7 @@ class TestSingleFamily:
             'parcel_type': ['single_family', 'single_family', 'single_family'],
         })
 
-        with_types_df = inventory.evaluate_single_family_df(test_data_df)
+        with_types_df = evaluations.single_family(test_data_df)
 
         test_results_df = pd.DataFrame({
             'id': [1, 2, 3],
@@ -34,7 +34,7 @@ class TestSingleFamily:
             'parcel_type': ['single_family', 'industrial', 'multi_family'],
         })
 
-        with_types_df = inventory.evaluate_single_family_df(test_data_df)
+        with_types_df = evaluations.single_family(test_data_df)
 
         test_results_df = pd.DataFrame({
             'id': [1],
@@ -70,7 +70,7 @@ class TestMultiFamilySingleParcel:
 
         mocker.patch('housing_unit_inventory.helpers.get_address_point_count_series', new=addr_pt_function_mock)
 
-        evaluated_df = inventory.evaluate_multi_family_single_parcel_df(test_parcels_df, mocker.Mock())
+        evaluated_df = evaluations.multi_family_single_parcel(test_parcels_df, mocker.Mock())
 
         test_results_df = pd.DataFrame({
             'PARCEL_ID': [10, 11],
@@ -101,7 +101,7 @@ class TestMultiFamilySingleParcel:
 
         mocker.patch('housing_unit_inventory.helpers.get_address_point_count_series', new=addr_pt_function_mock)
 
-        evaluated_df = inventory.evaluate_multi_family_single_parcel_df(test_parcels_df, mocker.Mock())
+        evaluated_df = evaluations.multi_family_single_parcel(test_parcels_df, mocker.Mock())
 
         test_results_df = pd.DataFrame({
             'PARCEL_ID': [10, 12],
@@ -135,7 +135,7 @@ class TestMobileHomeCommunities:
 
         mocker.patch('housing_unit_inventory.helpers.get_address_point_count_series', new=addr_pt_function_mock)
 
-        evaluated_df = inventory.evaluate_mobile_home_communities_df(test_parcels_df, mocker.Mock())
+        evaluated_df = evaluations.mobile_home_communities(test_parcels_df, mocker.Mock())
 
         test_results_df = pd.DataFrame({
             'PARCEL_ID': [10, 11],
@@ -185,7 +185,7 @@ class TestOwnedUnitGroupings:
         # common_area_types_method_mock = lambda x: x
         mocker.patch('housing_unit_inventory.helpers.set_common_area_types', new=lambda x: x)
 
-        oug_parcels_df = inventory.evalute_owned_unit_groupings_df(parcels_df, common_area_key_column, 'foo')
+        oug_parcels_df = evaluations.owned_unit_groupings(parcels_df, common_area_key_column, 'foo')
 
         test_df = pd.DataFrame({
             'PARCEL_ID': [2, 3],
