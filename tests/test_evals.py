@@ -1,153 +1,11 @@
 import numpy as np
 import pandas as pd
+import pytest
 from arcgis.features import GeoAccessor, GeoSeriesAccessor
 from arcgis.geometry import Geometry
 from pandas import testing as tm
 
-from housing_unit_inventory import evaluations
-
-
-class TestSingleFamily:
-
-    def test_evaluate_single_family_df_sets_proper_columns(self):
-        test_data_df = pd.DataFrame({
-            'id': [1, 2, 3],
-            'parcel_type': ['single_family', 'single_family', 'single_family'],
-        })
-
-        with_types_df = evaluations.single_family(test_data_df)
-
-        test_results_df = pd.DataFrame({
-            'id': [1, 2, 3],
-            'parcel_type': ['single_family', 'single_family', 'single_family'],
-            'TYPE': ['single_family', 'single_family', 'single_family'],
-            'SUBTYPE': ['single_family', 'single_family', 'single_family'],
-            'basebldg': ['1', '1', '1'],
-            'building_type_id': ['1', '1', '1'],
-        })
-
-        tm.assert_frame_equal(with_types_df, test_results_df)
-
-    def test_evaluate_single_family_df_only_gets_single_family(self):
-        test_data_df = pd.DataFrame({
-            'id': [1, 2, 3],
-            'parcel_type': ['single_family', 'industrial', 'multi_family'],
-        })
-
-        with_types_df = evaluations.single_family(test_data_df)
-
-        test_results_df = pd.DataFrame({
-            'id': [1],
-            'parcel_type': ['single_family'],
-            'TYPE': ['single_family'],
-            'SUBTYPE': ['single_family'],
-            'basebldg': ['1'],
-            'building_type_id': ['1'],
-        })
-
-        tm.assert_frame_equal(with_types_df, test_results_df)
-
-
-class TestMultiFamilySingleParcel:
-
-    def test_evaluate_multi_family_single_parcel_df_merges_addr_data(self, mocker):
-        test_parcels_df = pd.DataFrame({
-            'PARCEL_ID': [10, 11],
-            'parcel_type': ['apartment', 'apartment'],
-            'SHAPE': ['parcel_shape_10', 'parcel_shape_11'],
-        })
-
-        # test_addr_pts_df = pd.DataFrame({
-        #     'addr_id': [1, 2, 3, 4],
-        #     'SHAPE': ['addr_1', 'addr_2', 'addr_3', 'addr_4'],
-        # })
-
-        addr_pt_count_series = pd.Series(data=[2, 2], index=[10, 11], name='ap_count')
-        addr_pt_count_series.index.name = 'PARCEL_ID'
-
-        addr_pt_function_mock = mocker.MagicMock()
-        addr_pt_function_mock.return_value = addr_pt_count_series
-
-        mocker.patch('housing_unit_inventory.helpers.get_address_point_count_series', new=addr_pt_function_mock)
-
-        evaluated_df = evaluations.multi_family_single_parcel(test_parcels_df, mocker.Mock())
-
-        test_results_df = pd.DataFrame({
-            'PARCEL_ID': [10, 11],
-            'parcel_type': ['apartment', 'apartment'],
-            'SHAPE': ['parcel_shape_10', 'parcel_shape_11'],
-            'TYPE': ['multi_family', 'multi_family'],
-            'basebldg': ['1', '1'],
-            'building_type_id': ['2', '2'],
-            'SUBTYPE': ['apartment', 'apartment'],
-            'NOTE': ['', ''],
-            'ap_count': [2, 2],
-        })
-
-        tm.assert_frame_equal(evaluated_df, test_results_df)
-
-    def test_evaluate_multi_family_single_parcel_df_ignores_single_family(self, mocker):
-        test_parcels_df = pd.DataFrame({
-            'PARCEL_ID': [10, 11, 12],
-            'parcel_type': ['apartment', 'single_family', 'apartment'],
-            'SHAPE': ['parcel_shape_10', 'parcel_shape_11', 'parcel_shape_12'],
-        })
-
-        addr_pt_count_series = pd.Series(name='ap_count')
-        addr_pt_count_series.index.name = 'PARCEL_ID'
-
-        addr_pt_function_mock = mocker.MagicMock()
-        addr_pt_function_mock.return_value = addr_pt_count_series
-
-        mocker.patch('housing_unit_inventory.helpers.get_address_point_count_series', new=addr_pt_function_mock)
-
-        evaluated_df = evaluations.multi_family_single_parcel(test_parcels_df, mocker.Mock())
-
-        test_results_df = pd.DataFrame({
-            'PARCEL_ID': [10, 12],
-            'parcel_type': ['apartment', 'apartment'],
-            'SHAPE': ['parcel_shape_10', 'parcel_shape_12'],
-            'TYPE': ['multi_family', 'multi_family'],
-            'basebldg': ['1', '1'],
-            'building_type_id': ['2', '2'],
-            'SUBTYPE': ['apartment', 'apartment'],
-            'NOTE': ['', ''],
-            'ap_count': [np.nan, np.nan],
-        })
-
-        tm.assert_frame_equal(evaluated_df, test_results_df)
-
-
-class TestMobileHomeCommunities:
-
-    def test_evaluate_mobile_home_communities_df_merges_addr_data(self, mocker):
-        test_parcels_df = pd.DataFrame({
-            'PARCEL_ID': [10, 11],
-            'parcel_type': ['mobile_home_park', 'mobile_home_park'],
-            'SHAPE': ['parcel_shape_10', 'parcel_shape_11'],
-        })
-
-        addr_pt_count_series = pd.Series(data=[2, 2], index=[10, 11], name='ap_count')
-        addr_pt_count_series.index.name = 'PARCEL_ID'
-
-        addr_pt_function_mock = mocker.MagicMock()
-        addr_pt_function_mock.return_value = addr_pt_count_series
-
-        mocker.patch('housing_unit_inventory.helpers.get_address_point_count_series', new=addr_pt_function_mock)
-
-        evaluated_df = evaluations.mobile_home_communities(test_parcels_df, mocker.Mock())
-
-        test_results_df = pd.DataFrame({
-            'PARCEL_ID': [10, 11],
-            'parcel_type': ['mobile_home_park', 'mobile_home_park'],
-            'SHAPE': ['parcel_shape_10', 'parcel_shape_11'],
-            'TYPE': ['multi_family', 'multi_family'],
-            'SUBTYPE': ['mobile_home_park', 'mobile_home_park'],
-            'basebldg': ['1', '1'],
-            'ap_count': [2, 2],
-        })
-
-        tm.assert_frame_equal(evaluated_df, test_results_df)
+from housing_unit_inventory import evaluations, helpers
 
 
 class TestOwnedUnitGroupings:
@@ -196,4 +54,101 @@ class TestOwnedUnitGroupings:
             'BLDG_SQFT': [800, 1000],
             'FLOORS_CNT': [1, 2],
             'PARCEL_COUNT': [2, 1],
+        })
+
+
+@pytest.fixture
+def parcels_df():
+    parcels_df = pd.DataFrame({
+        'PARCEL_ID': ['1', '2', '3', '4', '5', '6', '7'],
+        'parcel_type': [
+            'single_family', 'multi_family', 'duplex', 'apartment', 'townhome', 'triplex-quadplex', 'mobile_home_park'
+        ],
+    })
+
+    return parcels_df
+
+
+class TestByParcelTypes:
+
+    def test_by_parcel_types_single_family_subsets_and_assigns_properly(self, parcels_df):
+        parcel_types = ['single_family']
+        attribute_dict = {
+            'TYPE': 'single_family',
+            'SUBTYPE': 'single_family',
+            'basebldg': '1',
+            'building_type_id': '1',
+        }
+
+        results_df = evaluations.by_parcel_types(parcels_df, parcel_types, attribute_dict)
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': ['1'],
+            'parcel_type': ['single_family'],
+            'TYPE': 'single_family',
+            'SUBTYPE': 'single_family',
+            'basebldg': '1',
+            'building_type_id': '1',
+        })
+
+        tm.assert_frame_equal(results_df, test_df)
+
+    def test_by_parcel_types_multi_family_group_subsets_and_assigns_properly(self, parcels_df, mocker):
+        parcel_types = ['multi_family', 'duplex', 'apartment', 'townhome', 'triplex-quadplex']
+        attribute_dict = {
+            'TYPE': 'multi_family',
+            'basebldg': '1',
+            'building_type_id': '2',
+        }
+
+        addr_pt_count_series = pd.Series(data=[2, 2, 2, 2, 2], index=['2', '3', '4', '5', '6'], name='UNIT_COUNT')
+        addr_pt_count_series.index.name = 'PARCEL_ID'
+
+        addr_pt_function_mock = mocker.MagicMock()
+        addr_pt_function_mock.return_value = addr_pt_count_series
+
+        mocker.patch('housing_unit_inventory.helpers.get_address_point_count_series', new=addr_pt_function_mock)
+
+        results_df = evaluations.by_parcel_types(
+            parcels_df, parcel_types, attribute_dict, True, helpers.set_multi_family_single_parcel_subtypes
+        )
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': ['2', '3', '4', '5', '6'],
+            'parcel_type': ['multi_family', 'duplex', 'apartment', 'townhome', 'triplex-quadplex'],
+            'TYPE': ['multi_family', 'multi_family', 'multi_family', 'multi_family', 'multi_family'],
+            'basebldg': ['1', '1', '1', '1', '1'],
+            'building_type_id': ['2', '2', '2', '2', '2'],
+            'SUBTYPE': ['multi_family', 'duplex', 'apartment', 'townhome', 'apartment'],
+            'NOTE': ['', '', '', '', 'triplex-quadplex'],
+            'UNIT_COUNT': [2, 2, 2, 2, 2],
+        })
+
+        tm.assert_frame_equal(results_df, test_df)
+
+    def test_by_parcel_types_mobile_home_communities_subsets_and_assigns_properly(self, parcels_df, mocker):
+        parcel_types = ['mobile_home_park']
+        attribute_dict = {
+            'TYPE': 'multi_family',
+            'SUBTYPE': 'mobile_home_park',
+            'basebldg': '1',
+        }
+
+        addr_pt_count_series = pd.Series(data=[10], index=['7'], name='UNIT_COUNT')
+        addr_pt_count_series.index.name = 'PARCEL_ID'
+
+        addr_pt_function_mock = mocker.MagicMock()
+        addr_pt_function_mock.return_value = addr_pt_count_series
+
+        mocker.patch('housing_unit_inventory.helpers.get_address_point_count_series', new=addr_pt_function_mock)
+
+        results_df = evaluations.by_parcel_types(parcels_df, parcel_types, attribute_dict, True)
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': ['7'],
+            'parcel_type': ['mobile_home_park'],
+            'TYPE': ['multi_family'],
+            'SUBTYPE': ['mobile_home_park'],
+            'basebldg': ['1'],
+            'UNIT_COUNT': [10],
         })

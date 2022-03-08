@@ -73,61 +73,34 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df) -> 
     return evaluated_oug_parcels_with_types_df
 
 
-#: TODO: combine these three into one method, passing a list for parcel_type and using .isin(), passing a dict for
-#: type/subtype/etc assignments, and a boolean for address counts (need to figure out mf/sf subtypes helper method)
-def single_family(parcels_df) -> pd.DataFrame.spatial:
-    #: Query out 'single_family' parcels from main parcel feature class
-    #: Update type, subtype ('single_family'), basebldg, building_type_id (1)
+def by_parcel_types(parcels_df, parcel_types, attribute_dict, address_points_df=None, subtypes_method=None):
+    """Add TYPE, SUBTYPE, basebldg, building_type_id, UNIT_COUNT, NOTE to parcels_df subset defined by parcel_types
 
-    single_family_parcels_df = parcels_df[parcels_df['parcel_type'] == 'single_family'].copy()
-    single_family_parcels_df['TYPE'] = 'single_family'
-    single_family_parcels_df['SUBTYPE'] = 'single_family'
-    single_family_parcels_df['basebldg'] = '1'
-    single_family_parcels_df['building_type_id'] = '1'
+    Args:
+        parcels_df (pd.DataFrame): Parcels dataset with a unique PARCEL_ID column
+        parcel_types (List<str>): parcel_types to include in this particular evaluation
+        attribute_dict (dict): Attribute names and values to set in the subsetted parcels
+        address_points_df (pd.DataFrame.spatial, optional): If provided, calculates the number of address points in
+        each parcel. Defaults to None.
+        subtypes_method (method, optional): If provided, call this method with the parcels subset as a parameter to set
+        the subtype (used to reassign tri-quad to apartment). Defaults to None.
 
-    return single_family_parcels_df
+    Returns:
+        pd.DataFrame: The subset of parcels with the appropriate fields added.
+    """
 
+    working_parcels_df = parcels_df[parcels_df['parcel_type'].isin(parcel_types)].copy()
+    for attribute, value in attribute_dict.items():
+        working_parcels_df[attribute] = value
 
-def multi_family_single_parcel(parcels_df, address_pts_df) -> pd.DataFrame.spatial:
-    #: Query out various multi-family parcels from main parcel feature class
-    #: Update type, subtype
-    #:      subtype comes from 'parcel_type' attribute, tri-quad changed to apartment but saved in NOTE column
-    #: Spatially join address points to queried parcels, calculate count
+    if subtypes_method:
+        working_parcels_df = subtypes_method(working_parcels_df)
 
-    mf_single_parcels_df = parcels_df[parcels_df['parcel_type'].isin([
-        'multi_family', 'duplex', 'apartment', 'townhome', 'triplex-quadplex'
-    ])].copy()
-    mf_single_parcels_df['TYPE'] = 'multi_family'
-    mf_single_parcels_df['basebldg'] = '1'
-    mf_single_parcels_df['building_type_id'] = '2'
+    if address_points_df:
+        address_points_series = helpers.get_address_point_count_series(
+            working_parcels_df, address_points_df, 'PARCEL_ID'
+        )
+        parcels_with_addr_pts_df = working_parcels_df.merge(address_points_series, how='left', on='PARCEL_ID')
+        return parcels_with_addr_pts_df
 
-    mf_single_parcels_subtypes_df = helpers.set_multi_family_single_parcel_subtypes(mf_single_parcels_df)
-    mf_addr_pt_counts_series = helpers.get_address_point_count_series(
-        mf_single_parcels_subtypes_df, address_pts_df, 'PARCEL_ID'
-    )
-
-    mf_with_addr_counts_df = mf_single_parcels_subtypes_df.merge(mf_addr_pt_counts_series, how='left', on='PARCEL_ID')
-
-    return mf_with_addr_counts_df
-
-
-def mobile_home_communities(parcels_df, address_pts_df) -> pd.DataFrame.spatial:
-    #: Select parcels that have their center in mobile home boundaries or are classified as mobile_home_park
-    #: Set type ='multi_family', subtype = 'mobile_home_park'
-    #: Count addresses in area
-
-    mobile_home_communities_parcels_df = parcels_df[parcels_df['parcel_type'] == 'mobile_home_park']
-
-    mobile_home_communities_parcels_df['TYPE'] = 'multi_family'
-    mobile_home_communities_parcels_df['SUBTYPE'] = 'mobile_home_park'
-    mobile_home_communities_parcels_df['basebldg'] = '1'
-
-    mhc_addr_pt_counts_series = helpers.get_address_point_count_series(
-        mobile_home_communities_parcels_df, address_pts_df, 'PARCEL_ID'
-    )
-
-    mhc_with_addr_counts_df = mobile_home_communities_parcels_df.merge(
-        mhc_addr_pt_counts_series, how='left', on='PARCEL_ID'
-    )
-
-    return mhc_with_addr_counts_df
+    return working_parcels_df

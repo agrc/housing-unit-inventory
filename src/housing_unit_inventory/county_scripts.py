@@ -51,8 +51,8 @@ def davis_county():
     count_all = standardized_parcels_df.shape[0]
     logging.info(f'Initial parcels in modeling area:\t {count_all}')
 
-    logging.debug('Classifying OUGs and MHCs...')
     #: Classify parcels within common areas
+    logging.debug('Classifying OUGs and MHCs...')
     common_area_key = 'common_area_key'
     common_areas_subset_df = helpers.subset_owned_unit_groupings_from_common_areas(common_areas_fc, common_area_key)
 
@@ -76,16 +76,36 @@ def davis_county():
     oug_features_df = evaluations.owned_unit_groupings(classified_parcels_df, common_area_key, address_pts_no_base_df)
 
     logging.info('Evaluating single family parcels...')
-    single_family_features_df = evaluations.single_family(classified_parcels_df)
+    single_family_attributes = {
+        'TYPE': 'single_family',
+        'SUBTYPE': 'single_family',
+        'basebldg': '1',
+        'building_type_id': '1',
+    }
+    single_family_features_df = evaluations.by_parcel_types(
+        classified_parcels_df, ['single_family'], single_family_attributes
+    )
 
     logging.info('Evaluating multi-family, single-parcel parcels...')
-    multi_family_single_parcel_features_df = evaluations.multi_family_single_parcel(
-        classified_parcels_df, address_pts_no_base_df
+    multi_family_types = ['multi_family', 'duplex', 'apartment', 'townhome', 'triplex-quadplex']
+    multi_family_attributes = {
+        'TYPE': 'multi_family',
+        'basebldg': '1',
+        'building_type_id': '2',
+    }
+    multi_family_single_parcel_features_df = evaluations.by_parcel_types(
+        classified_parcels_df, multi_family_types, multi_family_attributes, address_pts_no_base_df,
+        helpers.set_multi_family_single_parcel_subtypes
     )
 
     logging.info('Evaluating mobile home communities...')
-    mobile_home_communities_features_df = evaluations.mobile_home_communities(
-        classified_parcels_df, address_pts_no_base_df
+    mobile_home_attributes = {
+        'TYPE': 'multi_family',
+        'SUBTYPE': 'mobile_home_park',
+        'basebldg': '1',
+    }
+    mobile_home_communities_features_df = evaluations.by_parcel_types(
+        classified_parcels_df, 'mobile_home_park', mobile_home_attributes, address_pts_no_base_df
     )
 
     #: Merge the evaluated parcels into one dataframe
