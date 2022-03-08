@@ -318,7 +318,7 @@ def concat_evaluated_dataframes(dataframes, new_index='PARCEL_ID'):
 
 
 def classify_from_area(parcels_with_centroids_df, area_df, classify_info=()):
-    """Spatial join of parcels whose centers are withhin areas, with optional custom classification
+    """Spatial join of parcels whose centers are within areas, with optional custom classification
 
     Performs a left spatial join of parcels to areas, attempting to ensure all parcels are returned whether they are
     inside the areas or not.
@@ -328,9 +328,12 @@ def classify_from_area(parcels_with_centroids_df, area_df, classify_info=()):
     indicate overlapping area geometries.)
 
     Args:
-        parcels_with_centroids_df (pd.DataFrame.spatial): The parcels dataset with centroid shapes in the 'CENTROIDS' column.
-        area_df (pd.DataFrame.spatial): Areas to use for joining and classification. Should contain any fields to be joined as well as (optionally) a unique key column for classification.
-        classify_info (tuple, optional): Information for custom classification: (areas_unique_key_column, classify_column, classify_value). Defaults to ().
+        parcels_with_centroids_df (pd.DataFrame.spatial): The parcels dataset with centroid shapes in the 'CENTROIDS'
+        column.
+        area_df (pd.DataFrame.spatial): Areas to use for joining and classification. Should contain any fields to be
+        joined as well as (optionally) a unique key column for classification.
+        classify_info (tuple, optional): Information for custom classification: (areas_unique_key_column,
+        classify_column, classify_value). Defaults to ().
 
     Raises:
         ValueError: If three values are not passed in classify_info

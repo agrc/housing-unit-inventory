@@ -74,7 +74,11 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df) -> 
 
 
 def by_parcel_types(parcels_df, parcel_types, attribute_dict, address_points_df=None, subtypes_method=None):
-    """Add TYPE, SUBTYPE, basebldg, building_type_id, UNIT_COUNT, NOTE to parcels_df subset defined by parcel_types
+    """Run the evaluations subsetting by various parcel_types.
+
+    Add TYPE, SUBTYPE, basebldg, building_type_id, based on values set in attribute_dict. Add UNIT_COUNT based on
+    address points if passed in via address_points_df. Set SUBTYPE and add NOTE if helpers.
+    set_multi_family_single_parcel_subtypes is passed via subtypes_method.
 
     Args:
         parcels_df (pd.DataFrame): Parcels dataset with a unique PARCEL_ID column

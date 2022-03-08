@@ -30,6 +30,7 @@ def davis_county():
     #: Address points (used later)
     address_pts_no_base_df = helpers.get_non_base_addr_points(address_pts)
 
+    #: STEP 1: Prep parcels, load in extra data as needed
     #: Dissolve duplicate parcel ids
     logging.debug('Loading and dissolving parcels...')
     parcels_cleaned_df = helpers.load_and_clean_parcels(parcels_fc)
@@ -51,6 +52,7 @@ def davis_county():
     count_all = standardized_parcels_df.shape[0]
     logging.info(f'Initial parcels in modeling area:\t {count_all}')
 
+    #: STEP 2: Classify owned unit grouping (puds, condos, etc) and mobile home community parcels
     #: Classify parcels within common areas
     logging.debug('Classifying OUGs and MHCs...')
     common_area_key = 'common_area_key'
@@ -71,7 +73,7 @@ def davis_county():
         parcels_with_oug_df, mobile_home_communities_df, mobile_home_classify_info
     )
 
-    #: Run the evaluations
+    #: STEP 3: Run evaluations for each type of parcel
     logging.info('Evaluating owned unit groupings...')
     oug_features_df = evaluations.owned_unit_groupings(classified_parcels_df, common_area_key, address_pts_no_base_df)
 
@@ -108,6 +110,7 @@ def davis_county():
         classified_parcels_df, 'mobile_home_park', mobile_home_attributes, address_pts_no_base_df
     )
 
+    #: STEP 4: Merge the evaluated parcels together and clean
     #: Merge the evaluated parcels into one dataframe
     logging.debug('Merging dataframes...')
     evaluated_parcels_df = helpers.concat_evaluated_dataframes([
