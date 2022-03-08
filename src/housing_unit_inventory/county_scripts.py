@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 import arcpy
 import pandas as pd
@@ -7,30 +8,31 @@ from arcgis.features import GeoAccessor, GeoSeriesAccessor
 from . import evaluations, helpers
 
 
-def davis_by_dataframe():
+def davis_county():
 
     arcpy.env.overwriteOutput = True
 
     #: Inputs
-    # taz_shp = '.\\Inputs\\TAZ.shp'
-    parcels_fc = '.\\Inputs\\Davis_County_LIR_Parcels.gdb\\Parcels_Davis_LIR_UTM12'
-    address_pts = '.\\Inputs\\AddressPoints_Davis.gdb\\address_points_davis'
-    common_areas_fc = r'.\Inputs\Common_Areas.gdb\Common_Areas_Reviewed'
-    extended_info_csv = r'.\Inputs\davis_extended_simplified.csv'
-    mobile_home_communities = '.\\Inputs\\Mobile_Home_Parks.shp'
-    cities = r'.\Inputs\Cities.shp'
-    subcounties = r'.\Inputs\SubCountyArea_2019.shp'
+    input_dir_path = Path(r'c:\gis\git\housing_unit_inventory\Parcels\2020-Davis\Inputs')
+    parcels_fc = input_dir_path / r'Davis_County_LIR_Parcels.gdb/Parcels_Davis_LIR_UTM12'
+    address_pts = input_dir_path / r'AddressPoints_Davis.gdb\\address_points_davis'
+    common_areas_fc = input_dir_path / r'Common_Areas.gdb\Common_Areas_Reviewed'
+    extended_info_csv = input_dir_path / r'davis_extended_simplified.csv'
+    mobile_home_communities = input_dir_path / r'Mobile_Home_Parks.shp'
+    cities = input_dir_path / r'Cities.shp'
+    subcounties = input_dir_path / r'SubCountyArea_2019.shp'
 
     #: Output
-    output_fc = r'c:\gis\projects\housinginventory\housinginventory.gdb\davis2020_1'
-    output_csv = r'c:\gis\projects\housinginventory\davis2020_1.csv'
+    output_dir_path = Path(r'c:\gis\projects\housinginventory')
+    output_fc = output_dir_path / r'housinginventory.gdb\davis2020_1'
+    output_csv = output_dir_path / r'davis2020_1.csv'
 
     #: Address points (used later)
     address_pts_no_base_df = helpers.get_non_base_addr_points(address_pts)
 
     #: Dissolve duplicate parcel ids
-    logging.debug('Dissolving parcels...')
-    parcels_cleaned_df = helpers.dissolve_duplicate_parcels(parcels_fc)
+    logging.debug('Loading and dissolving parcels...')
+    parcels_cleaned_df = helpers.load_and_clean_parcels(parcels_fc)
 
     #: Load Extended Descriptions - be sure to format ACCOUNTNO column as text in excel first
     logging.debug('Merging csv data...')

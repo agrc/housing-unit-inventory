@@ -122,15 +122,14 @@ def add_centroids_to_parcel_df(parcels_df, join_field):
     return joined_df
 
 
-def dissolve_duplicate_parcels(parcels_for_modeling_layer):
-    #: TODO: rename '_clean_parcels' because that's what it does
-    # dissolve on parcel id,summarizing attributes in various ways
+def load_and_clean_parcels(parcels_fc):
+
     parcels_dissolved_fc = 'memory/dissolved'
     if arcpy.Exists(parcels_dissolved_fc):
         arcpy.management.Delete(parcels_dissolved_fc)
 
     parcels_dissolved = arcpy.management.Dissolve(
-        parcels_for_modeling_layer, parcels_dissolved_fc, 'PARCEL_ID', [
+        str(parcels_fc), parcels_dissolved_fc, 'PARCEL_ID', [
             ['PARCEL_ID', 'COUNT'],
             ['TAXEXEMPT_TYPE', 'FIRST'],
             ['TOTAL_MKT_VALUE', 'SUM'],
@@ -149,7 +148,7 @@ def dissolve_duplicate_parcels(parcels_for_modeling_layer):
     # rename columns
     #: moves OBJECTID, COUNT_PARCEL_ID
     parcels_dissolved_df = pd.DataFrame.spatial.from_featureclass(parcels_dissolved)
-    parcels_dissolved_df.columns = [
+    columns_subset = [
         'OBJECTID',
         'PARCEL_ID',
         'COUNT_PARCEL_ID',
@@ -166,11 +165,12 @@ def dissolve_duplicate_parcels(parcels_for_modeling_layer):
         'EFFBUILT_YR',
         'SHAPE',
     ]
+    reindex_df = parcels_dissolved_df.reindex(columns=columns_subset)
 
-    #: Remove parcels without parcel ids or empty geometries
-    parcels_dissolved_df.dropna(subset=['PARCEL_ID', 'SHAPE'], inplace=True)
+    #: Remove parcels without parcel ids and empty geometries
+    reindex_df.dropna(subset=['PARCEL_ID', 'SHAPE'], inplace=True)
 
-    return parcels_dissolved_df
+    return reindex_df
 
 
 def get_non_base_addr_points(address_pts_fc, type_column_name='PtType', base_address_value='BASE ADDRESS'):
