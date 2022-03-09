@@ -358,6 +358,9 @@ def classify_from_area(parcels_with_centroids_df, area_df, classify_info=()):
 
     change_geometry(oug_join_centroids_df, 'POLYS', 'CENTROIDS')
 
+    #: Remove 'index_left' left over from spatial join
+    oug_join_centroids_df.drop(columns=['index_right'], inplace=True)
+
     return oug_join_centroids_df.copy()
 
 

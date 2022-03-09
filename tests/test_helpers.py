@@ -600,7 +600,8 @@ class TestClassifyFromArea:
         joined_df = pd.DataFrame({
             'PARCEL_ID': [11, 12],
             'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
-            'common_area_key': [1, 1]
+            'common_area_key': [1, 1],
+            'index_right': [0, 1],
         })
 
         join_method_mock = mocker.MagicMock()
@@ -635,7 +636,8 @@ class TestClassifyFromArea:
         joined_df = pd.DataFrame({
             'PARCEL_ID': [11, 12],
             'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
-            'common_area_key': [1, np.nan]
+            'common_area_key': [1, np.nan],
+            'index_right': [0, 1],
         })
 
         join_method_mock = mocker.MagicMock()
@@ -670,7 +672,8 @@ class TestClassifyFromArea:
         joined_df = pd.DataFrame({
             'PARCEL_ID': [11, 12, np.nan],
             'SHAPE': ['parcel_shape_1', 'parcel_shape_2', np.nan],
-            'common_area_key': [1, 1, 1]
+            'common_area_key': [1, 1, 1],
+            'index_right': [0, 1, 2],
         })
 
         join_method_mock = mocker.MagicMock()
@@ -700,6 +703,7 @@ class TestClassifyFromArea:
             'PARCEL_ID': [11],
             'SHAPE': ['parcel_shape_1'],
             'common_area_key': [1],
+            'index_right': [0],
         })
 
         join_method_mock = mocker.MagicMock()
@@ -728,7 +732,8 @@ class TestClassifyFromArea:
         joined_df = pd.DataFrame({
             'PARCEL_ID': [11, 11],
             'SHAPE': ['parcel_shape_1', 'parcel_shape_1'],
-            'common_area_key': [1, 1]
+            'common_area_key': [1, 1],
+            'index_right': [0, 0],
         })
 
         join_method_mock = mocker.MagicMock()
@@ -784,7 +789,8 @@ class TestClassifyFromArea:
         joined_df = pd.DataFrame({
             'PARCEL_ID': [11, 12],
             'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
-            'common_area_key': [1, 1]
+            'common_area_key': [1, 1],
+            'index_right': [0, 1],
         })
 
         join_method_mock = mocker.MagicMock()
@@ -819,6 +825,7 @@ class TestClassifyFromArea:
             'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
             'common_area_key': [1, 1],
             'NAME': ['city1', 'city1'],
+            'index_right': [0, 1],
         })
 
         join_method_mock = mocker.MagicMock()
