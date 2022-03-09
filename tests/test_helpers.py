@@ -100,6 +100,7 @@ class TestCommonAreas:
             'OBJECTID': [1, 2, 3],
             'TYPE_WFRC': ['single_family', 'bar', 'multi_family'],
             'SUBTYPE_WFRC': ['bar', 'pud', 'foo'],
+            'SHAPE': ['shape1', 'shape2', 'shape3']
         })
         from_featureclass_method_mock = mocker.MagicMock()
         from_featureclass_method_mock.return_value = common_areas_df
@@ -113,6 +114,7 @@ class TestCommonAreas:
             'OBJECTID': [2, 3],
             'TYPE_WFRC': ['bar', 'multi_family'],
             'SUBTYPE_WFRC': ['pud', 'foo'],
+            'SHAPE': ['shape2', 'shape3'],
             'common_area_key': [2, 3],
             'IS_OUG': [1, 1],
         },
@@ -137,6 +139,38 @@ class TestCommonAreas:
                 'fake_fc_path', common_area_key
             )
         assert 'Unique key column OBJECTID does not contain unique values.' in str(error.value)
+
+    def test_subset_owned_unit_groupings_from_common_areas_raises_warning_and_removes_empty_geometries(self, mocker):
+        common_areas_df = pd.DataFrame({
+            'OBJECTID': [1, 2, 3],
+            'TYPE_WFRC': ['multi_family', 'bar', 'multi_family'],
+            'SUBTYPE_WFRC': ['bar', 'pud', 'foo'],
+            'SHAPE': [np.nan, 'shape2', 'shape3'],
+        })
+        from_featureclass_method_mock = mocker.MagicMock()
+        from_featureclass_method_mock.return_value = common_areas_df
+        mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass', new=from_featureclass_method_mock)
+
+        common_area_key = 'common_area_key'
+
+        with pytest.warns(UserWarning) as record:
+            common_areas_subset_df = helpers.subset_owned_unit_groupings_from_common_areas(
+                'fake_fc_path', common_area_key
+            )
+
+        assert record[0].message.args[0] == '1 common area row[s] had empty geometries'
+
+        test_df = pd.DataFrame({
+            'OBJECTID': [2, 3],
+            'TYPE_WFRC': ['bar', 'multi_family'],
+            'SUBTYPE_WFRC': ['pud', 'foo'],
+            'SHAPE': ['shape2', 'shape3'],
+            'common_area_key': [2, 3],
+            'IS_OUG': [1, 1],
+        },
+                               index=[1, 2])
+
+        tm.assert_frame_equal(common_areas_subset_df, test_df)
 
     def test_set_common_area_types(self):
         test_data_df = pd.DataFrame({

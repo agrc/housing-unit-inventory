@@ -216,6 +216,13 @@ def subset_owned_unit_groupings_from_common_areas(
     common_areas_df = pd.DataFrame.spatial.from_featureclass(common_areas_fc)
     if not common_areas_df[unique_key_column].is_unique:
         raise ValueError(f'Unique key column {unique_key_column} does not contain unique values.')
+
+    #: Warn if common areas contain empty geometries, then drop the appropriate rows.
+    empty_shape_row_count = common_areas_df[common_areas_df['SHAPE'].isna()][unique_key_column].count()
+    if empty_shape_row_count:
+        warnings.warn(f'{empty_shape_row_count} common area row[s] had empty geometries')
+        common_areas_df.dropna(subset=['SHAPE'], inplace=True)
+
     common_areas_df[common_area_key_column_name] = common_areas_df[unique_key_column]
 
     common_areas_subset_df = common_areas_df[(common_areas_df['SUBTYPE_WFRC'] == 'pud') |
