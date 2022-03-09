@@ -115,7 +115,7 @@ def add_centroids_to_parcel_df(parcels_df, join_field):
         .assign(**{join_field: lambda df: df[join_field].astype(str)})  #: ensure it's a str for join
     )
 
-    joined_df = parcels_df.join(centroids_df, on=join_field, how='left')
+    joined_df = parcels_df.merge(centroids_df, on=join_field, how='left')
 
     blank_centroids = joined_df['CENTROIDS'].isna().sum()
     if blank_centroids:
@@ -147,32 +147,12 @@ def load_and_clean_parcels(parcels_fc):
         ], 'MULTI_PART', 'DISSOLVE_LINES'
     )
 
-    # rename columns
-    #: moves OBJECTID, COUNT_PARCEL_ID
     parcels_dissolved_df = pd.DataFrame.spatial.from_featureclass(parcels_dissolved_fc)
-    columns_subset = [
-        'OBJECTID',
-        'PARCEL_ID',
-        'COUNT_PARCEL_ID',
-        'TAXEXEMPT_TYPE',
-        'TOTAL_MKT_VALUE',
-        'LAND_MKT_VALUE',
-        'PARCEL_ACRES',
-        'PROP_CLASS',
-        'PRIMARY_RES',
-        'HOUSE_CNT',
-        'BLDG_SQFT',
-        'FLOORS_CNT',
-        'BUILT_YR',
-        'EFFBUILT_YR',
-        'SHAPE',
-    ]
-    reindex_df = parcels_dissolved_df.reindex(columns=columns_subset)
 
     #: Remove parcels without parcel ids and empty geometries
-    reindex_df.dropna(subset=['PARCEL_ID', 'SHAPE'], inplace=True)
+    parcels_dissolved_df.dropna(subset=['PARCEL_ID', 'SHAPE'], inplace=True)
 
-    return reindex_df
+    return parcels_dissolved_df
 
 
 def get_non_base_addr_points(address_pts_fc, type_column_name='PtType', base_address_value='BASE ADDRESS'):

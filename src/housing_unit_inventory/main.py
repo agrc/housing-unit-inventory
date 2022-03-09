@@ -1,6 +1,6 @@
 import logging
 
-from . import county_scripts
+from housing_unit_inventory import county_scripts
 
 
 def process():

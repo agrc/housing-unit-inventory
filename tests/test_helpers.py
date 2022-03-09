@@ -196,100 +196,100 @@ class TestCommonAreas:
 
 class TestDataSetupAndCleaning:
 
-    def test_load_and_clean_parcels_removes_other_columns(self, mocker):
-        parcel_df = pd.DataFrame({
-            'OBJECTID': [0, 1],
-            'PARCEL_ID': ['15', '35'],
-            'COUNT_PARCEL_ID': [1, 2],
-            'random1': [7, 8],
-            'TAXEXEMPT_TYPE': ['', ''],
-            'TOTAL_MKT_VALUE': [1, 3],
-            'LAND_MKT_VALUE': [4, 6],
-            'PARCEL_ACRES': [.25, 1.25],
-            'PROP_CLASS': ['foo', 'bar'],
-            'PRIMARY_RES': ['baz', 'bee'],
-            'HOUSE_CNT': [1, 2],
-            'BLDG_SQFT': [10, 20],
-            'FLOORS_CNT': [13, 42],
-            'BUILT_YR': [1984, 2001],
-            'EFFBUILT_YR': [1910, 2016],
-            'SHAPE': ['s1', 's2'],
-            'random2': [.1, .2],
-        })
-        from_featureclass_mock = mocker.Mock()
-        from_featureclass_mock.return_value = parcel_df
-        mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass', new=from_featureclass_mock)
-        mocker.patch('arcpy.management.Dissolve')
-        exists_method_mock = mocker.Mock()
-        exists_method_mock.return_value = False
-        mocker.patch('arcpy.Exists', new=exists_method_mock)
+    # def test_load_and_clean_parcels_removes_other_columns(self, mocker):
+    #     parcel_df = pd.DataFrame({
+    #         'OBJECTID': [0, 1],
+    #         'PARCEL_ID': ['15', '35'],
+    #         'COUNT_PARCEL_ID': [1, 2],
+    #         'random1': [7, 8],
+    #         'TAXEXEMPT_TYPE': ['', ''],
+    #         'TOTAL_MKT_VALUE': [1, 3],
+    #         'LAND_MKT_VALUE': [4, 6],
+    #         'PARCEL_ACRES': [.25, 1.25],
+    #         'PROP_CLASS': ['foo', 'bar'],
+    #         'PRIMARY_RES': ['baz', 'bee'],
+    #         'HOUSE_CNT': [1, 2],
+    #         'BLDG_SQFT': [10, 20],
+    #         'FLOORS_CNT': [13, 42],
+    #         'BUILT_YR': [1984, 2001],
+    #         'EFFBUILT_YR': [1910, 2016],
+    #         'SHAPE': ['s1', 's2'],
+    #         'random2': [.1, .2],
+    #     })
+    #     from_featureclass_mock = mocker.Mock()
+    #     from_featureclass_mock.return_value = parcel_df
+    #     mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass', new=from_featureclass_mock)
+    #     mocker.patch('arcpy.management.Dissolve')
+    #     exists_method_mock = mocker.Mock()
+    #     exists_method_mock.return_value = False
+    #     mocker.patch('arcpy.Exists', new=exists_method_mock)
 
-        cleaned_parcels = helpers.load_and_clean_parcels('foo')
+    #     cleaned_parcels = helpers.load_and_clean_parcels('foo')
 
-        test_df = pd.DataFrame({
-            'OBJECTID': [0, 1],
-            'PARCEL_ID': ['15', '35'],
-            'COUNT_PARCEL_ID': [1, 2],
-            'TAXEXEMPT_TYPE': ['', ''],
-            'TOTAL_MKT_VALUE': [1, 3],
-            'LAND_MKT_VALUE': [4, 6],
-            'PARCEL_ACRES': [.25, 1.25],
-            'PROP_CLASS': ['foo', 'bar'],
-            'PRIMARY_RES': ['baz', 'bee'],
-            'HOUSE_CNT': [1, 2],
-            'BLDG_SQFT': [10, 20],
-            'FLOORS_CNT': [13, 42],
-            'BUILT_YR': [1984, 2001],
-            'EFFBUILT_YR': [1910, 2016],
-            'SHAPE': ['s1', 's2'],
-        })
+    #     test_df = pd.DataFrame({
+    #         'OBJECTID': [0, 1],
+    #         'PARCEL_ID': ['15', '35'],
+    #         'COUNT_PARCEL_ID': [1, 2],
+    #         'TAXEXEMPT_TYPE': ['', ''],
+    #         'TOTAL_MKT_VALUE': [1, 3],
+    #         'LAND_MKT_VALUE': [4, 6],
+    #         'PARCEL_ACRES': [.25, 1.25],
+    #         'PROP_CLASS': ['foo', 'bar'],
+    #         'PRIMARY_RES': ['baz', 'bee'],
+    #         'HOUSE_CNT': [1, 2],
+    #         'BLDG_SQFT': [10, 20],
+    #         'FLOORS_CNT': [13, 42],
+    #         'BUILT_YR': [1984, 2001],
+    #         'EFFBUILT_YR': [1910, 2016],
+    #         'SHAPE': ['s1', 's2'],
+    #     })
 
-        tm.assert_frame_equal(cleaned_parcels, test_df)
+    #     tm.assert_frame_equal(cleaned_parcels, test_df)
 
-    def test_load_and_clean_parcels_reorders_columns(self, mocker):
-        parcel_df = pd.DataFrame({
-            'SHAPE': ['s1', 's2'],
-            'PARCEL_ACRES': [.25, 1.25],
-            'PROP_CLASS': ['foo', 'bar'],
-            'PRIMARY_RES': ['baz', 'bee'],
-            'HOUSE_CNT': [1, 2],
-            'BLDG_SQFT': [10, 20],
-            'FLOORS_CNT': [13, 42],
-            'BUILT_YR': [1984, 2001],
-            'EFFBUILT_YR': [1910, 2016],
-            'OBJECTID': [0, 1],
-            'PARCEL_ID': ['15', '35'],
-            'COUNT_PARCEL_ID': [1, 2],
-            'TAXEXEMPT_TYPE': ['', ''],
-            'TOTAL_MKT_VALUE': [1, 3],
-            'LAND_MKT_VALUE': [4, 6],
-        })
-        from_featureclass_mock = mocker.Mock()
-        from_featureclass_mock.return_value = parcel_df
-        mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass', new=from_featureclass_mock)
-        mocker.patch('arcpy.management.Dissolve')
+    # def test_load_and_clean_parcels_reorders_columns(self, mocker):
+    #     parcel_df = pd.DataFrame({
+    #         'SHAPE': ['s1', 's2'],
+    #         'PARCEL_ACRES': [.25, 1.25],
+    #         'PROP_CLASS': ['foo', 'bar'],
+    #         'PRIMARY_RES': ['baz', 'bee'],
+    #         'HOUSE_CNT': [1, 2],
+    #         'BLDG_SQFT': [10, 20],
+    #         'FLOORS_CNT': [13, 42],
+    #         'BUILT_YR': [1984, 2001],
+    #         'EFFBUILT_YR': [1910, 2016],
+    #         'OBJECTID': [0, 1],
+    #         'PARCEL_ID': ['15', '35'],
+    #         'COUNT_PARCEL_ID': [1, 2],
+    #         'TAXEXEMPT_TYPE': ['', ''],
+    #         'TOTAL_MKT_VALUE': [1, 3],
+    #         'LAND_MKT_VALUE': [4, 6],
+    #     })
+    #     from_featureclass_mock = mocker.Mock()
+    #     from_featureclass_mock.return_value = parcel_df
+    #     mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass', new=from_featureclass_mock)
+    #     mocker.patch('arcpy.management.Dissolve')
 
-        cleaned_parcels = helpers.load_and_clean_parcels('foo')
+    #     cleaned_parcels = helpers.load_and_clean_parcels('foo')
 
-        test_df = pd.DataFrame({
-            'OBJECTID': [0, 1],
-            'PARCEL_ID': ['15', '35'],
-            'COUNT_PARCEL_ID': [1, 2],
-            'TAXEXEMPT_TYPE': ['', ''],
-            'TOTAL_MKT_VALUE': [1, 3],
-            'LAND_MKT_VALUE': [4, 6],
-            'PARCEL_ACRES': [.25, 1.25],
-            'PROP_CLASS': ['foo', 'bar'],
-            'PRIMARY_RES': ['baz', 'bee'],
-            'HOUSE_CNT': [1, 2],
-            'BLDG_SQFT': [10, 20],
-            'FLOORS_CNT': [13, 42],
-            'BUILT_YR': [1984, 2001],
-            'EFFBUILT_YR': [1910, 2016],
-            'SHAPE': ['s1', 's2'],
-        })
+    #     test_df = pd.DataFrame({
+    #         'OBJECTID': [0, 1],
+    #         'PARCEL_ID': ['15', '35'],
+    #         'COUNT_PARCEL_ID': [1, 2],
+    #         'TAXEXEMPT_TYPE': ['', ''],
+    #         'TOTAL_MKT_VALUE': [1, 3],
+    #         'LAND_MKT_VALUE': [4, 6],
+    #         'PARCEL_ACRES': [.25, 1.25],
+    #         'PROP_CLASS': ['foo', 'bar'],
+    #         'PRIMARY_RES': ['baz', 'bee'],
+    #         'HOUSE_CNT': [1, 2],
+    #         'BLDG_SQFT': [10, 20],
+    #         'FLOORS_CNT': [13, 42],
+    #         'BUILT_YR': [1984, 2001],
+    #         'EFFBUILT_YR': [1910, 2016],
+    #         'SHAPE': ['s1', 's2'],
+    #     })
 
-        tm.assert_frame_equal(cleaned_parcels, test_df)
+    #     tm.assert_frame_equal(cleaned_parcels, test_df)
 
     def test_load_and_clean_parcels_drops_empties(self, mocker):
         parcel_df = pd.DataFrame({
@@ -492,6 +492,62 @@ class TestDataSetupAndCleaning:
         with pytest.raises(ValueError) as error:
             joined_df = helpers.add_extra_info_from_csv('fake_csv_path', 2, csv_join_fields, parcels_df)
         assert 'Values in csv join field ACCOUNTNO are not unique.' in str(error.value)
+
+    def test_add_extra_info_from_csv_includes_rows_not_in_csv(self, mocker):
+        csv_join_fields = ['ACCOUNTNO', 'class', 'des_all']
+        csv_df = pd.DataFrame({
+            csv_join_fields[0]: ['01', '02'],
+            csv_join_fields[1]: ['foo', 'bar'],
+            csv_join_fields[2]: ['fee', 'fi'],
+        })
+
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': ['01', '02', '03'],
+        })
+
+        from_csv_method_mock = mocker.MagicMock()
+        from_csv_method_mock.return_value = csv_df
+        mocker.patch.object(pd, 'read_csv', new=from_csv_method_mock)
+
+        joined_df = helpers.add_extra_info_from_csv('fake_csv_path', 2, csv_join_fields, parcels_df)
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': ['01', '02', '03'],
+            'ACCOUNTNO': ['01', '02', np.nan],
+            'class': ['foo', 'bar', np.nan],
+            'des_all': ['fee', 'fi', np.nan],
+        })
+
+        tm.assert_frame_equal(joined_df, test_df)
+
+    def test_add_centroids_to_parcel_df_joins_properly(self, mocker):
+
+        mocker.patch('arcpy.management.FeatureToPoint')
+        mocker.patch.object(pd.DataFrame.spatial, 'to_featureclass')
+
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': ['01', '02'],
+            'VALUE': [20, 4.2],
+        })
+
+        centroids_df = pd.DataFrame({
+            'parcel_id': ['01', '02'],
+            'SHAPE': ['shape1', 'shape2'],
+        })
+
+        from_featureclass_mock = mocker.Mock()
+        from_featureclass_mock.return_value = centroids_df
+        mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass', new=from_featureclass_mock)
+
+        output_df = helpers.add_centroids_to_parcel_df(parcels_df, 'PARCEL_ID')
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': ['01', '02'],
+            'VALUE': [20, 4.2],
+            'CENTROIDS': ['shape1', 'shape2'],
+        })
+
+        tm.assert_frame_equal(output_df, test_df)
 
 
 class TestClassifyFromArea:
