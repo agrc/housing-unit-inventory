@@ -1,7 +1,10 @@
+import logging
+
 from . import county_scripts
 
 
 def process():
+    logging.basicConfig(level=logging.DEBUG)
     county_scripts.davis_county()
 
 

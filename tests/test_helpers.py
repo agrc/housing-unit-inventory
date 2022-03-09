@@ -446,6 +446,33 @@ class TestDataSetupAndCleaning:
 
         tm.assert_frame_equal(joined_df, test_df)
 
+    def test_add_extra_info_from_csv_removes_na_accountnos(self, mocker):
+        csv_join_fields = ['ACCOUNTNO', 'class', 'des_all']
+        csv_df = pd.DataFrame({
+            csv_join_fields[0]: ['01', '02', np.nan],
+            csv_join_fields[1]: ['foo', 'bar', 'baz'],
+            csv_join_fields[2]: ['fee', 'fi', 'fo']
+        })
+
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': ['01', '02', '03'],
+        })
+
+        from_csv_method_mock = mocker.MagicMock()
+        from_csv_method_mock.return_value = csv_df
+        mocker.patch.object(pd, 'read_csv', new=from_csv_method_mock)
+
+        joined_df = helpers.add_extra_info_from_csv('fake_csv_path', 2, csv_join_fields, parcels_df)
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': ['01', '02', '03'],
+            'ACCOUNTNO': ['01', '02', np.nan],
+            'class': ['foo', 'bar', np.nan],
+            'des_all': ['fee', 'fi', np.nan],
+        })
+
+        tm.assert_frame_equal(joined_df, test_df)
+
     def test_add_extra_info_from_csv_raises_error_on_non_unique_join_values(self, mocker):
         csv_join_fields = ['ACCOUNTNO', 'class', 'des_all']
         csv_df = pd.DataFrame({

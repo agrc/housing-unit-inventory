@@ -83,6 +83,8 @@ def add_extra_info_from_csv(info_csv, pad_length, csv_fields, parcels_df, csv_jo
 
     csv_df[csv_join_field] = csv_df[csv_join_field].str.zfill(pad_length)
 
+    csv_df.dropna(subset=['ACCOUNTNO'], inplace=True)
+
     try:
         parcels_merged_df = parcels_df.merge(
             csv_df[csv_fields], left_on='PARCEL_ID', right_on=csv_join_field, how='left', validate='m:1'
@@ -128,7 +130,7 @@ def load_and_clean_parcels(parcels_fc):
     if arcpy.Exists(parcels_dissolved_fc):
         arcpy.management.Delete(parcels_dissolved_fc)
 
-    parcels_dissolved = arcpy.management.Dissolve(
+    arcpy.management.Dissolve(
         str(parcels_fc), parcels_dissolved_fc, 'PARCEL_ID', [
             ['PARCEL_ID', 'COUNT'],
             ['TAXEXEMPT_TYPE', 'FIRST'],
@@ -147,7 +149,7 @@ def load_and_clean_parcels(parcels_fc):
 
     # rename columns
     #: moves OBJECTID, COUNT_PARCEL_ID
-    parcels_dissolved_df = pd.DataFrame.spatial.from_featureclass(parcels_dissolved)
+    parcels_dissolved_df = pd.DataFrame.spatial.from_featureclass(parcels_dissolved_fc)
     columns_subset = [
         'OBJECTID',
         'PARCEL_ID',

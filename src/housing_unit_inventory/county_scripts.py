@@ -13,10 +13,10 @@ def davis_county():
     arcpy.env.overwriteOutput = True
 
     #: Inputs
-    input_dir_path = Path(r'c:\gis\git\housing_unit_inventory\Parcels\2020-Davis\Inputs')
+    input_dir_path = Path(r'c:\gis\git\housing-unit-inventory\Parcels\2020-Davis\Inputs')
     parcels_fc = input_dir_path / r'Davis_County_LIR_Parcels.gdb/Parcels_Davis_LIR_UTM12'
-    address_pts = input_dir_path / r'AddressPoints_Davis.gdb\\address_points_davis'
-    common_areas_fc = input_dir_path / r'Common_Areas.gdb\Common_Areas_Reviewed'
+    address_pts = input_dir_path / r'AddressPoints_Davis.gdb/address_points_davis'
+    common_areas_fc = input_dir_path / r'Common_Areas.gdb/Common_Areas_Reviewed'
     extended_info_csv = input_dir_path / r'davis_extended_simplified.csv'
     mobile_home_communities = input_dir_path / r'Mobile_Home_Parks.shp'
     cities = input_dir_path / r'Cities.shp'
