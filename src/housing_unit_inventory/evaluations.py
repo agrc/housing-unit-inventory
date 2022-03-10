@@ -1,3 +1,5 @@
+import logging
+
 import pandas as pd
 from arcgis.features import GeoAccessor, GeoSeriesAccessor
 from arcgis.geometry import Geometry
@@ -38,6 +40,8 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df) -> 
     #: arcgis.geometry.get_area, .contains, .centroid
 
     oug_parcels_df = parcels_df[parcels_df['parcel_type'] == 'owned_unit_grouping'].copy()
+
+    logging.debug(f'{oug_parcels_df.shape[0]} parcels being evaluated as owned unit groupings...')
 
     #: use groupby to summarize the parcel attributes
     #: each series should be indexed by the common_area_key_col

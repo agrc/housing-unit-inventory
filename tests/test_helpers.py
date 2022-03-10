@@ -370,6 +370,36 @@ class TestDataSetupAndCleaning:
 
         tm.assert_frame_equal(cleaned_parcels, test_df)
 
+    def test_load_and_clean_parcels_renames_fields_and_ignores_other_fields(self, mocker):
+        parcel_df = pd.DataFrame({
+            'OBJECTID': [0],
+            'PARCEL_ID': ['15'],
+            'COUNT_PARCEL_ID': [1],
+            'FIRST_TAXEXEMPT_TYPE': [''],
+            'MAX_TOTAL_MKT_VALUE': [1],
+            'SUM_LAND_MKT_VALUE': [5],
+            'SHAPE': ['shape1'],
+        })
+
+        from_featureclass_mock = mocker.Mock()
+        from_featureclass_mock.return_value = parcel_df
+        mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass', new=from_featureclass_mock)
+        mocker.patch('arcpy.management.Dissolve')
+
+        cleaned_parcels = helpers.load_and_clean_parcels('foo')
+
+        test_df = pd.DataFrame({
+            'OBJECTID': [0],
+            'PARCEL_ID': ['15'],
+            'COUNT_PARCEL_ID': [1],
+            'TAXEXEMPT_TYPE': [''],
+            'TOTAL_MKT_VALUE': [1],
+            'LAND_MKT_VALUE': [5],
+            'SHAPE': ['shape1'],
+        })
+
+        tm.assert_frame_equal(cleaned_parcels, test_df)
+
     def test_load_and_clean_parcels_sends_string_to_arcpy_not_path(self, mocker):
         dissolve_mock = mocker.Mock()
         mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass')
@@ -582,6 +612,46 @@ class TestDataSetupAndCleaning:
         })
 
         tm.assert_frame_equal(output_df, test_df)
+
+    def test_clean_dissolved_field_names_removes_prefixes(self):
+        field_names = ['FIRST_THING', 'MAX_FOO', 'SUM_BAR']
+        prefixes = ['FIRST', 'MAX', 'SUM']
+
+        cleaned_names = helpers.clean_dissolve_field_names(field_names, prefixes)
+
+        test_names = {
+            'FIRST_THING': 'THING',
+            'MAX_FOO': 'FOO',
+            'SUM_BAR': 'BAR',
+        }
+
+        assert cleaned_names == test_names
+
+    def test_clean_dissolved_field_names_doesnt_mangle_other_underscores(self):
+        field_names = ['FIRST_THING', 'MAX_FOO', 'BAR_BAZ']
+        prefixes = ['FIRST', 'MAX', 'SUM']
+
+        cleaned_names = helpers.clean_dissolve_field_names(field_names, prefixes)
+
+        test_names = {
+            'FIRST_THING': 'THING',
+            'MAX_FOO': 'FOO',
+        }
+
+        assert cleaned_names == test_names
+
+    def test_clean_dissolved_field_names_ignores_single_word_names(self):
+        field_names = ['FIRST_THING', 'MAX_FOO', 'BAR']
+        prefixes = ['FIRST', 'MAX', 'SUM']
+
+        cleaned_names = helpers.clean_dissolve_field_names(field_names, prefixes)
+
+        test_names = {
+            'FIRST_THING': 'THING',
+            'MAX_FOO': 'FOO',
+        }
+
+        assert cleaned_names == test_names
 
 
 class TestClassifyFromArea:

@@ -38,7 +38,7 @@ class TestOwnedUnitGroupings:
         addr_count_method_mock = mocker.Mock()
         addr_count_method_mock.return_value = addr_pt_series
 
-        mocker.patch('housing_unit_inventory.helpers.get_address_point_count_series', new=year_built_method_mock)
+        mocker.patch('housing_unit_inventory.helpers.get_address_point_count_series', new=addr_count_method_mock)
 
         # common_area_types_method_mock = lambda x: x
         mocker.patch('housing_unit_inventory.helpers.set_common_area_types', new=lambda x: x)

@@ -149,10 +149,34 @@ def load_and_clean_parcels(parcels_fc):
 
     parcels_dissolved_df = pd.DataFrame.spatial.from_featureclass(parcels_dissolved_fc)
 
+    #: Remove stats from field names
+    cleaned_fields = clean_dissolve_field_names(list(parcels_dissolved_df.columns), ['FIRST', 'SUM', 'MAX'])
+    parcels_dissolved_df.rename(columns=cleaned_fields, inplace=True)
+
     #: Remove parcels without parcel ids and empty geometries
     parcels_dissolved_df.dropna(subset=['PARCEL_ID', 'SHAPE'], inplace=True)
 
     return parcels_dissolved_df
+
+
+def clean_dissolve_field_names(field_names, prefixes):
+    """Remove statistic name (SUM_, etc) from field names from dissolved feature class
+
+    Args:
+        field_names (List<str>): Field names from a dissolved feature class
+        prefixes (List<str>): Statistic prefixes (SUM_, FIRST_, etc) to remove from field_names
+
+    Returns:
+        Dict: Mapping of original names t
+    """
+
+    cleaned_names = {}
+    for name_with_stat in field_names:
+        prefix, _, original_field_name = name_with_stat.partition('_')
+        if prefix in prefixes:
+            cleaned_names[name_with_stat] = original_field_name
+
+    return cleaned_names
 
 
 def get_non_base_addr_points(address_pts_fc, type_column_name='PtType', base_address_value='BASE ADDRESS'):
@@ -226,7 +250,7 @@ def subset_owned_unit_groupings_from_common_areas(
     common_areas_df[common_area_key_column_name] = common_areas_df[unique_key_column]
 
     common_areas_subset_df = common_areas_df[(common_areas_df['SUBTYPE_WFRC'] == 'pud') |
-                                             (common_areas_df['TYPE_WFRC'] == 'multi_family')]
+                                             (common_areas_df['TYPE_WFRC'] == 'multi_family')].copy()
     common_areas_subset_df['IS_OUG'] = 1
 
     return common_areas_subset_df
