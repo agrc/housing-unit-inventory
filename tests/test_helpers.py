@@ -13,30 +13,55 @@ from housing_unit_inventory import helpers
 class TestYearBuilt:
 
     def test_get_proper_built_yr_value_series_gets_most_common(self, mocker):
-        test_parcels_df = pd.DataFrame({'PARCEL_ID': [1, 1, 1, 2], 'BUILT_YR': [5, 5, 6, 7]})
+        test_parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2, 3, 4],
+            'BUILT_YR': [5, 5, 6, 7],
+            'common_area_key': [1, 1, 1, 2],
+        })
 
-        built_yr_series = helpers.get_proper_built_yr_value_series(test_parcels_df, 'PARCEL_ID', 'BUILT_YR')
+        built_yr_series = helpers.get_proper_built_yr_value_series(test_parcels_df, 'common_area_key', 'BUILT_YR')
 
         test_series = pd.Series(data=[5, 7], index=[1, 2], name='BUILT_YR')
-        test_series.index.name = 'PARCEL_ID'
+        test_series.index.name = 'common_area_key'
         tm.assert_series_equal(built_yr_series, test_series)
 
-    def test_get_proper_built_yr_value_series_zeroes_gets_max(self, mocker):
-        test_parcels_df = pd.DataFrame({'PARCEL_ID': [1, 1, 1, 2], 'BUILT_YR': [0, 0, 6, 7]})
+    def test_get_proper_built_yr_value_series_zero_mode_gets_max(self, mocker):
+        test_parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2, 3, 4],
+            'BUILT_YR': [0, 0, 6, 7],
+            'common_area_key': [1, 1, 1, 2],
+        })
 
-        built_yr_series = helpers.get_proper_built_yr_value_series(test_parcels_df, 'PARCEL_ID', 'BUILT_YR')
+        built_yr_series = helpers.get_proper_built_yr_value_series(test_parcels_df, 'common_area_key', 'BUILT_YR')
 
         test_series = pd.Series(data=[6, 7], index=[1, 2], name='BUILT_YR')
-        test_series.index.name = 'PARCEL_ID'
+        test_series.index.name = 'common_area_key'
         tm.assert_series_equal(built_yr_series, test_series)
 
-    def test_get_proper_built_yr_value_series_multiple_modes_gets_max(self, mocker):
-        test_parcels_df = pd.DataFrame({'PARCEL_ID': [1, 1, 1, 2], 'BUILT_YR': [4, 5, 6, 7]})
+    def test_get_proper_built_yr_value_series_multiple_modes_gets_max_and_mode_of_other(self, mocker):
+        test_parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2, 3, 4, 5],
+            'BUILT_YR': [4, 5, 6, 6, 7],
+            'common_area_key': [1, 1, 2, 2, 2],
+        })
 
-        built_yr_series = helpers.get_proper_built_yr_value_series(test_parcels_df, 'PARCEL_ID', 'BUILT_YR')
+        built_yr_series = helpers.get_proper_built_yr_value_series(test_parcels_df, 'common_area_key', 'BUILT_YR')
 
-        test_series = pd.Series(data=[6, 7], index=[1, 2], name='BUILT_YR')
-        test_series.index.name = 'PARCEL_ID'
+        test_series = pd.Series(data=[5, 6], index=[1, 2], name='BUILT_YR')
+        test_series.index.name = 'common_area_key'
+        tm.assert_series_equal(built_yr_series, test_series)
+
+    def test_get_proper_built_yr_value_series_one_good_mode_then_one_multi_mode(self, mocker):
+        test_parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2, 3, 4],
+            'BUILT_YR': [4, 4, 6, 7],
+            'common_area_key': [1, 1, 2, 2],
+        })
+
+        built_yr_series = helpers.get_proper_built_yr_value_series(test_parcels_df, 'common_area_key', 'BUILT_YR')
+
+        test_series = pd.Series(data=[5, 6], index=[1, 2], name='BUILT_YR')
+        test_series.index.name = 'common_area_key'
         tm.assert_series_equal(built_yr_series, test_series)
 
 

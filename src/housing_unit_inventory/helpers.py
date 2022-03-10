@@ -21,12 +21,19 @@ def get_proper_built_yr_value_series(parcels_df, index_col, built_yr_col):
     parcels_grouped = parcels_df.groupby(index_col)
 
     #: Set mode to 0 to start with
-    built_yr_mode_series = pd.Series(data=0, index=parcels_grouped.groups.keys(), name=built_yr_col)
+    built_yr_mode_series = pd.Series(data=-1, index=parcels_grouped.groups.keys(), name=built_yr_col)
     built_yr_mode_series.index.name = index_col
     #: If we can get a single mode value, use that instead
     try:
+        #: This will throw a ValueError about 'Must produce aggregated value' if there are multiple modes
+        #: EXCEPT when a previous groupby group returns a proper single value, in which case it returns
+        #: a list of the multiple modes. Tricksy, false hobittses.
         built_yr_mode_series = parcels_grouped[built_yr_col].agg(pd.Series.mode)
     #: If there are multiple modes, .mode returns them all and .agg complains there isn't a single value
+    #: FIXME: this isn't happening, it's putting both modes into a list and putting that in the series.
+    #: Throw a breakpoint here and see if we're getting this ValueError to confirm behavior
+    #: And the set to 0 shouldn't matter- the .agg() returns a new series that overbinds built_yr_mod_series
+    #: This is working in the tests... clearly something is wrong with the tests.
     except ValueError as error:
         if str(error) == 'Must produce aggregated value':
             pass
@@ -34,7 +41,7 @@ def get_proper_built_yr_value_series(parcels_df, index_col, built_yr_col):
     built_yr_max_series = parcels_grouped[built_yr_col].max()
     built_yr_df = pd.DataFrame({'mode': built_yr_mode_series, 'max': built_yr_max_series})
     built_yr_df[built_yr_col] = built_yr_df['mode']
-    built_yr_df.loc[built_yr_df[built_yr_col] == 0, built_yr_col] = built_yr_df['max']
+    built_yr_df.loc[built_yr_df[built_yr_col] <= 0, built_yr_col] = built_yr_df['max']
 
     return built_yr_df[built_yr_col]
 
