@@ -68,7 +68,7 @@ def davis_county():
     mobile_home_communities_df = pd.DataFrame.spatial.from_featureclass(mobile_home_communities)
     mobile_home_communities_df[mobile_home_key] = mobile_home_communities_df['OBJECTID']
 
-    mobile_home_classify_info = (common_area_key, 'parcel_type', 'mobile_home_park')
+    mobile_home_classify_info = (mobile_home_key, 'parcel_type', 'mobile_home_park')
     classified_parcels_df = helpers.classify_from_area(
         parcels_with_oug_df, mobile_home_communities_df, mobile_home_classify_info
     )
