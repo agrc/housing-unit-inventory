@@ -32,6 +32,8 @@ class TestOwnedUnitGroupings:
             'SHAPE': ['common_shape1', 'common_shape2'],
             'TYPE_WFRC': ['pud', 'pud'],
             'SUBTYPE_WFRC': ['pud', 'pud'],
+            'CENTROIDS': ['centroid_foo', 'centroid_bar'],
+            'POLYS': ['poly_foo', 'poly_bar'],
         })
 
         year_built_series = pd.Series(data=[1901, 1902], index=['foo', 'bar'], name='BUILT_YR')
@@ -56,6 +58,8 @@ class TestOwnedUnitGroupings:
         test_df = pd.DataFrame(
             {
                 'SHAPE': ['common_shape1', 'common_shape2'],
+                'CENTROIDS': ['centroid_foo', 'centroid_bar'],
+                'POLYS': ['poly_foo', 'poly_bar'],
                 'TOTAL_MKT_VALUE': [25, 15],
                 'LAND_MKT_VALUE': [12, 10],
                 'BLDG_SQFT': [800, 1000],
@@ -97,6 +101,8 @@ class TestOwnedUnitGroupings:
             'SHAPE': ['common_shape1', 'common_shape2'],
             'TYPE_WFRC': ['pud', 'pud'],
             'SUBTYPE_WFRC': ['pud', 'pud'],
+            'CENTROIDS': ['centroid_foo', 'centroid_bar'],
+            'POLYS': ['poly_foo', 'poly_bar'],
         })
 
         year_built_series = pd.Series(data=[1901, 1902], index=[100, 200], name='BUILT_YR')
@@ -121,6 +127,8 @@ class TestOwnedUnitGroupings:
         test_df = pd.DataFrame(
             {
                 'SHAPE': ['common_shape1', 'common_shape2'],
+                'CENTROIDS': ['centroid_foo', 'centroid_bar'],
+                'POLYS': ['poly_foo', 'poly_bar'],
                 'TOTAL_MKT_VALUE': [25, 15],
                 'LAND_MKT_VALUE': [12, 10],
                 'BLDG_SQFT': [800, 1000],

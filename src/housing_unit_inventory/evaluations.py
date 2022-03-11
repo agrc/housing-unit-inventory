@@ -57,7 +57,7 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
     )
 
     #: Merge all our new info to the common area polygons, using the common_area_key_col as the df index
-    carry_over_fields = ['SHAPE', common_area_key_col, 'SUBTYPE_WFRC', 'TYPE_WFRC']
+    carry_over_fields = ['SHAPE', common_area_key_col, 'SUBTYPE_WFRC', 'TYPE_WFRC', 'CENTROIDS', 'POLYS']
     evaluated_oug_parcels_df = pd.concat(
         axis=1,
         objs=[
