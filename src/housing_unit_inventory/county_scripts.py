@@ -56,11 +56,11 @@ def davis_county():
     #: Classify parcels within common areas
     logging.debug('Classifying OUGs and MHCs...')
     common_area_key = 'common_area_key'
-    common_areas_subset_df = helpers.subset_owned_unit_groupings_from_common_areas(common_areas_fc, common_area_key)
+    owned_unit_groupings_df = helpers.subset_owned_unit_groupings_from_common_areas(common_areas_fc, common_area_key)
 
     common_area_classify_info = (common_area_key, 'parcel_type', 'owned_unit_grouping')
     parcels_with_oug_df = helpers.classify_from_area(
-        standardized_parcels_df, common_areas_subset_df, common_area_classify_info
+        standardized_parcels_df, owned_unit_groupings_df, common_area_classify_info
     )
 
     #: Classify parcels within mobile home communities
@@ -75,7 +75,9 @@ def davis_county():
 
     #: STEP 3: Run evaluations for each type of parcel
     logging.info('Evaluating owned unit groupings...')
-    oug_features_df = evaluations.owned_unit_groupings(classified_parcels_df, common_area_key, address_pts_no_base_df)
+    oug_features_df = evaluations.owned_unit_groupings(
+        classified_parcels_df, common_area_key, address_pts_no_base_df, owned_unit_groupings_df
+    )
 
     logging.info('Evaluating single family parcels...')
     single_family_attributes = {

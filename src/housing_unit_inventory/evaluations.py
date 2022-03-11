@@ -18,7 +18,7 @@ from . import helpers
 #:      mobile_home_park
 
 
-def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df) -> pd.DataFrame.spatial:
+def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, common_area_df) -> pd.DataFrame.spatial:
 
     #: common_area_key_col: a unique key (probably just a copied ObjectID?) for all the common areas
 
@@ -57,20 +57,26 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df) -> 
     )
 
     #: Merge all our new info to the common area polygons, using the common_area_key_col as the df index
-    carry_over_fields = ['PARCEL_ID', 'SHAPE', 'CENTROIDS', 'POLYS', common_area_key_col]
-    evaluated_oug_parcels_df = pd.concat([
-        parcels_df[carry_over_fields].copy().set_index(common_area_key_col),
-        total_mkt_value_sum_series,
-        land_mkt_value_sum_series,
-        bldg_sqft_sum_series,
-        floors_cnt_mean_series,
-        built_yr_series,
-        parcel_count_series,
-        address_count_series,
-    ])
+    carry_over_fields = ['SHAPE', common_area_key_col]
+    evaluated_oug_parcels_df = pd.concat(
+        axis=1,
+        objs=[
+            common_area_df[carry_over_fields].copy().set_index(common_area_key_col),
+            total_mkt_value_sum_series,
+            land_mkt_value_sum_series,
+            bldg_sqft_sum_series,
+            floors_cnt_mean_series,
+            built_yr_series,
+            parcel_count_series,
+            address_count_series,
+        ]
+    )
 
     #: Set type, subtype, basebldg, building_type_id
     evaluated_oug_parcels_with_types_df = helpers.set_common_area_types(evaluated_oug_parcels_df)
+
+    #: Add a generated PARCEL_ID based on the common_area_key for future aligning with other parcels
+    evaluated_oug_parcels_with_types_df['PARCEL_ID'] = 'oug_' + evaluated_oug_parcels_with_types_df.index
 
     #: TODO: implement some sort of count tracking. Maybe a separate data frame consisting of just the parcel ids, removing matching ones on each pass?
 
@@ -81,8 +87,8 @@ def by_parcel_types(parcels_df, parcel_types, attribute_dict, address_points_df=
     """Run the evaluations subsetting by various parcel_types.
 
     Add TYPE, SUBTYPE, basebldg, building_type_id, based on values set in attribute_dict. Add UNIT_COUNT based on
-    address points if passed in via address_points_df. Set SUBTYPE and add NOTE if helpers.
-    set_multi_family_single_parcel_subtypes is passed via subtypes_method.
+    address points if passed in via address_points_df. Set SUBTYPE and add NOTE if
+    helpers.set_multi_family_single_parcel_subtypes is passed via subtypes_method.
 
     Args:
         parcels_df (pd.DataFrame): Parcels dataset with a unique PARCEL_ID column

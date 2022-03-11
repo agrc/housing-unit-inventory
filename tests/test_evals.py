@@ -26,6 +26,12 @@ class TestOwnedUnitGroupings:
             'POLYS': ['poly1', 'poly2', 'poly3'],
         })
 
+        common_area_df = pd.DataFrame({
+            common_area_key_column: ['foo', 'bar'],
+            'source': ['one', 'two'],
+            'SHAPE': ['common_shape1', 'common_shape2'],
+        })
+
         year_built_series = pd.Series(data=[1901, 1902], index=['foo', 'bar'], name='BUILT_YR')
         year_built_series.index.name = common_area_key_column
         year_built_method_mock = mocker.Mock()
@@ -43,18 +49,25 @@ class TestOwnedUnitGroupings:
         # common_area_types_method_mock = lambda x: x
         mocker.patch('housing_unit_inventory.helpers.set_common_area_types', new=lambda x: x)
 
-        oug_parcels_df = evaluations.owned_unit_groupings(parcels_df, common_area_key_column, 'foo')
+        oug_parcels_df = evaluations.owned_unit_groupings(parcels_df, common_area_key_column, 'foo', common_area_df)
 
-        test_df = pd.DataFrame({
-            'PARCEL_ID': [2, 3],
-            'parcel_type': ['owned_unit_grouping', 'owned_unit_grouping'],
-            common_area_key_column: ['foo', 'bar'],
-            'TOTAL_MKT_VALUE': [25, 15],
-            'LAND_MKT_VALUE': [12, 10],
-            'BLDG_SQFT': [800, 1000],
-            'FLOORS_CNT': [1, 2],
-            'PARCEL_COUNT': [2, 1],
-        })
+        test_df = pd.DataFrame(
+            {
+                'SHAPE': ['common_shape1', 'common_shape2'],
+                'TOTAL_MKT_VALUE': [25, 15],
+                'LAND_MKT_VALUE': [12, 10],
+                'BLDG_SQFT': [800, 1000],
+                'FLOORS_CNT': [1., 2.],
+                'BUILT_YR': [1901, 1902],
+                'PARCEL_COUNT': [2, 1],
+                'UNIT_COUNT': [2, 1],
+                'PARCEL_ID': ['oug_foo', 'oug_bar'],
+            },
+            index=['foo', 'bar'],
+        )
+        test_df.index.name = common_area_key_column
+
+        tm.assert_frame_equal(oug_parcels_df, test_df)
 
 
 @pytest.fixture
