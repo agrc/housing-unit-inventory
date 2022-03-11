@@ -252,6 +252,26 @@ class TestCommonAreas:
 
         tm.assert_frame_equal(with_types_df, test_results_df)
 
+    def test_get_common_areas_intersecting_parcels_by_key_removes_nonmatching(self):
+        parcels_df = pd.DataFrame({
+            'common_area_key': [1, 2],
+            'PARCEL_ID': ['a', 'b'],
+        })
+
+        common_areas_df = pd.DataFrame({
+            'common_area_key': [1, 2, 3],
+            'area_name': ['foo', 'bar', 'baz'],
+        })
+
+        subset_df = helpers.get_common_areas_intersecting_parcels_by_key(common_areas_df, parcels_df, 'common_area_key')
+
+        test_df = pd.DataFrame({
+            'common_area_key': [1, 2],
+            'area_name': ['foo', 'bar'],
+        })
+
+        tm.assert_frame_equal(subset_df, test_df)
+
 
 class TestDataSetupAndCleaning:
 

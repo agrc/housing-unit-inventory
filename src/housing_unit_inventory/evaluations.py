@@ -43,6 +43,10 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
 
     logging.debug(f'{oug_parcels_df.shape[0]} parcels being evaluated as owned unit groupings...')
 
+    intersecting_common_areas_df = helpers.get_common_areas_intersecting_parcels_by_key(
+        common_area_df, parcels_df, common_area_key_col
+    )
+
     #: use groupby to summarize the parcel attributes per common area
     #: each series should be indexed by and refere back to the common_area_key_col, not the parcels
     parcels_grouped_by_oug_id = oug_parcels_df.groupby(common_area_key_col)
@@ -53,7 +57,7 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
     built_yr_series = helpers.get_proper_built_yr_value_series(oug_parcels_df, common_area_key_col, 'BUILT_YR')
     parcel_count_series = parcels_grouped_by_oug_id['SHAPE'].count().rename('PARCEL_COUNT')
     address_count_series = helpers.get_address_point_count_series(
-        common_area_df, address_points_df, common_area_key_col
+        intersecting_common_areas_df, address_points_df, common_area_key_col
     )
 
     #: Merge all our new info to the common area polygons, using the common_area_key_col as the df index
@@ -61,7 +65,7 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
     evaluated_oug_parcels_df = pd.concat(
         axis=1,
         objs=[
-            common_area_df[carry_over_fields].copy().set_index(common_area_key_col),
+            intersecting_common_areas_df[carry_over_fields].copy().set_index(common_area_key_col),
             total_mkt_value_sum_series,
             land_mkt_value_sum_series,
             bldg_sqft_sum_series,

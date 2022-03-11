@@ -451,3 +451,9 @@ def calculate_built_decade(parcels_df):
 
     #: Decade is floor division by 10, then multiply by 10
     parcels_df['BUILT_DECADE'] = parcels_df['BUILT_YR'] // 10 * 10
+
+
+def get_common_areas_intersecting_parcels_by_key(common_areas_df, parcels_df, common_area_key_col):
+    parcels_common_area_keys = parcels_df[common_area_key_col]
+    common_areas_subset_df = common_areas_df[common_areas_df[common_area_key_col].isin(parcels_common_area_keys)].copy()
+    return common_areas_subset_df
