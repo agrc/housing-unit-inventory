@@ -110,7 +110,7 @@ def by_parcel_types(parcels_df, parcel_types, attribute_dict, address_points_df=
     if subtypes_method:
         working_parcels_df = subtypes_method(working_parcels_df)
 
-    if address_points_df:
+    if isinstance(address_points_df, pd.DataFrame):
         address_points_series = helpers.get_address_point_count_series(
             working_parcels_df, address_points_df, 'PARCEL_ID'
         )

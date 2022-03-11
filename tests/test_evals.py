@@ -185,6 +185,11 @@ class TestByParcelTypes:
             'building_type_id': '2',
         }
 
+        addr_pt_df = pd.DataFrame({
+            'foo': [1, 2],
+            'bar': [3, 4],
+        })
+
         addr_pt_count_series = pd.Series(data=[2, 2, 2, 2, 2], index=['2', '3', '4', '5', '6'], name='UNIT_COUNT')
         addr_pt_count_series.index.name = 'PARCEL_ID'
 
@@ -194,7 +199,7 @@ class TestByParcelTypes:
         mocker.patch('housing_unit_inventory.helpers.get_address_point_count_series', new=addr_pt_function_mock)
 
         results_df = evaluations.by_parcel_types(
-            parcels_df, parcel_types, attribute_dict, True, helpers.set_multi_family_single_parcel_subtypes
+            parcels_df, parcel_types, attribute_dict, addr_pt_df, helpers.set_multi_family_single_parcel_subtypes
         )
 
         test_df = pd.DataFrame({
