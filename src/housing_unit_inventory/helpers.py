@@ -7,11 +7,15 @@ import pandas as pd
 
 
 def get_proper_built_yr_value_series(parcels_df, index_col, built_yr_col):
-    """Return either the most common yearbuilt or the max if the common is 0
+    """Return the largest most common yearbuilt value for each group or the largest value if the most common is 0
+
+    Returns the mode of the yearbuilt value (taking the largest value if there are multiple modes). If the mode is 0,
+    it returns the largest yearbuilt value instead (ie, for one or two built units and many more under construction,
+    you will get the latest year from the built units).
 
     Args:
         parcels_df (pd.DataFrame.spatial): The parcels data
-        index_col (str): The primary key of the parcel table (usually a parcel number/id)
+        index_col (str): The column to group the parcels by
         built_yr_col (str): The column holding the built year as an integer/float
 
     Returns:
@@ -20,23 +24,17 @@ def get_proper_built_yr_value_series(parcels_df, index_col, built_yr_col):
 
     parcels_grouped = parcels_df.groupby(index_col)
 
-    #: Set mode to 0 to start with
-    built_yr_mode_series = pd.Series(data=-1, index=parcels_grouped.groups.keys(), name=built_yr_col)
-    built_yr_mode_series.index.name = index_col
-    #: If we can get a single mode value, use that instead
-    try:
-        #: This will throw a ValueError about 'Must produce aggregated value' if there are multiple modes
-        #: EXCEPT when a previous groupby group returns a proper single value, in which case it returns
-        #: a list of the multiple modes. Tricksy, false hobittses.
-        built_yr_mode_series = parcels_grouped[built_yr_col].agg(pd.Series.mode)
-    #: If there are multiple modes, .mode returns them all and .agg complains there isn't a single value
-    #: FIXME: this isn't happening, it's putting both modes into a list and putting that in the series.
-    #: Throw a breakpoint here and see if we're getting this ValueError to confirm behavior
-    #: And the set to 0 shouldn't matter- the .agg() returns a new series that overbinds built_yr_mod_series
-    #: This is working in the tests... clearly something is wrong with the tests.
-    except ValueError as error:
-        if str(error) == 'Must produce aggregated value':
-            pass
+    #: Using .agg(pd.Series.mode) has inconsistent behavior based on whether the first group returns a single mode
+    #: or multiple modes, so using .apply instead: https://github.com/pandas-dev/pandas/issues/25581
+    built_yr_mode_series = parcels_grouped[built_yr_col].apply(pd.Series.mode)
+
+    #: If there are multiple modes, we just get the largest by flattening the index into a df and doing another groupby
+    if isinstance(built_yr_mode_series.index, pd.MultiIndex):
+        built_yr_mode_series = (
+            pd.DataFrame(built_yr_mode_series) \
+                .reset_index() \
+                .groupby(index_col)[built_yr_col].max()
+        )
 
     built_yr_max_series = parcels_grouped[built_yr_col].max()
     built_yr_df = pd.DataFrame({'mode': built_yr_mode_series, 'max': built_yr_max_series})
