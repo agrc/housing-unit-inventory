@@ -23,7 +23,6 @@ class TestOwnedUnitGroupings:
             'FLOORS_CNT': [1, 1, 2],
             'SHAPE': ['shape1', 'shape2', 'shape3'],
             'CENTROIDS': ['centroid1', 'centroid2', 'centroid3'],
-            'POLYS': ['poly1', 'poly2', 'poly3'],
         })
 
         common_area_df = pd.DataFrame({
@@ -33,7 +32,7 @@ class TestOwnedUnitGroupings:
             'TYPE_WFRC': ['pud', 'pud'],
             'SUBTYPE_WFRC': ['pud', 'pud'],
             'CENTROIDS': ['centroid_foo', 'centroid_bar'],
-            'POLYS': ['poly_foo', 'poly_bar'],
+            'IS_OUG': [1, 1],
         })
 
         year_built_series = pd.Series(data=[1901, 1902], index=['foo', 'bar'], name='BUILT_YR')
@@ -59,7 +58,7 @@ class TestOwnedUnitGroupings:
             {
                 'SHAPE': ['common_shape1', 'common_shape2'],
                 'CENTROIDS': ['centroid_foo', 'centroid_bar'],
-                'POLYS': ['poly_foo', 'poly_bar'],
+                'IS_OUG': [1, 1],
                 'TOTAL_MKT_VALUE': [25, 15],
                 'LAND_MKT_VALUE': [12, 10],
                 'BLDG_SQFT': [800, 1000],
@@ -102,7 +101,7 @@ class TestOwnedUnitGroupings:
             'TYPE_WFRC': ['pud', 'pud'],
             'SUBTYPE_WFRC': ['pud', 'pud'],
             'CENTROIDS': ['centroid_foo', 'centroid_bar'],
-            'POLYS': ['poly_foo', 'poly_bar'],
+            'IS_OUG': [1, 1],
         })
 
         year_built_series = pd.Series(data=[1901, 1902], index=[100, 200], name='BUILT_YR')
@@ -128,7 +127,7 @@ class TestOwnedUnitGroupings:
             {
                 'SHAPE': ['common_shape1', 'common_shape2'],
                 'CENTROIDS': ['centroid_foo', 'centroid_bar'],
-                'POLYS': ['poly_foo', 'poly_bar'],
+                'IS_OUG': [1, 1],
                 'TOTAL_MKT_VALUE': [25, 15],
                 'LAND_MKT_VALUE': [12, 10],
                 'BLDG_SQFT': [800, 1000],
