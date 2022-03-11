@@ -840,7 +840,7 @@ class TestClassifyFromArea:
         with pytest.warns(UserWarning) as record:
             classify_info = ('common_area_key', 'parcel_type', 'owned_unit_grouping')
             oug_parcels = helpers.classify_from_area(test_parcels_df, test_common_areas_df, classify_info)
-        assert record[0].message.args[0] == '2 duplicate parcels found in join; check areas features for overlaps'
+        assert record[0].message.args[0] == '2 duplicate parcel IDs found in join; check areas features for overlaps'
 
     def test_classify_from_area_raises_error_on_missing_classify_info(self, mocker):
         test_parcels_df = pd.DataFrame({
