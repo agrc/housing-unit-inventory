@@ -120,6 +120,10 @@ def add_centroids_to_parcel_df(parcels_df, join_field):
         .assign(**{join_field: lambda df: df[join_field].astype(str)})  #: ensure it's a str for join
     )
 
+    #: Ensure the join_field type remains the same, round tripping through arcpy may change it
+    source_type = parcels_df[join_field].dtype
+    centroids_df[join_field] = centroids_df[join_field].astype(source_type)
+
     joined_df = parcels_df.merge(centroids_df, on=join_field, how='left')
 
     blank_centroids = joined_df['CENTROIDS'].isna().sum()

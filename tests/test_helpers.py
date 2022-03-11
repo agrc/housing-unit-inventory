@@ -638,6 +638,35 @@ class TestDataSetupAndCleaning:
 
         tm.assert_frame_equal(output_df, test_df)
 
+    def test_add_centroids_to_parcel_df_handles_different_join_field_types(self, mocker):
+
+        mocker.patch('arcpy.management.FeatureToPoint')
+        mocker.patch.object(pd.DataFrame.spatial, 'to_featureclass')
+
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2],
+            'VALUE': [20, 4.2],
+        })
+
+        centroids_df = pd.DataFrame({
+            'parcel_id': ['1', '2'],
+            'SHAPE': ['shape1', 'shape2'],
+        })
+
+        from_featureclass_mock = mocker.Mock()
+        from_featureclass_mock.return_value = centroids_df
+        mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass', new=from_featureclass_mock)
+
+        output_df = helpers.add_centroids_to_parcel_df(parcels_df, 'PARCEL_ID')
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2],
+            'VALUE': [20, 4.2],
+            'CENTROIDS': ['shape1', 'shape2'],
+        })
+
+        tm.assert_frame_equal(output_df, test_df)
+
     def test_clean_dissolved_field_names_removes_prefixes(self):
         field_names = ['FIRST_THING', 'MAX_FOO', 'SUM_BAR']
         prefixes = ['FIRST', 'MAX', 'SUM']
