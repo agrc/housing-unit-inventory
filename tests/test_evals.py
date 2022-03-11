@@ -30,6 +30,8 @@ class TestOwnedUnitGroupings:
             common_area_key_column: ['foo', 'bar'],
             'source': ['one', 'two'],
             'SHAPE': ['common_shape1', 'common_shape2'],
+            'TYPE_WFRC': ['pud', 'pud'],
+            'SUBTYPE_WFRC': ['pud', 'pud'],
         })
 
         year_built_series = pd.Series(data=[1901, 1902], index=['foo', 'bar'], name='BUILT_YR')
@@ -47,7 +49,7 @@ class TestOwnedUnitGroupings:
         mocker.patch('housing_unit_inventory.helpers.get_address_point_count_series', new=addr_count_method_mock)
 
         # common_area_types_method_mock = lambda x: x
-        mocker.patch('housing_unit_inventory.helpers.set_common_area_types', new=lambda x: x)
+        # mocker.patch('housing_unit_inventory.helpers.set_common_area_types', new=lambda x: x)
 
         oug_parcels_df = evaluations.owned_unit_groupings(parcels_df, common_area_key_column, 'foo', common_area_df)
 
@@ -61,9 +63,78 @@ class TestOwnedUnitGroupings:
                 'BUILT_YR': [1901, 1902],
                 'PARCEL_COUNT': [2, 1],
                 'UNIT_COUNT': [2, 1],
+                'TYPE': ['single_family', 'single_family'],
+                'SUBTYPE': ['pud', 'pud'],
+                'basebldg': ['1', '1'],
+                'building_type_id': ['1', '1'],
                 'PARCEL_ID': ['oug_foo', 'oug_bar'],
             },
             index=['foo', 'bar'],
+        )
+        test_df.index.name = common_area_key_column
+
+        tm.assert_frame_equal(oug_parcels_df, test_df)
+
+    def test_eval_owned_unit_groupings_handles_non_str_common_area_keys(self, mocker):
+
+        common_area_key_column = 'common_area_key'
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2, 3],
+            'parcel_type': ['owned_unit_grouping', 'owned_unit_grouping', 'owned_unit_grouping'],
+            common_area_key_column: [100, 100, 200],
+            'TOTAL_MKT_VALUE': [10, 15, 15],
+            'LAND_MKT_VALUE': [5, 7, 10],
+            'BLDG_SQFT': [300, 500, 1000],
+            'FLOORS_CNT': [1, 1, 2],
+            'SHAPE': ['shape1', 'shape2', 'shape3'],
+            'CENTROIDS': ['centroid1', 'centroid2', 'centroid3'],
+            'POLYS': ['poly1', 'poly2', 'poly3'],
+        })
+
+        common_area_df = pd.DataFrame({
+            common_area_key_column: [100, 200],
+            'source': ['one', 'two'],
+            'SHAPE': ['common_shape1', 'common_shape2'],
+            'TYPE_WFRC': ['pud', 'pud'],
+            'SUBTYPE_WFRC': ['pud', 'pud'],
+        })
+
+        year_built_series = pd.Series(data=[1901, 1902], index=[100, 200], name='BUILT_YR')
+        year_built_series.index.name = common_area_key_column
+        year_built_method_mock = mocker.Mock()
+        year_built_method_mock.return_value = year_built_series
+
+        mocker.patch('housing_unit_inventory.helpers.get_proper_built_yr_value_series', new=year_built_method_mock)
+
+        addr_pt_series = pd.Series(data=[2, 1], index=[100, 200], name='UNIT_COUNT')
+        addr_pt_series.index.name = common_area_key_column
+        addr_count_method_mock = mocker.Mock()
+        addr_count_method_mock.return_value = addr_pt_series
+
+        mocker.patch('housing_unit_inventory.helpers.get_address_point_count_series', new=addr_count_method_mock)
+
+        # common_area_types_method_mock = lambda x: x
+        # mocker.patch('housing_unit_inventory.helpers.set_common_area_types', new=lambda x: x)
+
+        oug_parcels_df = evaluations.owned_unit_groupings(parcels_df, common_area_key_column, 'foo', common_area_df)
+
+        test_df = pd.DataFrame(
+            {
+                'SHAPE': ['common_shape1', 'common_shape2'],
+                'TOTAL_MKT_VALUE': [25, 15],
+                'LAND_MKT_VALUE': [12, 10],
+                'BLDG_SQFT': [800, 1000],
+                'FLOORS_CNT': [1., 2.],
+                'BUILT_YR': [1901, 1902],
+                'PARCEL_COUNT': [2, 1],
+                'UNIT_COUNT': [2, 1],
+                'TYPE': ['single_family', 'single_family'],
+                'SUBTYPE': ['pud', 'pud'],
+                'basebldg': ['1', '1'],
+                'building_type_id': ['1', '1'],
+                'PARCEL_ID': ['oug_100', 'oug_200'],
+            },
+            index=[100, 200],
         )
         test_df.index.name = common_area_key_column
 

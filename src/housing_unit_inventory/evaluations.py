@@ -43,8 +43,8 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
 
     logging.debug(f'{oug_parcels_df.shape[0]} parcels being evaluated as owned unit groupings...')
 
-    #: use groupby to summarize the parcel attributes
-    #: each series should be indexed by the common_area_key_col
+    #: use groupby to summarize the parcel attributes per common area
+    #: each series should be indexed by and refere back to the common_area_key_col, not the parcels
     parcels_grouped_by_oug_id = oug_parcels_df.groupby(common_area_key_col)
     total_mkt_value_sum_series = parcels_grouped_by_oug_id['TOTAL_MKT_VALUE'].sum()
     land_mkt_value_sum_series = parcels_grouped_by_oug_id['LAND_MKT_VALUE'].sum()
@@ -53,11 +53,11 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
     built_yr_series = helpers.get_proper_built_yr_value_series(oug_parcels_df, common_area_key_col, 'BUILT_YR')
     parcel_count_series = parcels_grouped_by_oug_id['SHAPE'].count().rename('PARCEL_COUNT')
     address_count_series = helpers.get_address_point_count_series(
-        oug_parcels_df, address_points_df, common_area_key_col
+        common_area_df, address_points_df, common_area_key_col
     )
 
     #: Merge all our new info to the common area polygons, using the common_area_key_col as the df index
-    carry_over_fields = ['SHAPE', common_area_key_col]
+    carry_over_fields = ['SHAPE', common_area_key_col, 'SUBTYPE_WFRC', 'TYPE_WFRC']
     evaluated_oug_parcels_df = pd.concat(
         axis=1,
         objs=[
@@ -76,7 +76,7 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
     evaluated_oug_parcels_with_types_df = helpers.set_common_area_types(evaluated_oug_parcels_df)
 
     #: Add a generated PARCEL_ID based on the common_area_key for future aligning with other parcels
-    evaluated_oug_parcels_with_types_df['PARCEL_ID'] = 'oug_' + evaluated_oug_parcels_with_types_df.index
+    evaluated_oug_parcels_with_types_df['PARCEL_ID'] = 'oug_' + evaluated_oug_parcels_with_types_df.index.astype(str)
 
     #: TODO: implement some sort of count tracking. Maybe a separate data frame consisting of just the parcel ids, removing matching ones on each pass?
 

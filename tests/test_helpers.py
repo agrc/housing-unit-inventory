@@ -208,8 +208,8 @@ class TestCommonAreas:
 
         test_results_df = pd.DataFrame({
             'id': [1, 2, 3],
-            'TYPE_WFRC': ['single_family', 'multi_family', 'multi_family'],
-            'SUBTYPE_WFRC': ['pud', '', ''],
+            # 'TYPE_WFRC': ['single_family', 'multi_family', 'multi_family'],
+            # 'SUBTYPE_WFRC': ['pud', '', ''],
             'TYPE': ['single_family', 'multi_family', 'multi_family'],
             'SUBTYPE': ['pud', '', ''],
             'basebldg': ['1', '1', '1'],

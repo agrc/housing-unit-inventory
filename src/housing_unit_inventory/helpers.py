@@ -220,6 +220,8 @@ def set_common_area_types(evaluated_df):
     evaluated_df.loc[evaluated_df['TYPE_WFRC'] == 'multi_family', 'basebldg'] = '1'
     evaluated_df.loc[evaluated_df['TYPE_WFRC'] == 'multi_family', 'building_type_id'] = '2'
 
+    evaluated_df.drop(columns=['SUBTYPE_WFRC', 'TYPE_WFRC'], inplace=True)
+
     return evaluated_df
 
 
@@ -272,20 +274,20 @@ def set_multi_family_single_parcel_subtypes(evaluated_df):
     return evaluated_df
 
 
-def get_address_point_count_series(parcels_df, address_points_df, key_col):
+def get_address_point_count_series(areas_df, address_points_df, key_col):
     """Add number of intersecting address points as the UNIT_COUNT
 
     Args:
-        parcels_df (pd.DataFrame.spatial): Parcels dataset
+        areas_df (pd.DataFrame.spatial): The area geometries
         address_points_df (pd.DataFrame.spatial): Address point dataset with base addresses filtered out
-        key_col (str): A column in parcels_df that identifies the joined rows that belong to a single source parcel/geometry
+        key_col (str): A column in areas_df that identifies the joined rows that belong to a single source geometry
 
     Returns:
         pd.Series: The count of addresses, named 'UNIT_COUNT' and indexed by key_col
     """
 
     address_count_series = (
-        parcels_df.spatial.join(address_points_df, 'left', 'contains') \
+        areas_df.spatial.join(address_points_df, 'left', 'contains') \
         .groupby(key_col)['SHAPE'].count() \
         .rename('UNIT_COUNT')
     )
