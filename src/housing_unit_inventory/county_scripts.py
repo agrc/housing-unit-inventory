@@ -14,13 +14,16 @@ def davis_county():
 
     #: Inputs
     input_dir_path = Path(r'c:\gis\git\housing-unit-inventory\Parcels\2020-Davis\Inputs')
-    parcels_fc = input_dir_path / r'Davis_County_LIR_Parcels.gdb/Parcels_Davis_LIR_UTM12'
+    opensgid_path = Path(r'c:\gis\projects\housinginventory\opensgid.agrc.utah.gov.sde')
+    # parcels_fc = input_dir_path / r'Davis_County_LIR_Parcels.gdb/Parcels_Davis_LIR_UTM12'
+    parcels_fc = Path(r'c:\gis\projects\housinginventory\housinginventory.gdb\davis_test_parcels')
     address_pts = input_dir_path / r'AddressPoints_Davis.gdb/address_points_davis'
     common_areas_fc = input_dir_path / r'Common_Areas.gdb/Common_Areas_Reviewed'
     extended_info_csv = input_dir_path / r'davis_extended_simplified.csv'
     mobile_home_communities = input_dir_path / r'Mobile_Home_Parks.shp'
-    cities = input_dir_path / r'Cities.shp'
     subcounties = input_dir_path / r'SubCountyArea_2019.shp'
+    cities = opensgid_path / 'opensgid.boundaries.municipal_boundaries'
+    metro_townships = opensgid_path / 'opensgid.boundaries.metro_townships'
 
     #: Output
     output_dir_path = Path(r'c:\gis\projects\housinginventory')
@@ -128,7 +131,12 @@ def davis_county():
     #: Add city and sub-county info
     logging.debug('Adding city and subcounty info...')
     cities_df = pd.DataFrame.spatial.from_featureclass(cities)
-    parcels_with_cities_df = helpers.classify_from_area(evaluated_parcels_df, cities_df)
+    metro_townships_df = pd.DataFrame.spatial.from_featureclass(metro_townships)
+    cities_townships_df = helpers.concat_cities_metro_townships(cities_df, metro_townships_df)
+    #: FIXME: This is bombing out with an index error on the spatial join in classify_from_area. Is the change from
+    #: polygons to centroids messing it up? It would have to be a result of the concat of the dataframes, because
+    #: classify_from_area works earlier for the oug/mobile home steps.
+    parcels_with_cities_df = helpers.classify_from_area(evaluated_parcels_df, cities_townships_df)
 
     subcounties_df = pd.DataFrame.spatial.from_featureclass(subcounties)
     final_parcels_df = helpers.classify_from_area(parcels_with_cities_df, subcounties_df)

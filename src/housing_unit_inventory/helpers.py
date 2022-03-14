@@ -454,6 +454,33 @@ def calculate_built_decade(parcels_df):
 
 
 def get_common_areas_intersecting_parcels_by_key(common_areas_df, parcels_df, common_area_key_col):
+    """Subset common areas based on a key found in both the parcels and common areas
+
+    Some common areas may extend beyond the spatial extent of the parcels. Using the common area identifier spatially copied to the parcels in an earlier step as a key, this gets only the common areas found within the parcels. Basically a right join of common areas and parcels based on the common area key.
+
+    Args:
+        common_areas_df (pd.DataFrame): Common areas dataframe; may extend spatially beyond parcels extent
+        parcels_df (pd.DataFrame): Dataframe of parcels being evaluated. Must share common_area_key_col with common_areas_df.
+        common_area_key_col (str): Column name holding key between parcels and common areas.
+
+    Returns:
+        pd.DataFrame: Spatial dataframe of only the common areas found in the parcels.
+    """
     parcels_common_area_keys = parcels_df[common_area_key_col]
     common_areas_subset_df = common_areas_df[common_areas_df[common_area_key_col].isin(parcels_common_area_keys)].copy()
     return common_areas_subset_df
+
+
+def concat_cities_metro_townships(cities_df, townships_df):
+    """Concattanate cities and metro townships into a single dataframe with specific fields
+
+    Args:
+        cities_df (pd.DataFrame): Cities dataframe with 'name', 'ugrcode', and 'SHAPE' columns
+        townships_df (pd.DataFrame): Metro Townships dataframe with 'name', 'ugrcode', and 'SHAPE' columns
+
+    Returns:
+        pd.DataFrame: Concattanated spatial dataframe containing only 'name', 'ugrcode', and 'SHAPE' columns
+    """
+
+    concat_df = pd.concat([cities_df, townships_df], join='inner')
+    return concat_df[['name', 'ugrcode', 'SHAPE']].copy()

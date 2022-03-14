@@ -1016,6 +1016,73 @@ class TestFinalMergingAndCleaning:
 
         assert 'Index has duplicate keys:' in str(error.value)
 
+    def test_concat_cities_metro_townships_concats_normally(self):
+        cities_df = pd.DataFrame({
+            'name': ['foo', 'bar'],
+            'ugrcode': ['fo', 'br'],
+            'SHAPE': ['shape1', 'shape2'],
+        })
+
+        townships_df = pd.DataFrame({
+            'name': ['baz'],
+            'ugrcode': ['bz'],
+            'SHAPE': ['shape3'],
+        })
+
+        concat_df = helpers.concat_cities_metro_townships(cities_df, townships_df)
+
+        test_df = pd.DataFrame({
+            'name': ['foo', 'bar', 'baz'],
+            'ugrcode': ['fo', 'br', 'bz'],
+            'SHAPE': ['shape1', 'shape2', 'shape3'],
+        })
+
+    def test_concat_cities_metro_townships_gets_inner_fields(self):
+        cities_df = pd.DataFrame({
+            'name': ['foo', 'bar'],
+            'ugrcode': ['fo', 'br'],
+            'SHAPE': ['shape1', 'shape2'],
+            'thing': [1, 2],
+        })
+
+        townships_df = pd.DataFrame({
+            'name': ['baz'],
+            'ugrcode': ['bz'],
+            'SHAPE': ['shape3'],
+            'fake': [3],
+        })
+
+        concat_df = helpers.concat_cities_metro_townships(cities_df, townships_df)
+
+        test_df = pd.DataFrame({
+            'name': ['foo', 'bar', 'baz'],
+            'ugrcode': ['fo', 'br', 'bz'],
+            'SHAPE': ['shape1', 'shape2', 'shape3'],
+        })
+
+    def test_concat_cities_metro_townships_removes_columns(self):
+        cities_df = pd.DataFrame({
+            'name': ['foo', 'bar'],
+            'ugrcode': ['fo', 'br'],
+            'SHAPE': ['shape1', 'shape2'],
+            'thing': [1, 2],
+        })
+
+        townships_df = pd.DataFrame({
+            'name': ['baz'],
+            'ugrcode': ['bz'],
+            'SHAPE': ['shape3'],
+            'thing': [3],
+        })
+
+        concat_df = helpers.concat_cities_metro_townships(cities_df, townships_df)
+
+        test_df = pd.DataFrame({
+            'name': ['foo', 'bar', 'baz'],
+            'ugrcode': ['fo', 'br', 'bz'],
+            'SHAPE': ['shape1', 'shape2', 'shape3'],
+        })
+
     def test_update_unit_count_fixes_single_family(self):
         parcels_df = pd.DataFrame({
             'PARCEL_ID': [1, 2],
