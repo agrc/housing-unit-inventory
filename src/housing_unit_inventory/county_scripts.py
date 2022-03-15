@@ -44,12 +44,12 @@ def davis_county():
     parcels_merged_df = helpers.add_extra_info_from_csv(extended_info_csv, 9, csv_fields, parcels_cleaned_df)
 
     logging.debug('Creating centroid shapes...')
-    parcels_with_centroids_df = helpers.add_centroids_to_parcel_df(parcels_merged_df, 'PARCEL_ID')
+    parcel_centroids_df = helpers.get_centroids_copy_of_polygon_df(parcels_merged_df, 'PARCEL_ID')
 
     davis_field_mapping = {
         'class': 'parcel_type',
     }
-    standardized_parcels_df = helpers.standardize_fields(parcels_with_centroids_df, davis_field_mapping)
+    standardized_parcels_df = helpers.standardize_fields(parcels_merged_df, davis_field_mapping)
 
     #: Get a count of all parcels
     count_all = standardized_parcels_df.shape[0]
@@ -60,13 +60,10 @@ def davis_county():
     logging.debug('Classifying OUGs and MHCs...')
     common_area_key = 'common_area_key'
     owned_unit_groupings_df = helpers.subset_owned_unit_groupings_from_common_areas(common_areas_fc, common_area_key)
-    owned_unit_groupings_with_centroids_df = helpers.add_centroids_to_parcel_df(
-        owned_unit_groupings_df, common_area_key
-    )
 
     common_area_classify_info = (common_area_key, 'parcel_type', 'owned_unit_grouping')
     parcels_with_oug_df = helpers.classify_from_area(
-        standardized_parcels_df, owned_unit_groupings_with_centroids_df, common_area_classify_info
+        standardized_parcels_df, parcel_centroids_df, 'PARCEL_ID', owned_unit_groupings_df, common_area_classify_info
     )
 
     #: Classify parcels within mobile home communities
@@ -76,14 +73,14 @@ def davis_county():
 
     mobile_home_classify_info = (mobile_home_key, 'parcel_type', 'mobile_home_park')
     classified_parcels_df = helpers.classify_from_area(
-        parcels_with_oug_df, mobile_home_communities_df, mobile_home_classify_info
+        parcels_with_oug_df, parcel_centroids_df, 'PARCEL_ID', mobile_home_communities_df, mobile_home_classify_info
     )
 
     #: STEP 3: Run evaluations for each type of parcel
     #: PARCELS: table
     logging.info('Evaluating owned unit groupings...')
     oug_features_df = evaluations.owned_unit_groupings(
-        classified_parcels_df, common_area_key, address_pts_no_base_df, owned_unit_groupings_with_centroids_df
+        classified_parcels_df, common_area_key, address_pts_no_base_df, owned_unit_groupings_df
     )
 
     #: PARCELS: table
@@ -135,16 +132,21 @@ def davis_county():
     #: Add city and sub-county info
     #: PARCELS: points
     logging.debug('Adding city and subcounty info...')
+    evaluated_centroids_df = helpers.get_centroids_copy_of_polygon_df(evaluated_parcels_df, 'PARCEL_ID')
     cities_df = pd.DataFrame.spatial.from_featureclass(cities)
     metro_townships_df = pd.DataFrame.spatial.from_featureclass(metro_townships)
     cities_townships_df = helpers.concat_cities_metro_townships(cities_df, metro_townships_df)
     #: FIXME: This is bombing out with an index error on the spatial join in classify_from_area. Is the change from
     #: polygons to centroids messing it up? It would have to be a result of the concat of the dataframes, because
     #: classify_from_area works earlier for the oug/mobile home steps.
-    parcels_with_cities_df = helpers.classify_from_area(evaluated_parcels_df, cities_townships_df)
+    parcels_with_cities_df = helpers.classify_from_area(
+        evaluated_parcels_df, evaluated_centroids_df, 'PARCEL_ID', cities_townships_df
+    )
 
     subcounties_df = pd.DataFrame.spatial.from_featureclass(subcounties)
-    final_parcels_df = helpers.classify_from_area(parcels_with_cities_df, subcounties_df)
+    final_parcels_df = helpers.classify_from_area(
+        parcels_with_cities_df, evaluated_centroids_df, 'PARCEL_ID', subcounties_df
+    )
 
     final_parcels_df['COUNTY'] = 'DAVIS'
 
