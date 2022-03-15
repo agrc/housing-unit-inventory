@@ -343,45 +343,38 @@ def concat_evaluated_dataframes(dataframes, new_index='PARCEL_ID'):
     return concated_dataframes
 
 
-def classify_from_area(parcels_with_centroids_df, area_df, classify_info=()):
-    """Spatial join of parcels whose centers are within areas, with optional custom classification
-
-    Performs a left spatial join of parcels to areas, attempting to ensure all parcels are returned whether they are
-    inside the areas or not.
-
-    Raises a UserWarning if the number of rows after the spatial join of parcel centroids within the areas is
-    different than the original number of parcel rows, or if there are duplicate parcel ids in the joined data (could
-    indicate overlapping area geometries.)
+def classify_from_area(parcels_df, parcel_centroids_df, parcel_key, area_df, classify_info=()):
+    """Add information from area polygons and/or provided values to parcels whose centroids are in the areas
 
     Args:
-        parcels_with_centroids_df (pd.DataFrame.spatial): The parcels dataset with centroid shapes in the 'CENTROIDS'
-        column.
-        area_df (pd.DataFrame.spatial): Areas to use for joining and classification. Should contain any fields to be
-        joined as well as (optionally) a unique key column for classification.
-        classify_info (tuple, optional): Information for custom classification: (areas_unique_key_column,
-        classify_column, classify_value). Defaults to ().
+        parcels_df (pd.DataFrame.spatial): Spatial dataframe of parcels (original polygon geometry)
+        parcel_centroids_df (pd.DataFrame.spatial): Dataframe of parcel centroids and a unique key
+        parcel_key (str): Name of common key column between normal parcels and centroids
+        area_df (pd.DataFrame.spatial): Areas dataframe to classify the parcels against
+        classify_info (tuple, optional): Tuple of (areas unique key column, target column, value) for optionally manually setting a column value for intersecting parcels. Defaults to ().
 
     Raises:
-        ValueError: If three values are not passed in classify_info
+        ValueError: If all three required classify_info values are not provided.
+        UserWarning: If duplicate parcel keys are found in the spatial join, indicating a centroid is within more than one area. Check for overlapping areas (assumes areas are spatially exclusive).
 
     Returns:
-        pd.DataFrame.spatial: Parcels with area info joined spatially and optional classification added.
+        pd.DataFrame.spatial: Original parcels_df with info from areas that contain the parcels' corresponding centroids
     """
 
-    change_geometry(parcels_with_centroids_df, 'CENTROIDS', 'POLYS')
-    joined_centroids_df = parcels_with_centroids_df.spatial.join(area_df, 'left', 'within')
+    #: get only the centroids within the areas
+    joined_centroids_df = parcel_centroids_df.spatial.join(area_df, 'inner', 'within')
 
-    if joined_centroids_df.shape[0] != parcels_with_centroids_df.shape[0]:
-        warnings.warn(
-            f'Different number of features in joined dataframe ({joined_centroids_df.shape[0]}) than in original '
-            f'parcels ({parcels_with_centroids_df.shape[0]})'
-        )
-
-    dup_parcel_ids = joined_centroids_df[joined_centroids_df.duplicated(subset=['PARCEL_ID'], keep=False)]
+    dup_parcel_ids = joined_centroids_df[joined_centroids_df.duplicated(subset=[parcel_key], keep=False)]
     if dup_parcel_ids.shape[0]:
         warnings.warn(
-            f'{dup_parcel_ids.shape[0]} duplicate parcel IDs found in join; check areas features for overlaps'
+            f'{dup_parcel_ids.shape[0]} duplicate keys found in spatial join; check areas features for overlaps'
         )
+
+    #: Remove SHAPE so we can join it to parcels w/o multiple geometry fields, index_right for cleanliness
+    joined_centroids_df.drop(columns=['SHAPE', 'index_right'], inplace=True)
+
+    #: Join intersecting centroids back to original parcels, keeping all original
+    merged_parcels = pd.merge(parcels_df, joined_centroids_df, how='left', on=parcel_key)
 
     if classify_info:
         #: Make sure we've got all the necessary classification info
@@ -392,15 +385,11 @@ def classify_from_area(parcels_with_centroids_df, area_df, classify_info=()):
                 'classify_info should be (areas_unique_key_column, classify_column, classify_value)'
             ) from error
 
-        classify_mask = joined_centroids_df[areas_unique_key_column].notna()
-        joined_centroids_df.loc[classify_mask, classify_column] = classify_value
+        #: Make sure parcel is associated with an area- areas_unique_key_col is not null
+        classify_mask = merged_parcels[areas_unique_key_column].notna()
+        merged_parcels.loc[classify_mask, classify_column] = classify_value
 
-    change_geometry(joined_centroids_df, 'POLYS', 'CENTROIDS')
-
-    #: Remove 'index_left' left over from spatial join
-    joined_centroids_df.drop(columns=['index_right'], inplace=True)
-
-    return joined_centroids_df.copy()
+    return merged_parcels.copy()
 
 
 def update_unit_count(parcels_df):
