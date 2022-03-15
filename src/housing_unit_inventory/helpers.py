@@ -100,7 +100,17 @@ def add_extra_info_from_csv(info_csv, pad_length, csv_fields, parcels_df, csv_jo
     return parcels_merged_df
 
 
-def add_centroids_to_parcel_df(parcels_df, join_field):
+def get_centroids_copy_of_polygon_df(polygon_df, join_field):
+    """Get the centroids of a polygon dataframe by round-tripping through FeatureToPoint, using INSIDE parameter
+
+    Args:
+        polygon_df (pd.DataFrame.spatial): Dataframe to get the centroids of (guaranteed to be inside the polygons)
+        join_field (str): Unique id field in polygon_df for joining data derived from centroids back to the polygons
+
+    Returns:
+        pd.DataFrame.spatial: Dataframe containing just the centroids and the common join field.
+    """
+
     memory_parcels = 'memory/parcels'
     memory_centroids = 'memory/centroids'
 
@@ -108,29 +118,21 @@ def add_centroids_to_parcel_df(parcels_df, join_field):
         if arcpy.Exists(featureclass):
             arcpy.management.Delete(featureclass)
 
-    parcels_df.spatial.to_featureclass(memory_parcels)
+    polygon_df.spatial.to_featureclass(memory_parcels)
     arcpy.management.FeatureToPoint(memory_parcels, memory_centroids, 'INSIDE')
-    centroids_df = (
-        pd.DataFrame.spatial.from_featureclass(memory_centroids)[[join_field.lower(), 'SHAPE']].rename(
-            columns={
-                'SHAPE': 'CENTROIDS',
-                join_field.lower(): join_field
-            }
-        )  #: feature class lowercases the columns
-        .assign(**{join_field: lambda df: df[join_field].astype(str)})  #: ensure it's a str for join
-    )
+    centroids_df = pd.DataFrame.spatial.from_featureclass(memory_centroids)
+
+    centroids_df.rename(columns={join_field.lower(): join_field}, inplace=True)  #: feature class lowercases the columns
 
     #: Ensure the join_field type remains the same, round tripping through arcpy may change it
-    source_type = parcels_df[join_field].dtype
+    source_type = polygon_df[join_field].dtype
     centroids_df[join_field] = centroids_df[join_field].astype(source_type)
 
-    joined_df = parcels_df.merge(centroids_df, on=join_field, how='left')
-
-    blank_centroids = joined_df['CENTROIDS'].isna().sum()
+    blank_centroids = centroids_df['SHAPE'].isna().sum()
     if blank_centroids:
         print(f'{blank_centroids} blank centroids!')
 
-    return joined_df
+    return centroids_df[[join_field, 'SHAPE']].copy()
 
 
 def load_and_clean_parcels(parcels_fc):

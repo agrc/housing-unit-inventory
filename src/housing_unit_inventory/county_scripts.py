@@ -80,11 +80,13 @@ def davis_county():
     )
 
     #: STEP 3: Run evaluations for each type of parcel
+    #: PARCELS: table
     logging.info('Evaluating owned unit groupings...')
     oug_features_df = evaluations.owned_unit_groupings(
         classified_parcels_df, common_area_key, address_pts_no_base_df, owned_unit_groupings_with_centroids_df
     )
 
+    #: PARCELS: table
     logging.info('Evaluating single family parcels...')
     single_family_attributes = {
         'TYPE': 'single_family',
@@ -96,6 +98,7 @@ def davis_county():
         classified_parcels_df, ['single_family'], single_family_attributes
     )
 
+    #: PARCELS: polygons
     logging.info('Evaluating multi-family, single-parcel parcels...')
     multi_family_types = ['multi_family', 'duplex', 'apartment', 'townhome', 'triplex-quadplex']
     multi_family_attributes = {
@@ -108,6 +111,7 @@ def davis_county():
         helpers.set_multi_family_single_parcel_subtypes
     )
 
+    #: PARCELS: polygons
     logging.info('Evaluating mobile home communities...')
     mobile_home_attributes = {
         'TYPE': 'multi_family',
@@ -129,6 +133,7 @@ def davis_county():
     ])
 
     #: Add city and sub-county info
+    #: PARCELS: points
     logging.debug('Adding city and subcounty info...')
     cities_df = pd.DataFrame.spatial.from_featureclass(cities)
     metro_townships_df = pd.DataFrame.spatial.from_featureclass(metro_townships)

@@ -629,7 +629,7 @@ class TestDataSetupAndCleaning:
 
         tm.assert_frame_equal(joined_df, test_df)
 
-    def test_add_centroids_to_parcel_df_joins_properly(self, mocker):
+    def test_get_centroids_copy_of_polygon_df_joins_properly(self, mocker):
 
         mocker.patch('arcpy.management.FeatureToPoint')
         mocker.patch.object(pd.DataFrame.spatial, 'to_featureclass')
@@ -647,18 +647,19 @@ class TestDataSetupAndCleaning:
         from_featureclass_mock = mocker.Mock()
         from_featureclass_mock.return_value = centroids_df
         mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass', new=from_featureclass_mock)
+        mocker.patch.object(pd.DataFrame.spatial, 'set_geometry')
 
-        output_df = helpers.add_centroids_to_parcel_df(parcels_df, 'PARCEL_ID')
+        output_df = helpers.get_centroids_copy_of_polygon_df(parcels_df, 'PARCEL_ID')
 
         test_df = pd.DataFrame({
             'PARCEL_ID': ['01', '02'],
-            'VALUE': [20, 4.2],
-            'CENTROIDS': ['shape1', 'shape2'],
+            # 'VALUE': [20, 4.2],
+            'SHAPE': ['shape1', 'shape2'],
         })
 
         tm.assert_frame_equal(output_df, test_df)
 
-    def test_add_centroids_to_parcel_df_handles_different_join_field_types(self, mocker):
+    def test_get_centroids_copy_of_polygon_df_handles_different_join_field_types(self, mocker):
 
         mocker.patch('arcpy.management.FeatureToPoint')
         mocker.patch.object(pd.DataFrame.spatial, 'to_featureclass')
@@ -676,13 +677,14 @@ class TestDataSetupAndCleaning:
         from_featureclass_mock = mocker.Mock()
         from_featureclass_mock.return_value = centroids_df
         mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass', new=from_featureclass_mock)
+        mocker.patch.object(pd.DataFrame.spatial, 'set_geometry')
 
-        output_df = helpers.add_centroids_to_parcel_df(parcels_df, 'PARCEL_ID')
+        output_df = helpers.get_centroids_copy_of_polygon_df(parcels_df, 'PARCEL_ID')
 
         test_df = pd.DataFrame({
             'PARCEL_ID': [1, 2],
-            'VALUE': [20, 4.2],
-            'CENTROIDS': ['shape1', 'shape2'],
+            # 'VALUE': [20, 4.2],
+            'SHAPE': ['shape1', 'shape2'],
         })
 
         tm.assert_frame_equal(output_df, test_df)
