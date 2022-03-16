@@ -168,6 +168,9 @@ def load_and_clean_parcels(parcels_fc):
     #: Remove parcels without parcel ids and empty geometries
     parcels_dissolved_df.dropna(subset=['PARCEL_ID', 'SHAPE'], inplace=True)
 
+    #: Ensure HOUSE_CNT is a float (for later comparison and handling NaNs)
+    parcels_dissolved_df['HOUSE_CNT'] = parcels_dissolved_df['HOUSE_CNT'].astype(float)
+
     return parcels_dissolved_df
 
 
@@ -426,6 +429,8 @@ def remove_zero_unit_house_counts(parcels_df):
 
     rows_with_zeros = parcels_df[(parcels_df['UNIT_COUNT'] == 0) | (parcels_df['HOUSE_CNT'] == 0)]
     parcels_df.drop(rows_with_zeros.index, inplace=True)
+
+    #: FIXME: this may not be the right logic, seems to drop almost all rows from test data. Maybe should be only if both are na?
     parcels_df.dropna(subset=['UNIT_COUNT', 'HOUSE_CNT'], inplace=True)
 
 

@@ -159,7 +159,7 @@ def davis_county():
 
     #: Clean up some nulls
     logging.info('Cleaning up final data')
-    final_parcels_df['NOTE'].fillna(final_parcels_df['des_all'], in_place=True)
+    final_parcels_df['NOTE'].fillna(final_parcels_df['des_all'], inplace=True)
 
     helpers.update_unit_count(final_parcels_df)
 

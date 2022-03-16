@@ -405,7 +405,7 @@ class TestDataSetupAndCleaning:
             'PARCEL_ACRES': [.25],
             'PROP_CLASS': ['foo'],
             'PRIMARY_RES': ['baz'],
-            'HOUSE_CNT': [1],
+            'HOUSE_CNT': [1.],
             'BLDG_SQFT': [10],
             'FLOORS_CNT': [13],
             'BUILT_YR': [1984],
@@ -424,6 +424,7 @@ class TestDataSetupAndCleaning:
             'MAX_TOTAL_MKT_VALUE': [1],
             'SUM_LAND_MKT_VALUE': [5],
             'SHAPE': ['shape1'],
+            'HOUSE_CNT': [1],
         })
 
         from_featureclass_mock = mocker.Mock()
@@ -441,6 +442,55 @@ class TestDataSetupAndCleaning:
             'TOTAL_MKT_VALUE': [1],
             'LAND_MKT_VALUE': [5],
             'SHAPE': ['shape1'],
+            'HOUSE_CNT': [1.],
+        })
+
+        tm.assert_frame_equal(cleaned_parcels, test_df)
+
+    def test_load_and_clean_parcels_converts_house_count_to_float(self, mocker):
+        parcel_df = pd.DataFrame({
+            'OBJECTID': [0],
+            'PARCEL_ID': ['15'],
+            'SHAPE': ['shape1'],
+            'HOUSE_CNT': ['1'],
+        })
+
+        from_featureclass_mock = mocker.Mock()
+        from_featureclass_mock.return_value = parcel_df
+        mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass', new=from_featureclass_mock)
+        mocker.patch('arcpy.management.Dissolve')
+
+        cleaned_parcels = helpers.load_and_clean_parcels('foo')
+
+        test_df = pd.DataFrame({
+            'OBJECTID': [0],
+            'PARCEL_ID': ['15'],
+            'SHAPE': ['shape1'],
+            'HOUSE_CNT': [1.],
+        })
+
+        tm.assert_frame_equal(cleaned_parcels, test_df)
+
+    def test_load_and_clean_parcels_converts_house_count_to_float_with_None(self, mocker):
+        parcel_df = pd.DataFrame({
+            'OBJECTID': [0],
+            'PARCEL_ID': ['15'],
+            'SHAPE': ['shape1'],
+            'HOUSE_CNT': [None],
+        })
+
+        from_featureclass_mock = mocker.Mock()
+        from_featureclass_mock.return_value = parcel_df
+        mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass', new=from_featureclass_mock)
+        mocker.patch('arcpy.management.Dissolve')
+
+        cleaned_parcels = helpers.load_and_clean_parcels('foo')
+
+        test_df = pd.DataFrame({
+            'OBJECTID': [0],
+            'PARCEL_ID': ['15'],
+            'SHAPE': ['shape1'],
+            'HOUSE_CNT': [np.nan],
         })
 
         tm.assert_frame_equal(cleaned_parcels, test_df)
