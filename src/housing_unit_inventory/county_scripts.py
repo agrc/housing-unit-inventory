@@ -35,15 +35,15 @@ def davis_county():
 
     #: STEP 1: Prep parcels, load in extra data as needed
     #: Dissolve duplicate parcel ids
-    logging.debug('Loading and dissolving parcels...')
+    logging.info('Loading and dissolving parcels...')
     parcels_cleaned_df = helpers.load_and_clean_parcels(parcels_fc)
 
     #: Load Extended Descriptions - be sure to format ACCOUNTNO column as text in excel first
-    logging.debug('Merging csv data...')
+    logging.info('Merging csv data...')
     csv_fields = ['ACCOUNTNO', 'des_all', 'class']
     parcels_merged_df = helpers.add_extra_info_from_csv(extended_info_csv, 9, csv_fields, parcels_cleaned_df)
 
-    logging.debug('Creating centroid shapes...')
+    logging.debug('Creating initial parcel centroids...')
     parcel_centroids_df = helpers.get_centroids_copy_of_polygon_df(parcels_merged_df, 'PARCEL_ID')
 
     davis_field_mapping = {
@@ -57,7 +57,7 @@ def davis_county():
 
     #: STEP 2: Classify owned unit grouping (puds, condos, etc) and mobile home community parcels
     #: Classify parcels within common areas
-    logging.debug('Classifying OUGs and MHCs...')
+    logging.info('Classifying OUGs and MHCs...')
     common_area_key = 'common_area_key'
     owned_unit_groupings_df = helpers.subset_owned_unit_groupings_from_common_areas(common_areas_fc, common_area_key)
 
@@ -121,7 +121,7 @@ def davis_county():
 
     #: STEP 4: Merge the evaluated parcels together and clean
     #: Merge the evaluated parcels into one dataframe
-    logging.debug('Merging dataframes...')
+    logging.info('Merging dataframes...')
     evaluated_parcels_df = helpers.concat_evaluated_dataframes([
         oug_features_df,
         single_family_features_df,
@@ -131,7 +131,8 @@ def davis_county():
 
     #: Add city and sub-county info
     #: PARCELS: points
-    logging.debug('Adding city and subcounty info...')
+    logging.info('Adding city and subcounty info...')
+    logging.debug('Getting evaluated parcel centroids...')
     evaluated_centroids_df = helpers.get_centroids_copy_of_polygon_df(evaluated_parcels_df, 'PARCEL_ID')
     cities_df = pd.DataFrame.spatial.from_featureclass(cities)
     metro_townships_df = pd.DataFrame.spatial.from_featureclass(metro_townships)
@@ -157,7 +158,7 @@ def davis_county():
     }, inplace=True)
 
     #: Clean up some nulls
-    logging.debug('Cleaning up final data')
+    logging.info('Cleaning up final data')
     final_parcels_df['NOTE'].fillna(final_parcels_df['des_all'], in_place=True)
 
     helpers.update_unit_count(final_parcels_df)

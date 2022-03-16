@@ -1,3 +1,4 @@
+import logging
 import warnings
 from datetime import datetime
 
@@ -338,7 +339,8 @@ def concat_evaluated_dataframes(dataframes, new_index='PARCEL_ID'):
         pd.DataFrame: Concatenated, reindexed dataframe
     """
 
-    concated_dataframes = pd.concat(dataframes).set_index(new_index, verify_integrity=True)
+    #: FIXME: reset index, reimplement validation (maybe custom validation check?)
+    concated_dataframes = pd.concat(dataframes)  #.set_index(new_index, verify_integrity=True)
 
     return concated_dataframes
 
@@ -360,6 +362,11 @@ def classify_from_area(parcels_df, parcel_centroids_df, parcel_key, area_df, cla
     Returns:
         pd.DataFrame.spatial: Original parcels_df with info from areas that contain the parcels' corresponding centroids
     """
+
+    if area_df.spatial.sr['wkid'] != parcel_centroids_df.spatial.sr['wkid']:
+        logging.debug(f'Reprojecting areas to {parcel_centroids_df.spatial.sr["wkid"]}...')
+        if not area_df.spatial.project(parcel_centroids_df.spatial.sr['wkid']):
+            raise RuntimeError(f'Reprojecting area_df to {parcel_centroids_df.spatial.sr["wkid"]} did not succeed.')
 
     #: get only the centroids within the areas
     joined_centroids_df = parcel_centroids_df.spatial.join(area_df, 'inner', 'within')

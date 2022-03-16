@@ -743,11 +743,15 @@ class TestClassifyFromArea:
             'PARCEL_ID': [11, 12],
             'SHAPE': ['centroid_shape_1', 'centroid_shape_2'],
         })
+        test_centroids_df.spatial = mocker.Mock()
+        test_centroids_df.spatial.sr = {'wkid': 'foo'}
 
         test_common_areas_df = pd.DataFrame({
             'common_area_key': [1],
             'SHAPE': ['addr_shape_1'],
         })
+        test_common_areas_df.spatial = mocker.Mock()
+        test_common_areas_df.spatial.sr = {'wkid': 'foo'}
 
         joined_df = pd.DataFrame({
             'PARCEL_ID': [11, 12],
@@ -758,9 +762,7 @@ class TestClassifyFromArea:
 
         join_method_mock = mocker.MagicMock()
         join_method_mock.return_value = joined_df
-
-        mocker.patch.object(pd.DataFrame.spatial, 'join', new=join_method_mock)
-        mocker.patch('housing_unit_inventory.helpers.change_geometry')
+        test_centroids_df.spatial.join = join_method_mock
 
         classify_info = ('common_area_key', 'parcel_type', 'owned_unit_grouping')
         oug_parcels = helpers.classify_from_area(
@@ -788,11 +790,15 @@ class TestClassifyFromArea:
             'PARCEL_ID': [11, 12],
             'SHAPE': ['centroid_shape_1', 'centroid_shape_2'],
         })
+        test_centroids_df.spatial = mocker.Mock()
+        test_centroids_df.spatial.sr = {'wkid': 'foo'}
 
         test_common_areas_df = pd.DataFrame({
             'common_area_key': [1],
             'SHAPE': ['addr_shape_1'],
         })
+        test_common_areas_df.spatial = mocker.Mock()
+        test_common_areas_df.spatial.sr = {'wkid': 'foo'}
 
         joined_df = pd.DataFrame({
             'PARCEL_ID': [11, 12],
@@ -803,9 +809,7 @@ class TestClassifyFromArea:
 
         join_method_mock = mocker.MagicMock()
         join_method_mock.return_value = joined_df
-
-        mocker.patch.object(pd.DataFrame.spatial, 'join', new=join_method_mock)
-        mocker.patch('housing_unit_inventory.helpers.change_geometry')
+        test_centroids_df.spatial.join = join_method_mock
 
         classify_info = ('common_area_key', 'parcel_type', 'owned_unit_grouping')
         oug_parcels = helpers.classify_from_area(
@@ -893,11 +897,15 @@ class TestClassifyFromArea:
             'PARCEL_ID': [11, 12],
             'SHAPE': ['centroid_shape_1', 'centroid_shape_2'],
         })
+        test_centroids_df.spatial = mocker.Mock()
+        test_centroids_df.spatial.sr = {'wkid': 'foo'}
 
         test_common_areas_df = pd.DataFrame({
             'common_area_key': [1],
             'SHAPE': ['addr_shape_1'],
         })
+        test_common_areas_df.spatial = mocker.Mock()
+        test_common_areas_df.spatial.sr = {'wkid': 'foo'}
 
         joined_df = pd.DataFrame({
             'PARCEL_ID': [11, 11],
@@ -908,9 +916,7 @@ class TestClassifyFromArea:
 
         join_method_mock = mocker.MagicMock()
         join_method_mock.return_value = joined_df
-
-        mocker.patch.object(pd.DataFrame.spatial, 'join', new=join_method_mock)
-        mocker.patch('housing_unit_inventory.helpers.change_geometry')
+        test_centroids_df.spatial.join = join_method_mock
 
         with pytest.warns(UserWarning) as record:
             classify_info = ('common_area_key', 'parcel_type', 'owned_unit_grouping')
@@ -930,11 +936,15 @@ class TestClassifyFromArea:
             'PARCEL_ID': [11, 12],
             'SHAPE': ['centroid_shape_1', 'centroid_shape_2'],
         })
+        test_centroids_df.spatial = mocker.Mock()
+        test_centroids_df.spatial.sr = {'wkid': 'foo'}
 
         test_common_areas_df = pd.DataFrame({
             'common_area_key': [1],
             'SHAPE': ['addr_shape_1'],
         })
+        test_common_areas_df.spatial = mocker.Mock()
+        test_common_areas_df.spatial.sr = {'wkid': 'foo'}
 
         joined_df = pd.DataFrame({
             'PARCEL_ID': [11, 12],
@@ -945,9 +955,7 @@ class TestClassifyFromArea:
 
         join_method_mock = mocker.MagicMock()
         join_method_mock.return_value = joined_df
-
-        mocker.patch.object(pd.DataFrame.spatial, 'join', new=join_method_mock)
-        mocker.patch('housing_unit_inventory.helpers.change_geometry')
+        test_centroids_df.spatial.join = join_method_mock
 
         with pytest.raises(ValueError) as error:
             classify_info = ('common_area_key', 'parcel_type')
@@ -967,11 +975,15 @@ class TestClassifyFromArea:
             'PARCEL_ID': [11, 12],
             'SHAPE': ['centroid_shape_1', 'centroid_shape_2'],
         })
+        test_centroids_df.spatial = mocker.Mock()
+        test_centroids_df.spatial.sr = {'wkid': 'foo'}
 
         test_common_areas_df = pd.DataFrame({
             'common_area_key': [1],
             'SHAPE': ['addr_shape_1'],
         })
+        test_common_areas_df.spatial = mocker.Mock()
+        test_common_areas_df.spatial.sr = {'wkid': 'foo'}
 
         joined_df = pd.DataFrame({
             'PARCEL_ID': [11, 12],
@@ -982,9 +994,7 @@ class TestClassifyFromArea:
 
         join_method_mock = mocker.MagicMock()
         join_method_mock.return_value = joined_df
-
-        mocker.patch.object(pd.DataFrame.spatial, 'join', new=join_method_mock)
-        mocker.patch('housing_unit_inventory.helpers.change_geometry')
+        test_centroids_df.spatial.join = join_method_mock
 
         oug_parcels = helpers.classify_from_area(test_parcels_df, test_centroids_df, 'PARCEL_ID', test_common_areas_df)
         test_df = pd.DataFrame({
@@ -1007,12 +1017,16 @@ class TestClassifyFromArea:
             'PARCEL_ID': [11, 12],
             'SHAPE': ['centroid_shape_1', 'centroid_shape_2'],
         })
+        test_centroids_df.spatial = mocker.Mock()
+        test_centroids_df.spatial.sr = {'wkid': 'foo'}
 
         test_common_areas_df = pd.DataFrame({
             'common_area_key': [1],
             'SHAPE': ['addr_shape_1'],
             'NAME': ['city1'],
         })
+        test_common_areas_df.spatial = mocker.Mock()
+        test_common_areas_df.spatial.sr = {'wkid': 'foo'}
 
         joined_df = pd.DataFrame({
             'PARCEL_ID': [11, 12],
@@ -1024,9 +1038,7 @@ class TestClassifyFromArea:
 
         join_method_mock = mocker.MagicMock()
         join_method_mock.return_value = joined_df
-
-        mocker.patch.object(pd.DataFrame.spatial, 'join', new=join_method_mock)
-        mocker.patch('housing_unit_inventory.helpers.change_geometry')
+        test_centroids_df.spatial.join = join_method_mock
 
         oug_parcels = helpers.classify_from_area(test_parcels_df, test_centroids_df, 'PARCEL_ID', test_common_areas_df)
         test_df = pd.DataFrame({
@@ -1039,6 +1051,86 @@ class TestClassifyFromArea:
 
         tm.assert_frame_equal(oug_parcels, test_df)
 
+    def test_classify_from_area_reprojects(self, mocker):
+        test_parcels_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'UNIT_COUNT': [1, 2],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+        })
+
+        test_centroids_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['centroid_shape_1', 'centroid_shape_2'],
+        })
+        test_centroids_df.spatial = mocker.Mock()
+        test_centroids_df.spatial.sr = {'wkid': 'foo'}
+
+        test_common_areas_df = pd.DataFrame({
+            'common_area_key': [1],
+            'SHAPE': ['addr_shape_1'],
+        })
+        test_common_areas_df.spatial = mocker.Mock()
+        test_common_areas_df.spatial.sr = {'wkid': 'bar'}
+
+        joined_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['centroid_shape_1', 'centroid_shape_2'],
+            'common_area_key': [1, 1],
+            'index_right': [0, 1],
+        })
+
+        test_common_areas_df.spatial.project.return_value = True
+
+        join_method_mock = mocker.MagicMock()
+        join_method_mock.return_value = joined_df
+        test_centroids_df.spatial.join = join_method_mock
+
+        classify_info = ('common_area_key', 'parcel_type', 'owned_unit_grouping')
+        oug_parcels = helpers.classify_from_area(
+            test_parcels_df, test_centroids_df, 'PARCEL_ID', test_common_areas_df, classify_info
+        )
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'UNIT_COUNT': [1, 2],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+            'common_area_key': [1, 1],
+            'parcel_type': ['owned_unit_grouping', 'owned_unit_grouping']
+        })
+
+        test_common_areas_df.spatial.project.assert_called_once()
+        tm.assert_frame_equal(oug_parcels, test_df)
+
+    def test_classify_from_area_raises_error_on_failed_reproject(self, mocker):
+        test_parcels_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'UNIT_COUNT': [1, 2],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+        })
+
+        test_centroids_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['centroid_shape_1', 'centroid_shape_2'],
+        })
+        test_centroids_df.spatial = mocker.Mock()
+        test_centroids_df.spatial.sr = {'wkid': 'foo'}
+
+        test_common_areas_df = pd.DataFrame({
+            'common_area_key': [1],
+            'SHAPE': ['addr_shape_1'],
+        })
+        test_common_areas_df.spatial = mocker.Mock()
+        test_common_areas_df.spatial.sr = {'wkid': 'bar'}
+
+        test_common_areas_df.spatial.project.return_value = False
+
+        classify_info = ('common_area_key', 'parcel_type', 'owned_unit_grouping')
+        with pytest.raises(RuntimeError) as error:
+            oug_parcels = helpers.classify_from_area(
+                test_parcels_df, test_centroids_df, 'PARCEL_ID', test_common_areas_df, classify_info
+            )
+        assert 'Reprojecting area_df to foo did not succeed.' in str(error.value)
+
 
 class TestFinalMergingAndCleaning:
 
@@ -1049,23 +1141,23 @@ class TestFinalMergingAndCleaning:
 
         concat_df = helpers.concat_evaluated_dataframes([df1, df2])
 
-        test_df = pd.DataFrame(
-            {'DATA': ['a', 'b', 'c', 'd', 'e', 'f']},
-            index=[1, 2, 3, 4, 5, 6],
-        )
-        test_df.index.name = 'PARCEL_ID'
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2, 3, 4, 5, 6],
+            'DATA': ['a', 'b', 'c', 'd', 'e', 'f'],
+        })
+        test_df.index = [0, 1, 2, 0, 1, 2]
 
         tm.assert_frame_equal(concat_df, test_df)
 
-    def test_concat_evaluated_dataframes_raises_error_on_duplicate_index_values(self):
-        df1 = pd.DataFrame({'PARCEL_ID': [1, 2, 3], 'DATA': ['a', 'b', 'c']})
+    # def test_concat_evaluated_dataframes_raises_error_on_duplicate_index_values(self):
+    #     df1 = pd.DataFrame({'PARCEL_ID': [1, 2, 3], 'DATA': ['a', 'b', 'c']})
 
-        df2 = pd.DataFrame({'PARCEL_ID': [4, 5, 3], 'DATA': ['d', 'e', 'f']})
+    #     df2 = pd.DataFrame({'PARCEL_ID': [4, 5, 3], 'DATA': ['d', 'e', 'f']})
 
-        with pytest.raises(ValueError) as error:
-            concat_df = helpers.concat_evaluated_dataframes([df1, df2])
+    #     with pytest.raises(ValueError) as error:
+    #         concat_df = helpers.concat_evaluated_dataframes([df1, df2])
 
-        assert 'Index has duplicate keys:' in str(error.value)
+    #     assert 'Index has duplicate keys:' in str(error.value)
 
     def test_concat_cities_metro_townships_concats_normally(self):
         cities_df = pd.DataFrame({
