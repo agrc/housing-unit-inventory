@@ -138,6 +138,8 @@ def get_centroids_copy_of_polygon_df(polygon_df, join_field):
 
 def load_and_clean_parcels(parcels_fc):
 
+    #: FIXME: Get parcel_count from this dissolve to document any joins (for checking if other values besides PARCEL_ID
+    #: are duplicated.)
     parcels_dissolved_fc = 'memory/dissolved'
     if arcpy.Exists(parcels_dissolved_fc):
         arcpy.management.Delete(parcels_dissolved_fc)

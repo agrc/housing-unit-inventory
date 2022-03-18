@@ -28,7 +28,7 @@ def davis_county():
     #: Output
     output_dir_path = Path(r'c:\gis\projects\housinginventory')
     output_fc = output_dir_path / r'housinginventory.gdb\davis2020_1'
-    output_csv = output_dir_path / r'davis2020_1.csv'
+    output_csv = output_dir_path / r'davis2020_2.csv'
 
     #: Address points (used later)
     address_pts_no_base_df = helpers.get_non_base_addr_points(address_pts)
@@ -134,12 +134,12 @@ def davis_county():
     logging.info('Adding city and subcounty info...')
     logging.debug('Getting evaluated parcel centroids...')
     evaluated_centroids_df = helpers.get_centroids_copy_of_polygon_df(evaluated_parcels_df, 'PARCEL_ID')
+
+    logging.debug('Merging cities and metro townships...')
     cities_df = pd.DataFrame.spatial.from_featureclass(cities)
     metro_townships_df = pd.DataFrame.spatial.from_featureclass(metro_townships)
     cities_townships_df = helpers.concat_cities_metro_townships(cities_df, metro_townships_df)
-    #: FIXME: This is bombing out with an index error on the spatial join in classify_from_area. Is the change from
-    #: polygons to centroids messing it up? It would have to be a result of the concat of the dataframes, because
-    #: classify_from_area works earlier for the oug/mobile home steps.
+
     parcels_with_cities_df = helpers.classify_from_area(
         evaluated_parcels_df, evaluated_centroids_df, 'PARCEL_ID', cities_townships_df
     )
@@ -152,8 +152,10 @@ def davis_county():
     final_parcels_df['COUNTY'] = 'DAVIS'
 
     #: Rename fields from city/subcounties
+    #: FIXME: 'CITY' already exists in the dataframe from some earlier dataset/join. Does .rename have a parameter for
+    #: stomping over that field?
     final_parcels_df.rename(columns={
-        'NAME': 'MUNICIPALITY',
+        'name': 'MUNICIPALITY',
         'NewSA': 'SUBREGION',
     }, inplace=True)
 
