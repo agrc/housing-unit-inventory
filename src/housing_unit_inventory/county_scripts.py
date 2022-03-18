@@ -153,7 +153,7 @@ def davis_county():
 
     #: Rename fields from city/subcounties
     final_parcels_df.rename(columns={
-        'NAME': 'CITY',
+        'NAME': 'MUNICIPALITY',
         'NewSA': 'SUBREGION',
     }, inplace=True)
 
@@ -165,13 +165,16 @@ def davis_county():
 
     helpers.calculate_built_decade(final_parcels_df)
 
-    # remove data points with zero units
+    #: Remove data points with zero units
     helpers.remove_zero_unit_house_counts(final_parcels_df)
 
+    #: Recalculate acreages
+    helpers.calculate_acreages(final_parcels_df, 'PARCEL_ACRES')
+
     final_fields = [
-        'OBJECTID', 'PARCEL_ID', 'TYPE', 'SUBTYPE', 'NOTE', 'IS_OUG', 'CITY', 'SUBREGION', 'COUNTY', 'UNIT_COUNT',
-        'PARCEL_COUNT', 'FLOORS_CNT', 'PARCEL_ACRES', 'BLDG_SQFT', 'TOTAL_MKT_VALUE', 'BUILT_YR', 'BUILT_DECADE',
-        'SHAPE'
+        'OBJECTID', 'PARCEL_ID', 'TYPE', 'SUBTYPE', 'NOTE', 'IS_OUG', 'MUNICIPALITY', 'SUBREGION', 'COUNTY',
+        'UNIT_COUNT', 'PARCEL_COUNT', 'FLOORS_CNT', 'PARCEL_ACRES', 'BLDG_SQFT', 'TOTAL_MKT_VALUE', 'BUILT_YR',
+        'BUILT_DECADE', 'SHAPE'
     ]
 
     logging.info('Writing final data out to disk...')

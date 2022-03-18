@@ -1390,11 +1390,14 @@ class TestFinalMergingAndCleaning:
 
         helpers.remove_zero_unit_house_counts(parcels_df)
 
-        test_df = pd.DataFrame({
-            'PARCEL_ID': [4],
-            'UNIT_COUNT': [1],
-            'HOUSE_CNT': [1],
-        }, index=[3])
+        test_df = pd.DataFrame(
+            {
+                'PARCEL_ID': [2, 3, 4],
+                'UNIT_COUNT': [0, 1, 1],
+                'HOUSE_CNT': [1, 0, 1],
+            },
+            index=[1, 2, 3],
+        )
 
         tm.assert_frame_equal(parcels_df, test_df, check_dtype=False)
 
@@ -1407,11 +1410,14 @@ class TestFinalMergingAndCleaning:
 
         helpers.remove_zero_unit_house_counts(parcels_df)
 
-        test_df = pd.DataFrame({
-            'PARCEL_ID': [4],
-            'UNIT_COUNT': [1],
-            'HOUSE_CNT': [1],
-        }, index=[3])
+        test_df = pd.DataFrame(
+            {
+                'PARCEL_ID': [2, 3, 4],
+                'UNIT_COUNT': [0, 1, 1],
+                'HOUSE_CNT': [1, 0, 1],
+            },
+            index=[1, 2, 3],
+        )
 
         tm.assert_frame_equal(parcels_df, test_df, check_dtype=False)
 
@@ -1424,11 +1430,14 @@ class TestFinalMergingAndCleaning:
 
         helpers.remove_zero_unit_house_counts(parcels_df)
 
-        test_df = pd.DataFrame({
-            'PARCEL_ID': [4],
-            'UNIT_COUNT': [1],
-            'HOUSE_CNT': [1],
-        }, index=[3])
+        test_df = pd.DataFrame(
+            {
+                'PARCEL_ID': [2, 3, 4],
+                'UNIT_COUNT': [0, 1, 1],
+                'HOUSE_CNT': [1, 0, 1],
+            },
+            index=[1, 2, 3],
+        )
 
         tm.assert_frame_equal(parcels_df, test_df, check_dtype=False)
 
@@ -1466,3 +1475,38 @@ class TestFinalMergingAndCleaning:
 
         assert warning[0].message.args[
             0] == '1 parcels have an invald built year (before 1847 or after current year plus two)'
+
+    def test_calculate_acreages_applies_lambda_to_all_shapes(self, mocker):
+        geometry_mock_1 = mocker.Mock()
+        geometry_mock_1.get_area.return_value = 1.
+
+        geometry_mock_2 = mocker.Mock()
+        geometry_mock_2.get_area.return_value = 0.5
+
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2],
+            'SHAPE': [geometry_mock_1, geometry_mock_2],
+        })
+
+        helpers.calculate_acreages(parcels_df, 'acres')
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2],
+            'SHAPE': [geometry_mock_1, geometry_mock_2],
+            'acres': [1., 0.5],
+        })
+
+        tm.assert_frame_equal(parcels_df, test_df)
+
+    def test_calculate_acreages_calls_with_PLANAR_and_ACRES(self, mocker):
+        geometry_mock_1 = mocker.Mock()
+        geometry_mock_1.get_area.return_value = 1.
+
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1],
+            'SHAPE': [geometry_mock_1],
+        })
+
+        helpers.calculate_acreages(parcels_df, 'acres')
+
+        geometry_mock_1.get_area.assert_called_with('PLANAR', 'ACRES')

@@ -421,17 +421,17 @@ def update_unit_count(parcels_df):
 
 
 def remove_zero_unit_house_counts(parcels_df):
-    """Remove any rows in-place that have a 0 or null in either UNIT_COUNT or HOUSE_CNT
+    """Remove any rows in-place that don't have either a UNIT_COUNT or a HOUSE_CNT
+
+    Any NaNs in UNIT_COUNT and HOUSE_CNT will be converted to 0s, and rows where both UNIT_COUNT and HOUSE_CNT == 0
+    will be dropped.
 
     Args:
         parcels_df (pd.DataFrame): Parcels dataset with populated UNIT_COUNT and HOUSE_CNT columns
     """
-
-    rows_with_zeros = parcels_df[(parcels_df['UNIT_COUNT'] == 0) | (parcels_df['HOUSE_CNT'] == 0)]
+    parcels_df.fillna({'UNIT_COUNT': 0, 'HOUSE_CNT': 0}, inplace=True)
+    rows_with_zeros = parcels_df[(parcels_df['UNIT_COUNT'] == 0) & (parcels_df['HOUSE_CNT'] == 0)]
     parcels_df.drop(rows_with_zeros.index, inplace=True)
-
-    #: FIXME: this may not be the right logic, seems to drop almost all rows from test data. Maybe should be only if both are na?
-    parcels_df.dropna(subset=['UNIT_COUNT', 'HOUSE_CNT'], inplace=True)
 
 
 def calculate_built_decade(parcels_df):
@@ -487,3 +487,14 @@ def concat_cities_metro_townships(cities_df, townships_df):
 
     concat_df = pd.concat([cities_df, townships_df], join='inner')
     return concat_df[['name', 'ugrcode', 'SHAPE']].copy()
+
+
+def calculate_acreages(parcels_df, acres_field):
+    """Calculate the acreages of polygon geometries in the SHAPE field
+
+    Args:
+        parcels_df (pd.DataFrame): Spatial data frame with polygon SHAPE column
+        acres_field (str): Column to store calculated acreage values
+    """
+
+    parcels_df[acres_field] = parcels_df['SHAPE'].apply(lambda shape: shape.get_area('PLANAR', 'ACRES'))
