@@ -492,11 +492,17 @@ def concat_cities_metro_townships(cities_df, townships_df):
 
 
 def calculate_acreages(parcels_df, acres_field):
-    """Calculate the acreages of polygon geometries in the SHAPE field
+    """Calculate the acreages of polygon geometries in the SHAPE field by dividing by 4046.8564
 
     Args:
-        parcels_df (pd.DataFrame): Spatial data frame with polygon SHAPE column
+        parcels_df (pd.DataFrame): Spatial data frame with polygon SHAPE column with units in meters
         acres_field (str): Column to store calculated acreage values
     """
 
-    parcels_df[acres_field] = parcels_df['SHAPE'].apply(lambda shape: shape.get_area('PLANAR', 'ACRES'))
+    #: Manually dividing .area by conversion factor is an order of magnitude faster than .get_area() and avoids runaway
+    #: memory situation, but doesn't do any spatial reference magic.
+
+    if parcels_df.spatial.sr['wkid'] != 26912:
+        warnings.warn(f'Input data not in UTM 12N (input sr: {parcels_df.spatial.sr}). Acreages may be inaccurate.')
+
+    parcels_df[acres_field] = parcels_df['SHAPE'].apply(lambda shape: shape.area / 4046.8564)

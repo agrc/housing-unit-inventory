@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from arcgis.features import GeoAccessor, GeoSeriesAccessor
-from arcgis.geometry import Geometry
+# from arcgis.geometry import Geometry
 from pandas import testing as tm
 
 from housing_unit_inventory import helpers
@@ -1476,17 +1476,19 @@ class TestFinalMergingAndCleaning:
         assert warning[0].message.args[
             0] == '1 parcels have an invald built year (before 1847 or after current year plus two)'
 
-    def test_calculate_acreages_applies_lambda_to_all_shapes(self, mocker):
+    def test_calculate_acreages_calculates_one_and_half_acres(self, mocker):
         geometry_mock_1 = mocker.Mock()
-        geometry_mock_1.get_area.return_value = 1.
+        geometry_mock_1.area = 4046.8564
 
         geometry_mock_2 = mocker.Mock()
-        geometry_mock_2.get_area.return_value = 0.5
+        geometry_mock_2.area = 2023.4282
 
         parcels_df = pd.DataFrame({
             'PARCEL_ID': [1, 2],
             'SHAPE': [geometry_mock_1, geometry_mock_2],
         })
+
+        mocker.patch.object(pd.DataFrame.spatial, 'sr', new={'wkid': 26912})
 
         helpers.calculate_acreages(parcels_df, 'acres')
 
@@ -1498,15 +1500,19 @@ class TestFinalMergingAndCleaning:
 
         tm.assert_frame_equal(parcels_df, test_df)
 
-    def test_calculate_acreages_calls_with_PLANAR_and_ACRES(self, mocker):
+    def test_calculate_acreages_warns_if_not_UTM12N(self, mocker):
         geometry_mock_1 = mocker.Mock()
-        geometry_mock_1.get_area.return_value = 1.
+        geometry_mock_1.area = 4046.8564
 
         parcels_df = pd.DataFrame({
             'PARCEL_ID': [1],
             'SHAPE': [geometry_mock_1],
         })
 
-        helpers.calculate_acreages(parcels_df, 'acres')
+        mocker.patch.object(pd.DataFrame.spatial, 'sr', new={'wkid': 42})
 
-        geometry_mock_1.get_area.assert_called_with('PLANAR', 'ACRES')
+        with pytest.warns(UserWarning) as record:
+            helpers.calculate_acreages(parcels_df, 'acres')
+
+        assert record[0].message.args[
+            0] == "Input data not in UTM 12N (input sr: {'wkid': 42}). Acreages may be inaccurate."
