@@ -165,10 +165,10 @@ def davis_county():
     final_parcels_df['COUNTY'] = 'DAVIS'
 
     #: Rename fields from city/subcounties
-    #: FIXME: 'CITY' already exists in the dataframe from some earlier dataset/join. Does .rename have a parameter for
-    #: stomping over that field?
+    #: CITY exists from some previous operation; drop it first
+    final_parcels_df.drop(columns=['CITY'], inplace=True)
     final_parcels_df.rename(columns={
-        'name': 'MUNICIPALITY',
+        'name': 'CITY',
         'NewSA': 'SUBREGION',
     }, inplace=True)
 
@@ -188,9 +188,9 @@ def davis_county():
     helpers.calculate_acreages(final_parcels_df, 'PARCEL_ACRES')
 
     final_fields = [
-        'OBJECTID', 'PARCEL_ID', 'TYPE', 'SUBTYPE', 'NOTE', 'IS_OUG', 'MUNICIPALITY', 'SUBREGION', 'COUNTY',
-        'UNIT_COUNT', 'PARCEL_COUNT', 'FLOORS_CNT', 'PARCEL_ACRES', 'BLDG_SQFT', 'TOTAL_MKT_VALUE', 'BUILT_YR',
-        'BUILT_DECADE', 'SHAPE'
+        'OBJECTID', 'PARCEL_ID', 'TYPE', 'SUBTYPE', 'NOTE', 'IS_OUG', 'CITY', 'SUBREGION', 'COUNTY', 'UNIT_COUNT',
+        'PARCEL_COUNT', 'FLOORS_CNT', 'PARCEL_ACRES', 'BLDG_SQFT', 'TOTAL_MKT_VALUE', 'BUILT_YR', 'BUILT_DECADE',
+        'SHAPE'
     ]
 
     logging.info('Writing final data out to disk...')
