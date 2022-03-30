@@ -7,7 +7,7 @@ from arcgis.features import GeoAccessor, GeoSeriesAccessor
 # from arcgis.geometry import Geometry
 from pandas import testing as tm
 
-from housing_unit_inventory import helpers
+from housing_unit_inventory import dissolve, helpers
 
 
 class TestYearBuilt:
@@ -275,101 +275,6 @@ class TestCommonAreas:
 
 class TestDataSetupAndCleaning:
 
-    # def test_load_and_clean_parcels_removes_other_columns(self, mocker):
-    #     parcel_df = pd.DataFrame({
-    #         'OBJECTID': [0, 1],
-    #         'PARCEL_ID': ['15', '35'],
-    #         'COUNT_PARCEL_ID': [1, 2],
-    #         'random1': [7, 8],
-    #         'TAXEXEMPT_TYPE': ['', ''],
-    #         'TOTAL_MKT_VALUE': [1, 3],
-    #         'LAND_MKT_VALUE': [4, 6],
-    #         'PARCEL_ACRES': [.25, 1.25],
-    #         'PROP_CLASS': ['foo', 'bar'],
-    #         'PRIMARY_RES': ['baz', 'bee'],
-    #         'HOUSE_CNT': [1, 2],
-    #         'BLDG_SQFT': [10, 20],
-    #         'FLOORS_CNT': [13, 42],
-    #         'BUILT_YR': [1984, 2001],
-    #         'EFFBUILT_YR': [1910, 2016],
-    #         'SHAPE': ['s1', 's2'],
-    #         'random2': [.1, .2],
-    #     })
-    #     from_featureclass_mock = mocker.Mock()
-    #     from_featureclass_mock.return_value = parcel_df
-    #     mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass', new=from_featureclass_mock)
-    #     mocker.patch('arcpy.management.Dissolve')
-    #     exists_method_mock = mocker.Mock()
-    #     exists_method_mock.return_value = False
-    #     mocker.patch('arcpy.Exists', new=exists_method_mock)
-
-    #     cleaned_parcels = helpers.load_and_clean_parcels('foo')
-
-    #     test_df = pd.DataFrame({
-    #         'OBJECTID': [0, 1],
-    #         'PARCEL_ID': ['15', '35'],
-    #         'COUNT_PARCEL_ID': [1, 2],
-    #         'TAXEXEMPT_TYPE': ['', ''],
-    #         'TOTAL_MKT_VALUE': [1, 3],
-    #         'LAND_MKT_VALUE': [4, 6],
-    #         'PARCEL_ACRES': [.25, 1.25],
-    #         'PROP_CLASS': ['foo', 'bar'],
-    #         'PRIMARY_RES': ['baz', 'bee'],
-    #         'HOUSE_CNT': [1, 2],
-    #         'BLDG_SQFT': [10, 20],
-    #         'FLOORS_CNT': [13, 42],
-    #         'BUILT_YR': [1984, 2001],
-    #         'EFFBUILT_YR': [1910, 2016],
-    #         'SHAPE': ['s1', 's2'],
-    #     })
-
-    #     tm.assert_frame_equal(cleaned_parcels, test_df)
-
-    # def test_load_and_clean_parcels_reorders_columns(self, mocker):
-    #     parcel_df = pd.DataFrame({
-    #         'SHAPE': ['s1', 's2'],
-    #         'PARCEL_ACRES': [.25, 1.25],
-    #         'PROP_CLASS': ['foo', 'bar'],
-    #         'PRIMARY_RES': ['baz', 'bee'],
-    #         'HOUSE_CNT': [1, 2],
-    #         'BLDG_SQFT': [10, 20],
-    #         'FLOORS_CNT': [13, 42],
-    #         'BUILT_YR': [1984, 2001],
-    #         'EFFBUILT_YR': [1910, 2016],
-    #         'OBJECTID': [0, 1],
-    #         'PARCEL_ID': ['15', '35'],
-    #         'COUNT_PARCEL_ID': [1, 2],
-    #         'TAXEXEMPT_TYPE': ['', ''],
-    #         'TOTAL_MKT_VALUE': [1, 3],
-    #         'LAND_MKT_VALUE': [4, 6],
-    #     })
-    #     from_featureclass_mock = mocker.Mock()
-    #     from_featureclass_mock.return_value = parcel_df
-    #     mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass', new=from_featureclass_mock)
-    #     mocker.patch('arcpy.management.Dissolve')
-
-    #     cleaned_parcels = helpers.load_and_clean_parcels('foo')
-
-    #     test_df = pd.DataFrame({
-    #         'OBJECTID': [0, 1],
-    #         'PARCEL_ID': ['15', '35'],
-    #         'COUNT_PARCEL_ID': [1, 2],
-    #         'TAXEXEMPT_TYPE': ['', ''],
-    #         'TOTAL_MKT_VALUE': [1, 3],
-    #         'LAND_MKT_VALUE': [4, 6],
-    #         'PARCEL_ACRES': [.25, 1.25],
-    #         'PROP_CLASS': ['foo', 'bar'],
-    #         'PRIMARY_RES': ['baz', 'bee'],
-    #         'HOUSE_CNT': [1, 2],
-    #         'BLDG_SQFT': [10, 20],
-    #         'FLOORS_CNT': [13, 42],
-    #         'BUILT_YR': [1984, 2001],
-    #         'EFFBUILT_YR': [1910, 2016],
-    #         'SHAPE': ['s1', 's2'],
-    #     })
-
-    #     tm.assert_frame_equal(cleaned_parcels, test_df)
-
     def test_load_and_clean_parcels_drops_empties(self, mocker):
         parcel_df = pd.DataFrame({
             'OBJECTID': [0, 1, 2],
@@ -388,10 +293,11 @@ class TestDataSetupAndCleaning:
             'EFFBUILT_YR': [1910, 2016, 2000],
             'SHAPE': ['s1', np.nan, 's3'],
         })
-        from_featureclass_mock = mocker.Mock()
-        from_featureclass_mock.return_value = parcel_df
-        mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass', new=from_featureclass_mock)
-        mocker.patch('arcpy.management.Dissolve')
+
+        dissolve_dupes_mock = mocker.Mock()
+        dissolve_dupes_mock.return_value = parcel_df
+        mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass')
+        mocker.patch.object(dissolve, 'dissolve_duplicates_by_dataframe', new=dissolve_dupes_mock)
 
         cleaned_parcels = helpers.load_and_clean_parcels('foo')
 
@@ -427,10 +333,10 @@ class TestDataSetupAndCleaning:
             'HOUSE_CNT': [1],
         })
 
-        from_featureclass_mock = mocker.Mock()
-        from_featureclass_mock.return_value = parcel_df
-        mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass', new=from_featureclass_mock)
-        mocker.patch('arcpy.management.Dissolve')
+        dissolve_dupes_mock = mocker.Mock()
+        dissolve_dupes_mock.return_value = parcel_df
+        mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass')
+        mocker.patch.object(dissolve, 'dissolve_duplicates_by_dataframe', new=dissolve_dupes_mock)
 
         cleaned_parcels = helpers.load_and_clean_parcels('foo')
 
@@ -455,10 +361,10 @@ class TestDataSetupAndCleaning:
             'HOUSE_CNT': ['1'],
         })
 
-        from_featureclass_mock = mocker.Mock()
-        from_featureclass_mock.return_value = parcel_df
-        mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass', new=from_featureclass_mock)
-        mocker.patch('arcpy.management.Dissolve')
+        dissolve_dupes_mock = mocker.Mock()
+        dissolve_dupes_mock.return_value = parcel_df
+        mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass')
+        mocker.patch.object(dissolve, 'dissolve_duplicates_by_dataframe', new=dissolve_dupes_mock)
 
         cleaned_parcels = helpers.load_and_clean_parcels('foo')
 
@@ -479,10 +385,10 @@ class TestDataSetupAndCleaning:
             'HOUSE_CNT': [None],
         })
 
-        from_featureclass_mock = mocker.Mock()
-        from_featureclass_mock.return_value = parcel_df
-        mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass', new=from_featureclass_mock)
-        mocker.patch('arcpy.management.Dissolve')
+        dissolve_dupes_mock = mocker.Mock()
+        dissolve_dupes_mock.return_value = parcel_df
+        mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass')
+        mocker.patch.object(dissolve, 'dissolve_duplicates_by_dataframe', new=dissolve_dupes_mock)
 
         cleaned_parcels = helpers.load_and_clean_parcels('foo')
 
@@ -494,17 +400,6 @@ class TestDataSetupAndCleaning:
         })
 
         tm.assert_frame_equal(cleaned_parcels, test_df)
-
-    def test_load_and_clean_parcels_sends_string_to_arcpy_not_path(self, mocker):
-        dissolve_mock = mocker.Mock()
-        mocker.patch.object(pd.DataFrame.spatial, 'from_featureclass')
-        mocker.patch('arcpy.management.Dissolve', new=dissolve_mock)
-
-        helpers.load_and_clean_parcels(Path('foo'))
-
-        dissolve_mock.assert_called_with(
-            'foo', 'memory/dissolved', 'PARCEL_ID', mocker.ANY, 'MULTI_PART', 'DISSOLVE_LINES'
-        )
 
     def test_standardize_fields_renames_all_fields(self):
         parcels_df = pd.DataFrame({

@@ -6,6 +6,8 @@ import arcpy
 import numpy as np
 import pandas as pd
 
+from housing_unit_inventory import dissolve
+
 
 def get_proper_built_yr_value_series(parcels_df, index_col, built_yr_col):
     """Return the largest most common yearbuilt value for each group or the largest value if the most common is 0
@@ -137,33 +139,41 @@ def get_centroids_copy_of_polygon_df(polygon_df, join_field):
 
 
 def load_and_clean_parcels(parcels_fc):
+    """Load parcel feature class, dissolve on PARCEL_ID, remove empty geometries
 
+    Args:
+        parcels_fc (pathlib.Path): Path to parcel feature class
+
+    Returns:
+        pd.DataFrame: Spatial data frame of de-duplicated, cleaned parcels
+    """
     #: FIXME: Get parcel_count from this dissolve to document any joins (for checking if other values besides PARCEL_ID
     #: are duplicated.)
-    parcels_dissolved_fc = 'memory/dissolved'
-    if arcpy.Exists(parcels_dissolved_fc):
-        arcpy.management.Delete(parcels_dissolved_fc)
 
-    arcpy.management.Dissolve(
-        str(parcels_fc), parcels_dissolved_fc, 'PARCEL_ID', [
-            ['PARCEL_ID', 'COUNT'],
-            ['TAXEXEMPT_TYPE', 'FIRST'],
-            ['TOTAL_MKT_VALUE', 'SUM'],
-            ['LAND_MKT_VALUE', 'SUM'],
-            ['PARCEL_ACRES', 'SUM'],
-            ['PROP_CLASS', 'FIRST'],
-            ['PRIMARY_RES', 'FIRST'],
-            ['HOUSE_CNT', 'MAX'],
-            ['BLDG_SQFT', 'SUM'],
-            ['FLOORS_CNT', 'MAX'],
-            ['BUILT_YR', 'FIRST'],
-            ['EFFBUILT_YR', 'FIRST'],
-        ], 'MULTI_PART', 'DISSOLVE_LINES'
+    parcels_df = pd.DataFrame.spatial.from_featureclass(parcels_fc)
+
+    field_map = {
+        'PARCEL_ID': 'COUNT',
+        'TAXEXEMPT_TYPE': 'FIRST',
+        'TOTAL_MKT_VALUE': 'SUM',
+        'LAND_MKT_VALUE': 'SUM',
+        'PARCEL_ACRES': 'SUM',
+        'PROP_CLASS': 'FIRST',
+        'PRIMARY_RES': 'FIRST',
+        'HOUSE_CNT': 'MAX',
+        'BLDG_SQFT': 'SUM',
+        'FLOORS_CNT': 'MAX',
+        'BUILT_YR': 'FIRST',
+        'EFFBUILT_YR': 'FIRST',
+    }
+
+    dupe_test_fields = list(field_map.keys())
+
+    parcels_dissolved_df = dissolve.dissolve_duplicates_by_dataframe(
+        parcels_df, 'PARCEL_ID', field_map, dupe_test_fields
     )
 
-    parcels_dissolved_df = pd.DataFrame.spatial.from_featureclass(parcels_dissolved_fc)
-
-    #: Remove stats from field names
+    #: Remove stats from field names FIXME: May not be needed now that arcpy dissolve is gone?
     cleaned_fields = clean_dissolve_field_names(list(parcels_dissolved_df.columns), ['FIRST', 'SUM', 'MAX'])
     parcels_dissolved_df.rename(columns=cleaned_fields, inplace=True)
 
