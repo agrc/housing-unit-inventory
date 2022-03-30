@@ -75,7 +75,8 @@ def _dissolve_attributes(duplicates_df, dissolve_field, fields_map, sum_duplicat
             columns={dissolve_field: f'{dissolve_field}_{fields_map[dissolve_field]}'}, inplace=True
         )
 
-    return dissolved_attributes_df  #.reset_index()
+    #: Pull dissolve_field back into columns to match geometry df schema
+    return dissolved_attributes_df.reset_index()
 
 
 def _smart_groupby_sum(group_df, sum_fields, test_fields):

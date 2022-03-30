@@ -309,9 +309,10 @@ class TestAttributeDissolve:
 
         dissolved_df = dissolve._dissolve_attributes(dups, 'PARCEL_ID', fields_map, [])
 
-        test_df = pd.DataFrame({'OWNER': [2]})
-        test_df.index = ['1']
-        test_df.index.name = 'PARCEL_ID'
+        test_df = pd.DataFrame({
+            'PARCEL_ID': ['1'],
+            'OWNER': [2],
+        })
 
         tm.assert_frame_equal(dissolved_df, test_df)
 
@@ -326,9 +327,10 @@ class TestAttributeDissolve:
 
         dissolved_df = dissolve._dissolve_attributes(dups, 'PARCEL_ID', fields_map, [])
 
-        test_df = pd.DataFrame({'OWNER': [1]})
-        test_df.index = ['1']
-        test_df.index.name = 'PARCEL_ID'
+        test_df = pd.DataFrame({
+            'PARCEL_ID': ['1'],
+            'OWNER': [1],
+        })
 
         tm.assert_frame_equal(dissolved_df, test_df)
 
@@ -343,9 +345,10 @@ class TestAttributeDissolve:
 
         dissolved_df = dissolve._dissolve_attributes(dups, 'PARCEL_ID', fields_map, [])
 
-        test_df = pd.DataFrame({'OWNER': ['foo']})
-        test_df.index = ['1']
-        test_df.index.name = 'PARCEL_ID'
+        test_df = pd.DataFrame({
+            'PARCEL_ID': ['1'],
+            'OWNER': ['foo'],
+        })
 
         tm.assert_frame_equal(dissolved_df, test_df)
 
@@ -360,9 +363,10 @@ class TestAttributeDissolve:
 
         dissolved_df = dissolve._dissolve_attributes(dups, 'PARCEL_ID', fields_map, [])
 
-        test_df = pd.DataFrame({'OWNER': [15]})
-        test_df.index = ['1']
-        test_df.index.name = 'PARCEL_ID'
+        test_df = pd.DataFrame({
+            'PARCEL_ID': ['1'],
+            'OWNER': [15],
+        })
 
         tm.assert_frame_equal(dissolved_df, test_df)
 
@@ -378,9 +382,10 @@ class TestAttributeDissolve:
 
         dissolved_df = dissolve._dissolve_attributes(dups, 'PARCEL_ID', fields_map, ['TEST', 'PARCEL_ACRES'])
 
-        test_df = pd.DataFrame({'TEST': [100]})
-        test_df.index = ['1']
-        test_df.index.name = 'PARCEL_ID'
+        test_df = pd.DataFrame({
+            'PARCEL_ID': ['1'],
+            'TEST': [100],
+        })
 
         tm.assert_frame_equal(dissolved_df, test_df)
 
@@ -396,9 +401,10 @@ class TestAttributeDissolve:
 
         dissolved_df = dissolve._dissolve_attributes(dups, 'PARCEL_ID', fields_map, ['TEST', 'PARCEL_ACRES'])
 
-        test_df = pd.DataFrame({'TEST': [200.]})
-        test_df.index = ['1']
-        test_df.index.name = 'PARCEL_ID'
+        test_df = pd.DataFrame({
+            'PARCEL_ID': ['1'],
+            'TEST': [200.],
+        })
 
         tm.assert_frame_equal(dissolved_df, test_df)
 
@@ -414,9 +420,10 @@ class TestAttributeDissolve:
 
         dissolved_df = dissolve._dissolve_attributes(dups, 'PARCEL_ID', fields_map, ['TEST', 'PARCEL_ACRES'])
 
-        test_df = pd.DataFrame({'TEST': [300.]})
-        test_df.index = ['1']
-        test_df.index.name = 'PARCEL_ID'
+        test_df = pd.DataFrame({
+            'PARCEL_ID': ['1'],
+            'TEST': [300.],
+        })
 
         tm.assert_frame_equal(dissolved_df, test_df)
 
@@ -431,9 +438,10 @@ class TestAttributeDissolve:
 
         dissolved_df = dissolve._dissolve_attributes(dups, 'PARCEL_ID', fields_map, [])
 
-        test_df = pd.DataFrame({'TEST': [200]})
-        test_df.index = ['1']
-        test_df.index.name = 'PARCEL_ID'
+        test_df = pd.DataFrame({
+            'PARCEL_ID': ['1'],
+            'TEST': [200],
+        })
 
         tm.assert_frame_equal(dissolved_df, test_df)
 
@@ -450,11 +458,10 @@ class TestAttributeDissolve:
         dissolved_df = dissolve._dissolve_attributes(dups, 'PARCEL_ID', fields_map, [])
 
         test_df = pd.DataFrame({
+            'PARCEL_ID': ['1'],
             'TEST': [200],
             'TEST2': [400],
         })
-        test_df.index = ['1']
-        test_df.index.name = 'PARCEL_ID'
 
         tm.assert_frame_equal(dissolved_df, test_df)
 
@@ -471,11 +478,10 @@ class TestAttributeDissolve:
         dissolved_df = dissolve._dissolve_attributes(dups, 'PARCEL_ID', fields_map, [])
 
         test_df = pd.DataFrame({
+            'PARCEL_ID': ['1'],
             'TEST': [200],
             'TEST2': [300],
         })
-        test_df.index = ['1']
-        test_df.index.name = 'PARCEL_ID'
 
         tm.assert_frame_equal(dissolved_df, test_df)
 
@@ -492,11 +498,10 @@ class TestAttributeDissolve:
         dissolved_df = dissolve._dissolve_attributes(dups, 'PARCEL_ID', fields_map, [])
 
         test_df = pd.DataFrame({
+            'PARCEL_ID': ['1', '2'],
             'TEST': [200, 400],
             'TEST2': [600, 800],
         })
-        test_df.index = ['1', '2']
-        test_df.index.name = 'PARCEL_ID'
 
         tm.assert_frame_equal(dissolved_df, test_df)
 
@@ -513,11 +518,10 @@ class TestAttributeDissolve:
         dissolved_df = dissolve._dissolve_attributes(dups, 'PARCEL_ID', fields_map, [])
 
         test_df = pd.DataFrame({
+            'PARCEL_ID': ['1', '2'],
             'TEST': [200, 400],
             'TEST2': [500, 700],
         })
-        test_df.index = ['1', '2']
-        test_df.index.name = 'PARCEL_ID'
 
         tm.assert_frame_equal(dissolved_df, test_df)
 
@@ -549,10 +553,9 @@ class TestAttributeDissolve:
             dissolved_df = dissolve._dissolve_attributes(dups, 'PARCEL_ID', fields_map, [])
 
         test_df = pd.DataFrame({
+            'PARCEL_ID': ['1'],
             'TEST2': [300],
         })
-        test_df.index = ['1']
-        test_df.index.name = 'PARCEL_ID'
 
         tm.assert_frame_equal(dissolved_df, test_df)
         assert warning[0].message.args[0] == 'Attribute operation "foo" not supported, skipping...'
@@ -569,11 +572,10 @@ class TestAttributeDissolve:
         dissolved_df = dissolve._dissolve_attributes(dups, 'PARCEL_ID', fields_map, [])
 
         test_df = pd.DataFrame({
+            'PARCEL_ID': ['1'],
             'PARCEL_ID_count': [2],
             'TEST': [200],
         })
-        test_df.index = ['1']
-        test_df.index.name = 'PARCEL_ID'
 
         tm.assert_frame_equal(dissolved_df, test_df)
 
@@ -590,11 +592,10 @@ class TestAttributeDissolve:
             dissolved_df = dissolve._dissolve_attributes(dups, 'PARCEL_ID', fields_map, [])
 
         test_df = pd.DataFrame({
+            'PARCEL_ID': ['1'],
             'PARCEL_ID_max': ['1'],
             'TEST': [200],
         })
-        test_df.index = ['1']
-        test_df.index.name = 'PARCEL_ID'
 
         tm.assert_frame_equal(dissolved_df, test_df)
         assert warning[0].message.args[
