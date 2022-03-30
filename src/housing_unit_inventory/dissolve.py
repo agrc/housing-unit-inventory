@@ -187,4 +187,9 @@ def dissolve_duplicates_by_dataframe(dataframe, dissolve_field, fields_map, dupl
 
     all_combined = _recombine_dissolved_with_all(dissolved_combined, uniques)
 
+    #: Filter down to just the columns in fields_map
+    keep_columns = list(fields_map.keys())
+    keep_columns.append('SHAPE')
+    all_combined = all_combined[keep_columns].copy()
+
     return all_combined

@@ -600,3 +600,93 @@ class TestAttributeDissolve:
         tm.assert_frame_equal(dissolved_df, test_df)
         assert warning[0].message.args[
             0] == 'Dissolve field "PARCEL_ID" should only use "count" operation; result likely nonsensical'
+
+
+class TestDissolveDuplicates:
+
+    def test_dissolve_duplicates_by_dataframe_recombination(self, mocker):
+        duplicates = pd.DataFrame()
+        uniques_df = pd.DataFrame({
+            'PARCEL_ID': ['10', '11'],
+            'BUILT_YR': [1989, 1990],
+            'TOTAL_MKT_VALUE': [100, 200],
+            'SHAPE': ['shape10', 'shape11'],
+        })
+
+        extract_dupes_uniques_mock = mocker.Mock()
+        extract_dupes_uniques_mock.return_value = (duplicates, uniques_df)
+        mocker.patch.object(dissolve, '_extract_duplicates_and_uniques', new=extract_dupes_uniques_mock)
+        mocker.patch.object(dissolve, '_dissolve_geometries')
+        mocker.patch.object(dissolve, '_dissolve_attributes')
+
+        spatial_dissolve_df = pd.DataFrame({
+            'PARCEL_ID': ['12'],
+            'PARCEL_ID_count': [2],
+            'BUILT_YR': [2000],
+            'TOTAL_MKT_VALUE': [400],
+            'SHAPE': ['dissolved12'],
+        })
+        combine_mock = mocker.Mock()
+        combine_mock.return_value = spatial_dissolve_df
+        mocker.patch.object(dissolve, '_combine_geometries_and_attributes', new=combine_mock)
+
+        fields_map = {
+            'PARCEL_ID': 'count',
+            'BUILT_YR': 'first',
+            'TOTAL_MKT_VALUE': 'sum',
+        }
+
+        dissolved_df = dissolve.dissolve_duplicates_by_dataframe(pd.DataFrame(), 'PARCEL_ID', fields_map, [])
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': ['12', '10', '11'],
+            'BUILT_YR': [2000, 1989, 1990],
+            'TOTAL_MKT_VALUE': [400, 100, 200],
+            'SHAPE': ['dissolved12', 'shape10', 'shape11'],
+        })
+
+        tm.assert_frame_equal(dissolved_df, test_df)
+
+    def test_dissolve_duplicates_by_dataframe_recombination_drops_fields_not_in_fields_map(self, mocker):
+        duplicates = pd.DataFrame()
+        uniques_df = pd.DataFrame({
+            'PARCEL_ID': ['10', '11'],
+            'BUILT_YR': [1989, 1990],
+            'TOTAL_MKT_VALUE': [100, 200],
+            'SHAPE': ['shape10', 'shape11'],
+            'EXTRA1': ['foo', 'bar'],
+        })
+
+        extract_dupes_uniques_mock = mocker.Mock()
+        extract_dupes_uniques_mock.return_value = (duplicates, uniques_df)
+        mocker.patch.object(dissolve, '_extract_duplicates_and_uniques', new=extract_dupes_uniques_mock)
+        mocker.patch.object(dissolve, '_dissolve_geometries')
+        mocker.patch.object(dissolve, '_dissolve_attributes')
+
+        spatial_dissolve_df = pd.DataFrame({
+            'PARCEL_ID': ['12'],
+            'PARCEL_ID_count': [2],
+            'BUILT_YR': [2000],
+            'TOTAL_MKT_VALUE': [400],
+            'SHAPE': ['dissolved12'],
+        })
+        combine_mock = mocker.Mock()
+        combine_mock.return_value = spatial_dissolve_df
+        mocker.patch.object(dissolve, '_combine_geometries_and_attributes', new=combine_mock)
+
+        fields_map = {
+            'PARCEL_ID': 'count',
+            'BUILT_YR': 'first',
+            'TOTAL_MKT_VALUE': 'sum',
+        }
+
+        dissolved_df = dissolve.dissolve_duplicates_by_dataframe(pd.DataFrame(), 'PARCEL_ID', fields_map, [])
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': ['12', '10', '11'],
+            'BUILT_YR': [2000, 1989, 1990],
+            'TOTAL_MKT_VALUE': [400, 100, 200],
+            'SHAPE': ['dissolved12', 'shape10', 'shape11'],
+        })
+
+        tm.assert_frame_equal(dissolved_df, test_df)
