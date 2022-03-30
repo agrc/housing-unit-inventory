@@ -55,6 +55,8 @@ class TestOwnedUnitGroupings:
         test_df = pd.DataFrame(
             {
                 'SHAPE': ['common_shape1', 'common_shape2'],
+                'SUBTYPE': ['pud', 'pud'],
+                'TYPE': ['single_family', 'single_family'],
                 'IS_OUG': [1, 1],
                 'TOTAL_MKT_VALUE': [25, 15],
                 'LAND_MKT_VALUE': [12, 10],
@@ -63,8 +65,6 @@ class TestOwnedUnitGroupings:
                 'BUILT_YR': [1901, 1902],
                 'PARCEL_COUNT': [2, 1],
                 'UNIT_COUNT': [2, 1],
-                'TYPE': ['single_family', 'single_family'],
-                'SUBTYPE': ['pud', 'pud'],
                 'basebldg': ['1', '1'],
                 'building_type_id': ['1', '1'],
                 'PARCEL_ID': ['oug_foo', 'oug_bar'],
@@ -121,6 +121,8 @@ class TestOwnedUnitGroupings:
         test_df = pd.DataFrame(
             {
                 'SHAPE': ['common_shape1', 'common_shape2'],
+                'SUBTYPE': ['pud', 'pud'],
+                'TYPE': ['single_family', 'single_family'],
                 'IS_OUG': [1, 1],
                 'TOTAL_MKT_VALUE': [25, 15],
                 'LAND_MKT_VALUE': [12, 10],
@@ -130,7 +132,6 @@ class TestOwnedUnitGroupings:
                 'PARCEL_COUNT': [2, 1],
                 'UNIT_COUNT': [2, 1],
                 'TYPE': ['single_family', 'single_family'],
-                'SUBTYPE': ['pud', 'pud'],
                 'basebldg': ['1', '1'],
                 'building_type_id': ['1', '1'],
                 'PARCEL_ID': ['oug_100', 'oug_200'],

@@ -227,22 +227,28 @@ def get_non_base_addr_points(address_pts_fc, type_column_name='PtType', base_add
 
 
 def set_common_area_types(evaluated_df):
+    """Set TYPE and SUBTYPE values for common unit areas/owned unit groupings
 
-    evaluated_df['TYPE'] = ''
-    evaluated_df['SUBTYPE'] = ''
+    Args:
+        evaluated_df (pd.DataFrame): The fully-evaluated common area parcel dataframe
+
+    Returns:
+        pd.DataFrame: The modified and updated evaluated_df
+    """
+
+    evaluated_df.rename(columns={
+        'TYPE_WFRC': 'TYPE',
+        'SUBTYPE_WFRC': 'SUBTYPE',
+    }, inplace=True)
     evaluated_df['basebldg'] = ''
     evaluated_df['building_type_id'] = ''
 
-    evaluated_df.loc[evaluated_df['SUBTYPE_WFRC'] == 'pud', 'TYPE'] = 'single_family'
-    evaluated_df.loc[evaluated_df['SUBTYPE_WFRC'] == 'pud', 'SUBTYPE'] = 'pud'
-    evaluated_df.loc[evaluated_df['SUBTYPE_WFRC'] == 'pud', 'basebldg'] = '1'
-    evaluated_df.loc[evaluated_df['SUBTYPE_WFRC'] == 'pud', 'building_type_id'] = '1'
+    evaluated_df.loc[evaluated_df['SUBTYPE'] == 'pud', 'TYPE'] = 'single_family'
+    evaluated_df.loc[evaluated_df['SUBTYPE'] == 'pud', 'basebldg'] = '1'
+    evaluated_df.loc[evaluated_df['SUBTYPE'] == 'pud', 'building_type_id'] = '1'
 
-    evaluated_df.loc[evaluated_df['TYPE_WFRC'] == 'multi_family', 'TYPE'] = 'multi_family'
-    evaluated_df.loc[evaluated_df['TYPE_WFRC'] == 'multi_family', 'basebldg'] = '1'
-    evaluated_df.loc[evaluated_df['TYPE_WFRC'] == 'multi_family', 'building_type_id'] = '2'
-
-    evaluated_df.drop(columns=['SUBTYPE_WFRC', 'TYPE_WFRC'], inplace=True)
+    evaluated_df.loc[evaluated_df['TYPE'] == 'multi_family', 'basebldg'] = '1'
+    evaluated_df.loc[evaluated_df['TYPE'] == 'multi_family', 'building_type_id'] = '2'
 
     return evaluated_df
 

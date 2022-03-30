@@ -201,17 +201,15 @@ class TestCommonAreas:
         test_data_df = pd.DataFrame({
             'id': [1, 2, 3],
             'TYPE_WFRC': ['single_family', 'multi_family', 'multi_family'],
-            'SUBTYPE_WFRC': ['pud', '', ''],
+            'SUBTYPE_WFRC': ['pud', 'condo', 'townhome'],
         })
 
         with_types_df = helpers.set_common_area_types(test_data_df)
 
         test_results_df = pd.DataFrame({
             'id': [1, 2, 3],
-            # 'TYPE_WFRC': ['single_family', 'multi_family', 'multi_family'],
-            # 'SUBTYPE_WFRC': ['pud', '', ''],
             'TYPE': ['single_family', 'multi_family', 'multi_family'],
-            'SUBTYPE': ['pud', '', ''],
+            'SUBTYPE': ['pud', 'condo', 'townhome'],
             'basebldg': ['1', '1', '1'],
             'building_type_id': ['1', '2', '2'],
         })
