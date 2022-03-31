@@ -135,15 +135,17 @@ class TestCommonAreas:
 
         common_areas_subset_df = helpers.subset_owned_unit_groupings_from_common_areas('fake_fc_path', common_area_key)
 
-        test_df = pd.DataFrame({
-            'OBJECTID': [2, 3],
-            'TYPE_WFRC': ['bar', 'multi_family'],
-            'SUBTYPE_WFRC': ['pud', 'foo'],
-            'SHAPE': ['shape2', 'shape3'],
-            'common_area_key': [2, 3],
-            'IS_OUG': [1, 1],
-        },
-                               index=[1, 2])
+        test_df = pd.DataFrame(
+            {
+                'OBJECTID': [2, 3],
+                'TYPE_WFRC': ['bar', 'multi_family'],
+                'SUBTYPE_WFRC': ['pud', 'foo'],
+                'SHAPE': ['shape2', 'shape3'],
+                'common_area_key': [2, 3],
+                'IS_OUG': ['Yes', 'Yes'],
+            },
+            index=[1, 2],
+        )
 
         tm.assert_frame_equal(common_areas_subset_df, test_df)
 
@@ -185,15 +187,17 @@ class TestCommonAreas:
 
         assert record[0].message.args[0] == '1 common area row[s] had empty geometries'
 
-        test_df = pd.DataFrame({
-            'OBJECTID': [2, 3],
-            'TYPE_WFRC': ['bar', 'multi_family'],
-            'SUBTYPE_WFRC': ['pud', 'foo'],
-            'SHAPE': ['shape2', 'shape3'],
-            'common_area_key': [2, 3],
-            'IS_OUG': [1, 1],
-        },
-                               index=[1, 2])
+        test_df = pd.DataFrame(
+            {
+                'OBJECTID': [2, 3],
+                'TYPE_WFRC': ['bar', 'multi_family'],
+                'SUBTYPE_WFRC': ['pud', 'foo'],
+                'SHAPE': ['shape2', 'shape3'],
+                'common_area_key': [2, 3],
+                'IS_OUG': ['Yes', 'Yes'],
+            },
+            index=[1, 2],
+        )
 
         tm.assert_frame_equal(common_areas_subset_df, test_df)
 

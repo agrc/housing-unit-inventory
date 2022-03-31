@@ -56,6 +56,7 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
     floors_cnt_mean_series = parcels_grouped_by_oug_id['FLOORS_CNT'].mean()
     built_yr_series = helpers.get_proper_built_yr_value_series(oug_parcels_df, common_area_key_col, 'BUILT_YR')
     parcel_count_series = parcels_grouped_by_oug_id['SHAPE'].count().rename('PARCEL_COUNT')
+    notes_mode_series = parcels_grouped_by_oug_id['des_all'].agg(pd.Series.mode).rename('NOTE')
     address_count_series = helpers.get_address_point_count_series(
         intersecting_common_areas_df, address_points_df, common_area_key_col
     )
@@ -72,6 +73,7 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
             floors_cnt_mean_series,
             built_yr_series,
             parcel_count_series,
+            notes_mode_series,
             address_count_series,
         ]
     )

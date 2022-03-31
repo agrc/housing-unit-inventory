@@ -38,14 +38,14 @@ def remove_zero_unit_house_counts(parcels_df):
     parcels_df.drop(rows_with_zeros.index, inplace=True)
 
 
-def built_decade(parcels_df, built_yr_field='BUILT_YR'):
-    """Calculate BUILT_DECADE from BUILT_YR in-place
+def built_decade(parcels_df, built_yr_field='BUILT_YR', built_decade_field='BLT_DECADE'):
+    """Calculate built_decade_field from built_yr_field in-place
 
-    Raises a UserWarning with the number of rows whose BUILT_YR is before 1846 or after the current year + 2 (yes,
+    Raises a UserWarning with the number of rows whose built_decade_field is before 1846 or after the current year + 2 (yes,
     there were structures prior to Fort Buenaventura, but I highly doubt any are still in use as housing).
 
     Args:
-        parcels_df (pd.DataFrame): Parcels dataset with BUILT_YR column
+        parcels_df (pd.DataFrame): Parcels dataset with built_decade_field column
     """
 
     this_year = datetime.now().year
@@ -58,7 +58,7 @@ def built_decade(parcels_df, built_yr_field='BUILT_YR'):
         )
 
     #: Decade is floor division by 10, then multiply by 10
-    parcels_df['BLT_DECADE'] = parcels_df[built_yr_field] // 10 * 10
+    parcels_df[built_decade_field] = parcels_df[built_yr_field] // 10 * 10
 
 
 def acreages(parcels_df, acres_field):

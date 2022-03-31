@@ -165,7 +165,7 @@ def davis_county():
     final_parcels_df.rename(
         columns={
             'name': 'CITY',  #: from cities
-            'NewSA': 'SUBREGION',  #: From subcounties/regions
+            'NewSA': 'SUBCOUNTY',  #: From subcounties/regions
             'BUILT_YR': 'APX_BLT_YR',
             'BLDG_SQFT': 'TOT_BD_FT2',
             'TOTAL_MKT_VALUE': 'TOT_VALUE',
@@ -177,6 +177,7 @@ def davis_county():
     #: Clean up some nulls
     logging.info('Cleaning up final data')
     final_parcels_df['NOTE'].fillna(final_parcels_df['des_all'], inplace=True)
+    final_parcels_df['IS_OUG'].fillna('No', inplace=True)
 
     #: Recalculate acreages
     logging.info('Recalculating acreages...')
@@ -186,17 +187,21 @@ def davis_county():
 
     calculate.built_decade(final_parcels_df, 'APX_BLT_YR')
 
-    calculate.dwelling_units_per_acre(final_parcels_df, 'UNIT_COUNT', 'PARCEL_ACRES')
+    calculate.dwelling_units_per_acre(final_parcels_df, 'UNIT_COUNT', 'ACRES')
 
     calculate.approximate_floors(final_parcels_df, 'FLOORS_CNT')
 
     #: Remove data points with zero units
     calculate.remove_zero_unit_house_counts(final_parcels_df)
 
+    # final_fields = [
+    #     'OBJECTID', 'PARCEL_ID', 'TYPE', 'SUBTYPE', 'NOTE', 'IS_OUG', 'CITY', 'SUBREGION', 'COUNTY', 'UNIT_COUNT',
+    #     'PARCEL_COUNT', 'APX_HGHT', 'ACRES', 'TOT_BD_FT2', 'TOT_VALUE', 'APX_BLT_YR', 'BLT_DECADE', 'SHAPE'
+    # ]
+
     final_fields = [
-        'OBJECTID', 'PARCEL_ID', 'TYPE', 'SUBTYPE', 'NOTE', 'IS_OUG', 'CITY', 'SUBREGION', 'COUNTY', 'UNIT_COUNT',
-        'PARCEL_COUNT', 'APX_HGHT', 'PARCEL_ACRES', 'TOT_BD_FT2', 'TOTAL_MKT_VALUE', 'APX_BLT_YR', 'BUILT_DECADE',
-        'SHAPE'
+        'SHAPE', 'UNIT_ID', 'TYPE', 'SUBTYPE', 'IS_OUG', 'UNIT_COUNT', 'DUA', 'ACRES', 'TOT_BD_FT2', 'TOT_VALUE',
+        'APX_BLT_YR', 'BLT_DECADE', 'CITY', 'SUBCOUNTY', 'COUNTY'
     ]
 
     logging.info('Writing final data out to disk...')

@@ -286,7 +286,7 @@ def subset_owned_unit_groupings_from_common_areas(
 
     common_areas_subset_df = common_areas_df[(common_areas_df['SUBTYPE_WFRC'] == 'pud') |
                                              (common_areas_df['TYPE_WFRC'] == 'multi_family')].copy()
-    common_areas_subset_df['IS_OUG'] = 1
+    common_areas_subset_df['IS_OUG'] = 'Yes'
 
     return common_areas_subset_df
 
