@@ -1092,16 +1092,6 @@ class TestFinalMergingAndCleaning:
 
         tm.assert_frame_equal(concat_df, test_df)
 
-    # def test_concat_evaluated_dataframes_raises_error_on_duplicate_index_values(self):
-    #     df1 = pd.DataFrame({'PARCEL_ID': [1, 2, 3], 'DATA': ['a', 'b', 'c']})
-
-    #     df2 = pd.DataFrame({'PARCEL_ID': [4, 5, 3], 'DATA': ['d', 'e', 'f']})
-
-    #     with pytest.raises(ValueError) as error:
-    #         concat_df = helpers.concat_evaluated_dataframes([df1, df2])
-
-    #     assert 'Index has duplicate keys:' in str(error.value)
-
     def test_concat_cities_metro_townships_concats_normally(self):
         cities_df = pd.DataFrame({
             'name': ['foo', 'bar'],
@@ -1409,3 +1399,34 @@ class TestFinalMergingAndCleaning:
 
         assert record[0].message.args[
             0] == "Input data not in UTM 12N (input sr: {'wkid': 42}). Acreages may be inaccurate."
+
+    def test_calculate_approximate_floors_rounds_and_drops_orig_field(self):
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2],
+            'FLOORS_CNT': [1.2, 2.6],
+        })
+
+        helpers.calculate_approximate_floors(parcels_df, 'FLOORS_CNT')
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2],
+            'APX_HGHT': [1., 3.],
+        })
+
+        tm.assert_frame_equal(parcels_df, test_df)
+
+    def test_calculate_dwelling_units_per_acre_calculates_correctly(self):
+        parcels_df = pd.DataFrame({
+            'acres': [1., .5],
+            'units': [1, 10],
+        })
+
+        helpers.calculate_dwelling_units_per_acre(parcels_df, 'units', 'acres')
+
+        test_df = pd.DataFrame({
+            'acres': [1., .5],
+            'units': [1, 10],
+            'DUA': [1., 20.],
+        })
+
+        tm.assert_frame_equal(parcels_df, test_df)

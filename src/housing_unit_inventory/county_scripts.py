@@ -77,13 +77,11 @@ def davis_county():
     )
 
     #: STEP 3: Run evaluations for each type of parcel
-    #: PARCELS: table
     logging.info('Evaluating owned unit groupings...')
     oug_features_df = evaluations.owned_unit_groupings(
         classified_parcels_df, common_area_key, address_pts_no_base_df, owned_unit_groupings_df
     )
 
-    #: PARCELS: table
     logging.info('Evaluating single family parcels...')
     single_family_attributes = {
         'TYPE': 'single_family',
@@ -95,7 +93,6 @@ def davis_county():
         classified_parcels_df, ['single_family'], single_family_attributes
     )
 
-    #: PARCELS: polygons
     logging.info('Evaluating multi-family, single-parcel parcels...')
     multi_family_types = ['multi_family', 'duplex', 'apartment', 'townhome', 'triplex-quadplex']
     multi_family_attributes = {
@@ -108,7 +105,6 @@ def davis_county():
         helpers.set_multi_family_single_parcel_subtypes
     )
 
-    #: PARCELS: polygons
     logging.info('Evaluating mobile home communities...')
     mobile_home_attributes = {
         'TYPE': 'multi_family',
@@ -143,7 +139,6 @@ def davis_county():
     del classified_parcels_df
 
     #: Add city and sub-county info
-    #: PARCELS: points
     logging.info('Adding city and subcounty info...')
     logging.debug('Getting evaluated parcel centroids...')
     evaluated_centroids_df = helpers.get_centroids_copy_of_polygon_df(evaluated_parcels_df, 'PARCEL_ID')
@@ -164,32 +159,41 @@ def davis_county():
 
     final_parcels_df['COUNTY'] = 'DAVIS'
 
-    #: Rename fields from city/subcounties
+    #: Rename fields
     #: CITY exists from some previous operation; drop it first
     final_parcels_df.drop(columns=['CITY'], inplace=True)
-    final_parcels_df.rename(columns={
-        'name': 'CITY',
-        'NewSA': 'SUBREGION',
-    }, inplace=True)
+    final_parcels_df.rename(
+        columns={
+            'name': 'CITY',  #: from cities
+            'NewSA': 'SUBREGION',  #: From subcounties/regions
+            'BUILT_YR': 'APX_BLT_YR',
+            'BLDG_SQFT': 'TOT_BD_FT2',
+        },
+        inplace=True
+    )
 
     #: Clean up some nulls
     logging.info('Cleaning up final data')
     final_parcels_df['NOTE'].fillna(final_parcels_df['des_all'], inplace=True)
 
-    helpers.update_unit_count(final_parcels_df)
-
-    helpers.calculate_built_decade(final_parcels_df)
-
-    #: Remove data points with zero units
-    helpers.remove_zero_unit_house_counts(final_parcels_df)
-
     #: Recalculate acreages
     logging.info('Recalculating acreages...')
     helpers.calculate_acreages(final_parcels_df, 'PARCEL_ACRES')
 
+    helpers.update_unit_count(final_parcels_df)
+
+    helpers.calculate_built_decade(final_parcels_df, 'APX_BLT_YR')
+
+    helpers.calculate_dwelling_units_per_acre(final_parcels_df, 'UNIT_COUNT', 'PARCEL_ACRES')
+
+    helpers.calculate_approximate_floors(final_parcels_df, 'FLOORS_CNT')
+
+    #: Remove data points with zero units
+    helpers.remove_zero_unit_house_counts(final_parcels_df)
+
     final_fields = [
         'OBJECTID', 'PARCEL_ID', 'TYPE', 'SUBTYPE', 'NOTE', 'IS_OUG', 'CITY', 'SUBREGION', 'COUNTY', 'UNIT_COUNT',
-        'PARCEL_COUNT', 'FLOORS_CNT', 'PARCEL_ACRES', 'BLDG_SQFT', 'TOTAL_MKT_VALUE', 'BUILT_YR', 'BUILT_DECADE',
+        'PARCEL_COUNT', 'APX_HGHT', 'PARCEL_ACRES', 'TOT_BD_FT2', 'TOTAL_MKT_VALUE', 'APX_BLT_YR', 'BUILT_DECADE',
         'SHAPE'
     ]
 

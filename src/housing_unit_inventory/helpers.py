@@ -452,7 +452,7 @@ def remove_zero_unit_house_counts(parcels_df):
     parcels_df.drop(rows_with_zeros.index, inplace=True)
 
 
-def calculate_built_decade(parcels_df):
+def calculate_built_decade(parcels_df, built_yr_field='BUILT_YR'):
     """Calculate BUILT_DECADE from BUILT_YR in-place
 
     Raises a UserWarning with the number of rows whose BUILT_YR is before 1846 or after the current year + 2 (yes,
@@ -463,7 +463,8 @@ def calculate_built_decade(parcels_df):
     """
 
     this_year = datetime.now().year
-    invalid_built_year_rows = parcels_df[(parcels_df['BUILT_YR'] < 1846) | (parcels_df['BUILT_YR'] > this_year + 2)]
+    invalid_built_year_rows = parcels_df[(parcels_df[built_yr_field] < 1846) |
+                                         (parcels_df[built_yr_field] > this_year + 2)]
     if invalid_built_year_rows.shape[0]:
         warnings.warn(
             f'{invalid_built_year_rows.shape[0]} parcels have an invald built year (before 1847 or after current '
@@ -471,7 +472,7 @@ def calculate_built_decade(parcels_df):
         )
 
     #: Decade is floor division by 10, then multiply by 10
-    parcels_df['BUILT_DECADE'] = parcels_df['BUILT_YR'] // 10 * 10
+    parcels_df['BUILT_DECADE'] = parcels_df[built_yr_field] // 10 * 10
 
 
 def get_common_areas_intersecting_parcels_by_key(common_areas_df, parcels_df, common_area_key_col):
@@ -522,3 +523,14 @@ def calculate_acreages(parcels_df, acres_field):
         warnings.warn(f'Input data not in UTM 12N (input sr: {parcels_df.spatial.sr}). Acreages may be inaccurate.')
 
     parcels_df[acres_field] = parcels_df['SHAPE'].apply(lambda shape: shape.area / 4046.8564)
+
+
+def calculate_approximate_floors(parcels_df, floors_count_field):
+
+    parcels_df['APX_HGHT'] = parcels_df[floors_count_field].round()
+    parcels_df.drop(columns=[floors_count_field], inplace=True)
+
+
+def calculate_dwelling_units_per_acre(parcels_df, unit_count_field, acres_field):
+
+    parcels_df['DUA'] = parcels_df[unit_count_field] / parcels_df[acres_field]
