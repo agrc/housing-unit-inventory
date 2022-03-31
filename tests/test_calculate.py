@@ -186,7 +186,7 @@ class TestCalculations:
         test_df = pd.DataFrame({
             'PARCEL_ID': [1, 2, 3, 4],
             'BUILT_YR': [1851, 1900, 1902, 2022],
-            'BUILT_DECADE': [1850, 1900, 1900, 2020]
+            'BLT_DECADE': [1850, 1900, 1900, 2020]
         })
 
         tm.assert_frame_equal(parcels_df, test_df)
@@ -202,7 +202,7 @@ class TestCalculations:
         test_df = pd.DataFrame({
             'PARCEL_ID': [1, 2, 3, 4],
             'BUILT_YR': [1851, 1900, 198, 2022],
-            'BUILT_DECADE': [1850, 1900, 190, 2020]
+            'BLT_DECADE': [1850, 1900, 190, 2020]
         })
 
         tm.assert_frame_equal(parcels_df, test_df)

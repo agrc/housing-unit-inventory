@@ -168,6 +168,8 @@ def davis_county():
             'NewSA': 'SUBREGION',  #: From subcounties/regions
             'BUILT_YR': 'APX_BLT_YR',
             'BLDG_SQFT': 'TOT_BD_FT2',
+            'TOTAL_MKT_VALUE': 'TOT_VALUE',
+            'PARCEL_ACRES': 'ACRES',
         },
         inplace=True
     )
@@ -178,7 +180,7 @@ def davis_county():
 
     #: Recalculate acreages
     logging.info('Recalculating acreages...')
-    calculate.acreages(final_parcels_df, 'PARCEL_ACRES')
+    calculate.acreages(final_parcels_df, 'ACRES')
 
     calculate.update_unit_count(final_parcels_df)
 

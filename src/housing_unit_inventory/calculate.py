@@ -58,7 +58,7 @@ def built_decade(parcels_df, built_yr_field='BUILT_YR'):
         )
 
     #: Decade is floor division by 10, then multiply by 10
-    parcels_df['BUILT_DECADE'] = parcels_df[built_yr_field] // 10 * 10
+    parcels_df['BLT_DECADE'] = parcels_df[built_yr_field] // 10 * 10
 
 
 def acreages(parcels_df, acres_field):
