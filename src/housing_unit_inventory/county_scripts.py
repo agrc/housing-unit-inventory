@@ -5,7 +5,7 @@ import arcpy
 import pandas as pd
 from arcgis.features import GeoAccessor, GeoSeriesAccessor
 
-from . import evaluations, helpers
+from . import calculate, evaluations, helpers
 
 
 def davis_county():
@@ -178,18 +178,18 @@ def davis_county():
 
     #: Recalculate acreages
     logging.info('Recalculating acreages...')
-    helpers.calculate_acreages(final_parcels_df, 'PARCEL_ACRES')
+    calculate.acreages(final_parcels_df, 'PARCEL_ACRES')
 
-    helpers.update_unit_count(final_parcels_df)
+    calculate.update_unit_count(final_parcels_df)
 
-    helpers.calculate_built_decade(final_parcels_df, 'APX_BLT_YR')
+    calculate.built_decade(final_parcels_df, 'APX_BLT_YR')
 
-    helpers.calculate_dwelling_units_per_acre(final_parcels_df, 'UNIT_COUNT', 'PARCEL_ACRES')
+    calculate.dwelling_units_per_acre(final_parcels_df, 'UNIT_COUNT', 'PARCEL_ACRES')
 
-    helpers.calculate_approximate_floors(final_parcels_df, 'FLOORS_CNT')
+    calculate.approximate_floors(final_parcels_df, 'FLOORS_CNT')
 
     #: Remove data points with zero units
-    helpers.remove_zero_unit_house_counts(final_parcels_df)
+    calculate.remove_zero_unit_house_counts(final_parcels_df)
 
     final_fields = [
         'OBJECTID', 'PARCEL_ID', 'TYPE', 'SUBTYPE', 'NOTE', 'IS_OUG', 'CITY', 'SUBREGION', 'COUNTY', 'UNIT_COUNT',
@@ -199,5 +199,5 @@ def davis_county():
 
     logging.info('Writing final data out to disk...')
     output_df = final_parcels_df.reindex(columns=final_fields)
-    output_df.spatial.to_featureclass(output_fc)
+    output_df.spatial.to_featureclass(output_fc, sanitize_columns=False)
     output_df.drop(columns=['SHAPE']).to_csv(output_csv)
