@@ -1,4 +1,5 @@
 import logging
+import warnings
 
 import pandas as pd
 from arcgis.features import GeoAccessor, GeoSeriesAccessor
@@ -82,7 +83,17 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
     evaluated_oug_parcels_with_types_df = helpers.set_common_area_types(evaluated_oug_parcels_df)
 
     #: Add a generated PARCEL_ID based on the common_area_key for future aligning with other parcels
-    evaluated_oug_parcels_with_types_df['PARCEL_ID'] = 'oug_' + evaluated_oug_parcels_with_types_df.index.astype(str)
+    # evaluated_oug_parcels_with_types_df['PARCEL_ID'] = 'oug_' + evaluated_oug_parcels_with_types_df.index.astype(str)
+    try:
+        evaluated_oug_parcels_with_types_df['PARCEL_ID'
+                                           ] = 990000 + evaluated_oug_parcels_with_types_df.index.astype(int)
+    except TypeError:
+        warnings.warn(
+            f'Common area key {common_area_key_col} cannot be converted to int for PARCEL_ID creation, using simple range instead'
+        )
+        evaluated_oug_parcels_with_types_df.insert(
+            0, 'PARCEL_ID', range(990000, 990000 + len(evaluated_oug_parcels_with_types_df))
+        )
 
     #: TODO: implement some sort of count tracking. Maybe a separate data frame consisting of just the parcel ids, removing matching ones on each pass?
 
