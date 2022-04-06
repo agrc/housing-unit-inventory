@@ -1,10 +1,7 @@
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 import pytest
 from arcgis.features import GeoAccessor, GeoSeriesAccessor
-# from arcgis.geometry import Geometry
 from pandas import testing as tm
 
 from housing_unit_inventory import dissolve, helpers

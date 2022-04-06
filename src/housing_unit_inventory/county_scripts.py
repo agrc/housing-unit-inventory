@@ -178,7 +178,9 @@ def davis_county():
     logging.info('Cleaning up final data')
     #: FIXME: This fill may be throwing the unit count off, adding a bunch of weird text that python may be
     #: interpreting as strings in calculate.update_unit_count. Should this just be '' instead?
-    final_parcels_df['NOTE'].fillna(final_parcels_df[''], inplace=True)
+    #: The source data look ok, instead it looks like somewhere (dissolve? evaluate ougs?) is combining the NOTE/
+    #: des_all data into funky nested lists (`["['Townhouse Two Story']" '[nan]']`)
+    final_parcels_df['NOTE'].fillna('', inplace=True)
     final_parcels_df['IS_OUG'].fillna('No', inplace=True)
 
     #: Recalculate acreages

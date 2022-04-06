@@ -73,6 +73,31 @@ class TestCalculations:
 
         tm.assert_frame_equal(parcels_df, test_df)
 
+    def test_update_unit_count_throws_weird_array_ValueError(self):
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2],
+            'SUBTYPE': ['apartment', 'apartment'],
+            'NOTE': ['triplex-quadplex', ["['Townhouse Two Story']"
+                                          '[nan]']],
+            'UNIT_COUNT': [1, 4],
+            'HOUSE_CNT': [3, 4],
+        })
+
+        with pytest.raises(ValueError) as error:
+            calculate.update_unit_count(parcels_df)
+
+        assert 'The truth value of a Series is ambiguous' in str(error.value)
+
+        # test_df = pd.DataFrame({
+        #     'PARCEL_ID': [1, 2],
+        #     'SUBTYPE': ['apartment', 'apartment'],
+        #     'NOTE': ['triplex-quadplex', 'triplex-quadplex'],
+        #     'UNIT_COUNT': [3, 4],
+        #     'HOUSE_CNT': [3, 4],
+        # })
+
+        # tm.assert_frame_equal(parcels_df, test_df)
+
     def test_update_unit_count_fixes_everything(self):
         parcels_df = pd.DataFrame({
             'PARCEL_ID': [1, 2, 3],
