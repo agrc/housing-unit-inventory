@@ -31,6 +31,27 @@ class TestCalculations:
 
         tm.assert_frame_equal(parcels_df, test_df)
 
+    def test_update_unit_count_fixes_single_family_with_nans(self):
+        parcels_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2],
+            'SUBTYPE': ['single_family', 'single_family'],
+            'UNIT_COUNT': [0, np.nan],
+            'NOTE': ['', ''],
+            'HOUSE_CNT': [1, 1],
+        })
+
+        calculate.update_unit_count(parcels_df)
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [1, 2],
+            'SUBTYPE': ['single_family', 'single_family'],
+            'UNIT_COUNT': [1., 1.],
+            'NOTE': ['', ''],
+            'HOUSE_CNT': [1, 1],
+        })
+
+        tm.assert_frame_equal(parcels_df, test_df)
+
     def test_update_unit_count_fixes_duplex(self):
         parcels_df = pd.DataFrame({
             'PARCEL_ID': [1, 2],
@@ -73,30 +94,21 @@ class TestCalculations:
 
         tm.assert_frame_equal(parcels_df, test_df)
 
-    def test_update_unit_count_throws_weird_array_ValueError(self):
-        parcels_df = pd.DataFrame({
-            'PARCEL_ID': [1, 2],
-            'SUBTYPE': ['apartment', 'apartment'],
-            'NOTE': ['triplex-quadplex', ["['Townhouse Two Story']"
-                                          '[nan]']],
-            'UNIT_COUNT': [1, 4],
-            'HOUSE_CNT': [3, 4],
-        })
+    #: This catches an error when the oug series merging returns multiple modes of the NOTE/des_all field. That was
+    #: fixed, so this test may not be needed (couldn't get it to throw anyway, it was a really weird value in NOTE)
+    # def test_update_unit_count_throws_weird_array_ValueError(self):
+    #     parcels_df = pd.DataFrame({
+    #         'PARCEL_ID': [1, 2],
+    #         'SUBTYPE': ['apartment', 'apartment'],
+    #         'NOTE': ['triplex-quadplex', ["['Townhouse Two Story']", '[nan]']],
+    #         'UNIT_COUNT': [1, 4],
+    #         'HOUSE_CNT': [3, 4],
+    #     })
 
-        with pytest.raises(ValueError) as error:
-            calculate.update_unit_count(parcels_df)
+    #     with pytest.raises(ValueError) as error:
+    #         calculate.update_unit_count(parcels_df)
 
-        assert 'The truth value of a Series is ambiguous' in str(error.value)
-
-        # test_df = pd.DataFrame({
-        #     'PARCEL_ID': [1, 2],
-        #     'SUBTYPE': ['apartment', 'apartment'],
-        #     'NOTE': ['triplex-quadplex', 'triplex-quadplex'],
-        #     'UNIT_COUNT': [3, 4],
-        #     'HOUSE_CNT': [3, 4],
-        # })
-
-        # tm.assert_frame_equal(parcels_df, test_df)
+    #     assert 'The truth value of a Series is ambiguous' in str(error.value)
 
     def test_update_unit_count_fixes_everything(self):
         parcels_df = pd.DataFrame({

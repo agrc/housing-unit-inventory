@@ -14,7 +14,8 @@ def update_unit_count(parcels_df):
     """
 
     # fix single family (non-pud)
-    parcels_df.loc[(parcels_df['UNIT_COUNT'] == 0) & (parcels_df['SUBTYPE'] == 'single_family'), 'UNIT_COUNT'] = 1
+    zero_or_null_unit_counts = (parcels_df['UNIT_COUNT'] == 0) | (parcels_df['UNIT_COUNT'].isna())
+    parcels_df.loc[(zero_or_null_unit_counts) & (parcels_df['SUBTYPE'] == 'single_family'), 'UNIT_COUNT'] = 1
 
     # fix duplex
     parcels_df.loc[(parcels_df['SUBTYPE'] == 'duplex'), 'UNIT_COUNT'] = 2
