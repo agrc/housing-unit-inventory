@@ -1,50 +1,8 @@
-# Input Data
-
-## Parcels
-
-LIR parcels. Uses these fields:
-
-- OBJECTID
-- PARCEL_ID
-- TOTAL_MKT_VALUE
-- HOUSE_CNT
-- BLDG_SQFT
-- BUILT_YR
-- SHAPE
-
-Duplicate OIDs are dissolved on parcel ID using a custom dissolve that only sums attribute values if they are not the same (found some sliver parcels that duplicate the info for their parent parcel).
-
-## Extended Parcel Info
-
-From Assesor. For Davis, joins between AccountNo and Parcel ID.
-
-- **class**             The detailed description of the parcel (sf, apartment, mobile home, etc). Renamed to parcel_type and used to set the SUBTYPEs
-- **des_all**           Copied to NOTE field, used to identify tri/quad parcels
-
-## Other Boundaries
-
-From UGRC/MPOs
-
-- **Municipalities**    Used to set the CITY field. Use SGID boundaries.
-- **Subregions**        Used to set the SUBCOUNTY field to identify similar areas for planning/etc.
-
-## Address Points
-
-UT address points. Used to get unit count- need to have one point for every unit (apt, mobile home, condo, duplex, etc).Needs to have BASE ADDRESS info so we can filter out base addresses (HOA clubhouses, appartment offices, etc).
-
-## Common Areas
-
-Created. Used to identify areas that contribute to the value/acreage of multiple units (PUDs, condos, mobile homes, etc).
-
-## Mobile Home Communities
-
-Created. Used to identify any mobile home communities that are not identified as such in the assessor data or are split into multiple parcels.
-
 # Output Fields
 
 ## UNIT ID
 
-WFRC created a unique ID here; this may make sense for datasets that include multiple counties. I'd like to use PARCEL_ID, or at least include PARCEL_ID in some form.
+WFRC created a unique ID here; this may make sense for datasets that include multiple counties. I'd like to use PARCEL_ID, or at least include PARCEL_ID in some form (maybe FIPs-prefixed? 11-PARCEL_ID?)
 
 ## TYPE
 
@@ -104,3 +62,69 @@ The subregion the parcel's centroid is in, based on file provided by WFRC/county
 ## PARCEL_ID
 
 String value, because LIR specifies it is text, not numeric. Either a single parcel's PARCEL_ID or, for multi-parcel groupings, it is 99xxxx, where xxxx is either the common area key value used to identify the groupings or just a number between 0 and 9999. 99 was chosen because at least Cache reserves 99- numbers for common areas and other "fake" parcel IDs, so I'm hoping it's least likely to clash with real parcel IDs.
+
+# Input Data
+
+## Parcels
+
+LIR parcels. Uses these fields:
+
+- OBJECTID
+- PARCEL_ID
+- TOTAL_MKT_VALUE
+- HOUSE_CNT
+- BLDG_SQFT
+- BUILT_YR
+- SHAPE
+
+Duplicate OIDs are dissolved on parcel ID using a custom dissolve that only sums attribute values if they are not the same (found some sliver parcels that duplicate the info for their parent parcel).
+
+## Extended Parcel Info
+
+From Assesor. For Davis, joins between AccountNo and Parcel ID.
+
+- **class**             The detailed description of the parcel (sf, apartment, mobile home, etc). Renamed to parcel_type and used to filter out specific property types, set the SUBTYPEs
+- **des_all**           Copied to NOTE field, used to identify tri/quad parcels
+
+## Other Boundaries
+
+From UGRC/MPOs
+
+- **Municipalities**    Used to set the CITY field. Use SGID boundaries.
+- **Subregions**        Used to set the SUBCOUNTY field to identify similar areas for planning/etc.
+
+## Address Points
+
+UT address points. Used to get unit count- need to have one point for every unit (apt, mobile home, condo, duplex, etc).Needs to have BASE ADDRESS info so we can filter out base addresses (HOA clubhouses, appartment offices, etc).
+
+## Common Areas
+
+Created. Used to identify areas that contribute to the value/acreage of multiple units (PUDs, condos, mobile homes, etc).
+
+## Mobile Home Communities
+
+Created. Used to identify any mobile home communities that are not identified as such in the assessor data or are split into multiple parcels.
+
+# General Process
+
+1. **Prep Parcels**
+  a. Load parcels into memory
+  a. Dissolve duplicate parcels
+  a. Add any needed external data from assessor
+  a. Create centroids of parcels for later spatial joins/summarize withins
+1. **Classify Parcels**
+  a. Subset provided owned unit grouping areas as needed to just residential areas
+  a. Classify any parcels within owned unit grouping areas, adding a key unique to each area to each parcel whose centroid is wtihin the area
+  a. Classify any parcels within provided mobile home community areas
+1. **Evaluate Parcels** (filter based on parcel_type)
+  a. Owned unit groupings: Transfer/summarize attributes of parcels to the appropriate grouping area using the key established in the classify stage.
+  a. Single family parcels: Just set some attributes directly
+  a. Multi-family, single-parcel parcels: Set some attributes directly, calculate type/subtype, get unit count from address points
+  a. Mobile home communities: Set some attributes directly, get unit count from address points
+1. **Merge and Calculate**
+  a. Merge all the evaluated parcel subgroups into a single dataset
+  a. Calculate new parcel centroids, use to get CITY and SUBREGION
+  a. Rename various fields, fill Nulls as appropriate
+  a. Calculate acreages, unit density, year and decade built, floor counts
+  a. Reindex fields to final desired fields.
+  a. Write to both feature class and csv (minus shape field)
