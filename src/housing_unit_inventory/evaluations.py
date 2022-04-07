@@ -19,6 +19,22 @@ from . import helpers
 #:      mobile_home_park
 
 
+def _series_single_mode(series):
+    """Find the mode of series using pd.Series.mode. If there are multiple, only return the first (per sorting)
+
+    Args:
+        series (pd.Series): The series you want to find a single mode of
+
+    Returns:
+        pd.Series: A single-element series containing the first mode (based on pd.Series.mode's sorting)
+    """
+
+    modes = series.mode()
+    if modes.size > 1:
+        return modes.iloc[0:1]
+    return modes
+
+
 def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, common_area_df) -> pd.DataFrame.spatial:
 
     #: common_area_key_col: a unique key (probably just a copied ObjectID?) for all the common areas
@@ -57,7 +73,7 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
     floors_cnt_mean_series = parcels_grouped_by_oug_id['FLOORS_CNT'].mean()
     built_yr_series = helpers.get_proper_built_yr_value_series(oug_parcels_df, common_area_key_col, 'BUILT_YR')
     parcel_count_series = parcels_grouped_by_oug_id['SHAPE'].count().rename('PARCEL_COUNT')
-    notes_mode_series = parcels_grouped_by_oug_id['des_all'].agg(pd.Series.mode).rename('NOTE')
+    notes_mode_series = parcels_grouped_by_oug_id['des_all'].agg(_series_single_mode).rename('NOTE')
     address_count_series = helpers.get_address_point_count_series(
         intersecting_common_areas_df, address_points_df, common_area_key_col
     )

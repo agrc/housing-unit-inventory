@@ -209,6 +209,22 @@ class TestOwnedUnitGroupings:
 
         tm.assert_frame_equal(oug_parcels_df, test_df)
 
+    def test_series_single_mode_returns_first_of_multiple_modes(self):
+        test_series = pd.Series(['foo', 'foo', 'bar', 'bar', 'baz'])
+        mode = evaluations._series_single_mode(test_series)
+
+        test_series = pd.Series(['bar'])
+
+        tm.assert_series_equal(mode, test_series)
+
+    def test_series_single_mode_returns_single_mode(self):
+        test_series = pd.Series(['foo', 'foo', 'bar', 'boo', 'baz'])
+        mode = evaluations._series_single_mode(test_series)
+
+        test_series = pd.Series(['foo'])
+
+        tm.assert_series_equal(mode, test_series)
+
 
 @pytest.fixture
 def parcels_df():
