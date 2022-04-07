@@ -33,9 +33,9 @@ setup(
     },
     keywords=['gis'],
     install_requires=[
-        'pandas==1.3.*',
-        'numpy==1.20.*',
-        'arcgis==1.9.*',
+        'pandas',
+        'numpy',
+        'arcgis',
     ],
     extras_require={
         'tests': [
