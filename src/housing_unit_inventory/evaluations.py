@@ -111,6 +111,9 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
             0, 'PARCEL_ID', range(990000, 990000 + len(evaluated_oug_parcels_with_types_df))
         )
 
+    #: Convert PARCEL_ID to str to match type with other PARCEL_IDs
+    evaluated_oug_parcels_with_types_df = evaluated_oug_parcels_with_types_df.astype({'PARCEL_ID': str})
+
     #: TODO: implement some sort of count tracking. Maybe a separate data frame consisting of just the parcel ids, removing matching ones on each pass?
 
     return evaluated_oug_parcels_with_types_df

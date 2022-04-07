@@ -66,7 +66,7 @@ class TestOwnedUnitGroupings:
                 'UNIT_COUNT': [2, 1],
                 'basebldg': ['1', '1'],
                 'building_type_id': ['1', '1'],
-                'PARCEL_ID': [990011, 990012],
+                'PARCEL_ID': ['990011', '990012'],
             },
             index=[11, 12],
         )
@@ -118,7 +118,7 @@ class TestOwnedUnitGroupings:
 
         test_df = pd.DataFrame(
             {
-                'PARCEL_ID': [990000, 990001],
+                'PARCEL_ID': ['990000', '990001'],
                 'SHAPE': ['common_shape1', 'common_shape2'],
                 'SUBTYPE': ['pud', 'pud'],
                 'TYPE': ['single_family', 'single_family'],
@@ -187,7 +187,7 @@ class TestOwnedUnitGroupings:
 
         test_df = pd.DataFrame(
             {
-                'PARCEL_ID': [990000],
+                'PARCEL_ID': ['990000'],
                 'SHAPE': ['common_shape1'],
                 'SUBTYPE': ['pud'],
                 'TYPE': ['single_family'],
