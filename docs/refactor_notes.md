@@ -81,7 +81,7 @@ Duplicate OIDs are dissolved on parcel ID using a custom dissolve that only sums
 
 ## Extended Parcel Info
 
-From Assesor. For Davis, joins between AccountNo and Parcel ID.
+From Assessor. For Davis, joins between AccountNo and Parcel ID.
 
 - **class**             The detailed description of the parcel (sf, apartment, mobile home, etc). Renamed to parcel_type and used to filter out specific property types, set the SUBTYPEs
 - **des_all**           Copied to NOTE field, used to identify tri/quad parcels
@@ -95,7 +95,7 @@ From UGRC/MPOs
 
 ## Address Points
 
-UT address points. Used to get unit count- need to have one point for every unit (apt, mobile home, condo, duplex, etc).Needs to have BASE ADDRESS info so we can filter out base addresses (HOA clubhouses, appartment offices, etc).
+UT address points. Used to get unit count- need to have one point for every unit (apt, mobile home, condo, duplex, etc).Needs to have BASE ADDRESS info so we can filter out base addresses (HOA clubhouses, apartment offices, etc).
 
 ## Common Areas
 
@@ -114,7 +114,7 @@ Created. Used to identify any mobile home communities that are not identified as
   a. Create centroids of parcels for later spatial joins/summarize withins
 1. **Classify Parcels**
   a. Subset provided owned unit grouping areas as needed to just residential areas
-  a. Classify any parcels within owned unit grouping areas, adding a key unique to each area to each parcel whose centroid is wtihin the area
+  a. Classify any parcels within owned unit grouping areas, adding a key unique to each area to each parcel whose centroid is within the area
   a. Classify any parcels within provided mobile home community areas
 1. **Evaluate Parcels** (filter based on parcel_type)
   a. Owned unit groupings: Transfer/summarize attributes of parcels to the appropriate grouping area using the key established in the classify stage.

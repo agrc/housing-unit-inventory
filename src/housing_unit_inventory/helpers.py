@@ -47,6 +47,7 @@ def get_proper_built_yr_value_series(parcels_df, index_col, built_yr_col):
     return built_yr_df[built_yr_col]
 
 
+#: Unused
 def change_geometry(dataframe, to_new_geometry_column, current_geometry_name):
     """Swap between spatially-enabled data frame shape columns.
 
@@ -91,6 +92,7 @@ def add_extra_info_from_csv(info_csv, pad_length, csv_fields, parcels_df, csv_jo
 
     csv_df[csv_join_field] = csv_df[csv_join_field].str.zfill(pad_length)
 
+    #: FIXME: Magic string value- same as csv_join_field? different? why are we dropping this?
     csv_df.dropna(subset=['ACCOUNTNO'], inplace=True)
 
     try:
@@ -152,6 +154,7 @@ def load_and_clean_parcels(parcels_fc):
 
     parcels_df = pd.DataFrame.spatial.from_featureclass(parcels_fc)
 
+    #: FIXME: These are from the LIR schema, so it should be safe to hardcode this mapping?
     field_map = {
         'PARCEL_ID': 'COUNT',
         'TAXEXEMPT_TYPE': 'FIRST',
@@ -186,6 +189,7 @@ def load_and_clean_parcels(parcels_fc):
     return parcels_dissolved_df
 
 
+#: FIXME: May not be needed (see load_and_clean_parcels())
 def clean_dissolve_field_names(field_names, prefixes):
     """Remove statistic name (SUM_, etc) from field names from dissolved feature class
 
@@ -218,7 +222,6 @@ def get_non_base_addr_points(address_pts_fc, type_column_name='PtType', base_add
         pd.DataFrame.spatial: A spatial dataframe without any base addresses
     """
 
-    # get address points without base address point
     address_pts_no_base_df = (
         pd.DataFrame.spatial.from_featureclass(address_pts_fc) \
         .query(f'{type_column_name} != @base_address_value')
@@ -236,10 +239,12 @@ def set_common_area_types(evaluated_df):
         pd.DataFrame: The modified and updated evaluated_df
     """
 
+    #: FIXME: we should do this rename when we first load the common areas so that we've got a defined interface
     evaluated_df.rename(columns={
         'TYPE_WFRC': 'TYPE',
         'SUBTYPE_WFRC': 'SUBTYPE',
     }, inplace=True)
+    #: FIXME: Do we need these basebldg/id fields? If not, this whole method may be superfluous
     evaluated_df['basebldg'] = ''
     evaluated_df['building_type_id'] = ''
 
@@ -253,10 +258,13 @@ def set_common_area_types(evaluated_df):
     return evaluated_df
 
 
+#: FIXME: Davis specific, also sets some vital fields that should probably be done elsewhere so that they can be reused #: for other counties.
 def subset_owned_unit_groupings_from_common_areas(
     common_areas_fc, common_area_key_column_name, unique_key_column='OBJECTID'
 ):
     """Get PUDs and multi-family parcels from common_areas_fc as a dataframe
+
+    Also set IS_OUG to 'Yes' and copy unique_eky_column to to common_area_key_column_name.
 
     Args:
         common_areas_fc (str): Path to the common areas featureclass.
@@ -291,6 +299,7 @@ def subset_owned_unit_groupings_from_common_areas(
     return common_areas_subset_df
 
 
+#: FIXME: This may be Davis-specific, also the decision to force tri/quad to apartment is hidden in this
 def set_multi_family_single_parcel_subtypes(evaluated_df):
     #: SUBTYPE = class unless class == 'triplex-quadplex', in which case it becomes 'apartment' and NOTE becomes tri-quad
 
@@ -421,9 +430,9 @@ def classify_from_area(parcels_df, parcel_centroids_df, parcel_key, area_df, cla
 
 
 def get_common_areas_intersecting_parcels_by_key(common_areas_df, parcels_df, common_area_key_col):
-    """Subset common areas based on a key found in both the parcels and common areas
+    """Subset common areas based on a key found in both the parcels and common areas to avoid areas with no parcels
 
-    Some common areas may extend beyond the spatial extent of the parcels. Using the common area identifier spatially copied to the parcels in an earlier step as a key, this gets only the common areas found within the parcels. Basically a right join of common areas and parcels based on the common area key.
+    Some common areas may extend beyond the spatial extent of the parcels. Using the common area identifier spatially copied to the parcels in an earlier step as a key, this gets only the common areas found within the parcels. Because the area geometries are then merged with the other evaluated parcels, this prevents adding blank or superfluous geometries. Basically a right join of common areas and parcels based on the common area key.
 
     Args:
         common_areas_df (pd.DataFrame): Common areas dataframe; may extend spatially beyond parcels extent
