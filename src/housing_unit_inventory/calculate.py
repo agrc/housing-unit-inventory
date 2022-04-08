@@ -13,6 +13,9 @@ def update_unit_count(parcels_df):
         parcels_df (pd.DataFrame): The evaluated parcel dataset with UNIT_COUNT, HOUSE_CNT, SUBTYPE, and NOTE columns
     """
 
+    #: FIXME: Field names are good, but subtype values may be davis-specific. Do we need these checks, or can we just
+    #: use the address points instead?
+
     # fix single family (non-pud)
     zero_or_null_unit_counts = (parcels_df['UNIT_COUNT'] == 0) | (parcels_df['UNIT_COUNT'].isna())
     parcels_df.loc[(zero_or_null_unit_counts) & (parcels_df['SUBTYPE'] == 'single_family'), 'UNIT_COUNT'] = 1
@@ -79,12 +82,26 @@ def acreages(parcels_df, acres_field):
     parcels_df[acres_field] = parcels_df['SHAPE'].apply(lambda shape: shape.area / 4046.8564)
 
 
+#: FIXME: Unused?
 def approximate_floors(parcels_df, floors_count_field):
+    """Round the floors to the nearest whole number
+
+    Args:
+        parcels_df (pd.DataFrame): Dataframe with floors count field
+        floors_count_field (str): Number of floors column, may not be whole numbers due to averaging.
+    """
 
     parcels_df['APX_HGHT'] = parcels_df[floors_count_field].round()
     parcels_df.drop(columns=[floors_count_field], inplace=True)
 
 
 def dwelling_units_per_acre(parcels_df, unit_count_field, acres_field):
+    """Calculate the number of dwelling units per acre
+
+    Args:
+        parcels_df (pd.DataFrame): Dataframe with unit counts and pre-calculated acreage fields
+        unit_count_field (str): Number of units in a parcel
+        acres_field (str): Parcels acreage, pre-computed
+    """
 
     parcels_df['DUA'] = parcels_df[unit_count_field] / parcels_df[acres_field]

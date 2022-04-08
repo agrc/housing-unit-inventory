@@ -43,6 +43,17 @@ def _dissolve_geometries(duplicates_df, dissolve_field):
 
 
 def _dissolve_attributes(duplicates_df, dissolve_field, fields_map, sum_duplicate_test_fields):
+    """Calculate summary statistics of attributes with custom sum that doesn't add identical rows
+
+    Args:
+        duplicates_df (pd.DataFrame): Dataframe of tabular data being dissolved
+        dissolve_field (str): Field containing the keys to group/dissolve on
+        fields_map (dict): {field name: summary statistic operation} for every field to summarize. Fields not present are dropped.
+        sum_duplicate_test_fields (List<str>): Fields used in custom sum to determine if rows are duplicates
+
+    Returns:
+        pd.DataFrame: dissolve_fields summarized according to fields_map
+    """
 
     dissolved_attributes_df = pd.DataFrame()
 
@@ -177,11 +188,22 @@ def _extract_duplicates_and_uniques(dataframe, dissolve_field):
     return duplicates, uniques
 
 
-def dissolve_duplicates_by_dataframe(dataframe, dissolve_field, fields_map, duplicate_test_fields):
+def dissolve_duplicates_by_dataframe(dataframe, dissolve_field, fields_map, sum_duplicate_test_fields):
+    """Dissolve gemoetries with duplicate values in specified field, summarizing other fields according to fields map. Fields being summed wont be summed if the rows are duplicates.
+
+    Args:
+        dataframe (pd.DataFrame): Spatial dataframe with at least one column with duplicate values.
+        dissolve_field (str): Column used to identify rows that should be dissolved together.
+        fields_map (dict): {field name: summary statistic operation} for every field to summarize. Fields not present are dropped.
+        sum_duplicate_test_fields (List<str>): Fields used in custom sum to determine if rows are duplicates
+
+    Returns:
+        pd.DataFrame: Geometries and fields dissolved based on the specified column.
+    """
     duplicates, uniques = _extract_duplicates_and_uniques(dataframe, dissolve_field)
 
     dissolved_geometries = _dissolve_geometries(duplicates, dissolve_field)
-    dissolved_attributes = _dissolve_attributes(duplicates, dissolve_field, fields_map, duplicate_test_fields)
+    dissolved_attributes = _dissolve_attributes(duplicates, dissolve_field, fields_map, sum_duplicate_test_fields)
 
     dissolved_combined = _combine_geometries_and_attributes(dissolved_geometries, dissolved_attributes, dissolve_field)
 
