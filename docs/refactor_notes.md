@@ -108,26 +108,26 @@ Created. Used to identify any mobile home communities that are not identified as
 # General Process
 
 1. **Prep Parcels**
-  a. Load parcels into memory
-  a. Dissolve duplicate parcels
-  a. Add any needed external data from assessor
-  a. Create centroids of parcels for later spatial joins/summarize withins
+    - Load parcels into memory
+    - Dissolve duplicate parcels
+    - Add any needed external data from assessor
+    - Create centroids of parcels for later spatial joins/summarize withins
 1. **Classify Parcels**
-  a. Subset provided owned unit grouping areas as needed to just residential areas
-  a. Classify any parcels within owned unit grouping areas, adding a key unique to each area to each parcel whose centroid is within the area
-  a. Classify any parcels within provided mobile home community areas
+    - Subset provided owned unit grouping areas as needed to just residential areas
+    - Classify any parcels within owned unit grouping areas, adding a key unique to each area to each parcel whose centroid is within the area
+    - Classify any parcels within provided mobile home community areas
 1. **Evaluate Parcels** (filter based on parcel_type)
-  a. Owned unit groupings: Transfer/summarize attributes of parcels to the appropriate grouping area using the key established in the classify stage.
-  a. Single family parcels: Just set some attributes directly
-  a. Multi-family, single-parcel parcels: Set some attributes directly, calculate type/subtype, get unit count from address points
-  a. Mobile home communities: Set some attributes directly, get unit count from address points
+    - Owned unit groupings: Transfer/summarize attributes of parcels to the appropriate grouping area using the key established in the classify stage.
+    - Single family parcels: Just set some attributes directly
+    - Multi-family, single-parcel parcels: Set some attributes directly, calculate type/subtype, get unit count from address points
+    - Mobile home communities: Set some attributes directly, get unit count from address points
 1. **Merge and Calculate**
-  a. Merge all the evaluated parcel subgroups into a single dataset
-  a. Calculate new parcel centroids, use to get CITY and SUBREGION
-  a. Rename various fields, fill Nulls as appropriate
-  a. Calculate acreages, unit density, year and decade built, floor counts
-  a. Reindex fields to final desired fields.
-  a. Write to both feature class and csv (minus shape field)
+    - Merge all the evaluated parcel subgroups into a single dataset
+    - Calculate new parcel centroids, use to get CITY and SUBREGION
+    - Rename various fields, fill Nulls as appropriate
+    - Calculate acreages, unit density, year and decade built, floor counts
+    - Reindex fields to final desired fields.
+    - Write to both feature class and csv (minus shape field)
 
 ## Questions
 
