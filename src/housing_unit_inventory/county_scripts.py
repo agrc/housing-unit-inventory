@@ -15,8 +15,8 @@ def davis_county():
     #: Inputs
     input_dir_path = Path(r'c:\gis\git\housing-unit-inventory\Parcels\2020-Davis\Inputs')
     opensgid_path = Path(r'c:\gis\projects\housinginventory\opensgid.agrc.utah.gov.sde')
-    parcels_fc = input_dir_path / r'Davis_County_LIR_Parcels.gdb/Parcels_Davis_LIR_UTM12'
-    # parcels_fc = Path(r'c:\gis\projects\housinginventory\housinginventory.gdb\davis_test_parcels')
+    # parcels_fc = input_dir_path / r'Davis_County_LIR_Parcels.gdb/Parcels_Davis_LIR_UTM12'
+    parcels_fc = Path(r'c:\gis\projects\housinginventory\housinginventory.gdb\davis_test_parcels')
     address_pts = input_dir_path / r'AddressPoints_Davis.gdb/address_points_davis'
     common_areas_fc = input_dir_path / r'Common_Areas.gdb/Common_Areas_Reviewed'
     extended_info_csv = input_dir_path / r'davis_extended_simplified.csv'
@@ -27,8 +27,8 @@ def davis_county():
 
     #: Output
     output_dir_path = Path(r'c:\gis\projects\housinginventory')
-    output_fc = output_dir_path / r'housinginventory.gdb\davis2020_7'
-    output_csv = output_dir_path / r'davis2020_7.csv'
+    output_fc = output_dir_path / r'housinginventory.gdb\davis2020_7a'
+    output_csv = output_dir_path / r'davis2020_7a.csv'
 
     #: Address points (used later)
     address_pts_no_base_df = helpers.get_non_base_addr_points(address_pts)
@@ -176,7 +176,7 @@ def davis_county():
 
     #: Clean up some nulls
     logging.info('Cleaning up final data')
-    final_parcels_df['NOTE'].fillna('', inplace=True)
+    # final_parcels_df['NOTE'].fillna('', inplace=True)
     final_parcels_df['IS_OUG'].fillna('No', inplace=True)
 
     #: Recalculate acreages
@@ -189,7 +189,7 @@ def davis_county():
 
     calculate.dwelling_units_per_acre(final_parcels_df, 'UNIT_COUNT', 'ACRES')
 
-    calculate.approximate_floors(final_parcels_df, 'FLOORS_CNT')
+    # calculate.approximate_floors(final_parcels_df, 'FLOORS_CNT')
 
     #: Remove data points with zero units
     calculate.remove_zero_unit_house_counts(final_parcels_df)

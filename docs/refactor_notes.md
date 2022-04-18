@@ -128,3 +128,10 @@ Created. Used to identify any mobile home communities that are not identified as
   a. Calculate acreages, unit density, year and decade built, floor counts
   a. Reindex fields to final desired fields.
   a. Write to both feature class and csv (minus shape field)
+
+## Questions
+
+- UNITID- county fips + parcel ID?
+- 'basebldg', 'building_type_id'- needed?
+- Use addr points to set unit count for du/tri/quadplex?
+- Subtypes- unique? county-by-county? Merge to a statewide set?

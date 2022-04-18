@@ -92,8 +92,7 @@ def add_extra_info_from_csv(info_csv, pad_length, csv_fields, parcels_df, csv_jo
 
     csv_df[csv_join_field] = csv_df[csv_join_field].str.zfill(pad_length)
 
-    #: FIXME: Magic string value- same as csv_join_field? different? why are we dropping this?
-    csv_df.dropna(subset=['ACCOUNTNO'], inplace=True)
+    csv_df.dropna(subset=[csv_join_field], inplace=True)
 
     try:
         parcels_merged_df = parcels_df.merge(
@@ -149,12 +148,11 @@ def load_and_clean_parcels(parcels_fc):
     Returns:
         pd.DataFrame: Spatial data frame of de-duplicated, cleaned parcels
     """
-    #: FIXME: Get parcel_count from this dissolve to document any joins (for checking if other values besides PARCEL_ID
+    #: TODO: Get parcel_count from this dissolve to document any joins (for checking if other values besides PARCEL_ID
     #: are duplicated.)
 
     parcels_df = pd.DataFrame.spatial.from_featureclass(parcels_fc)
 
-    #: FIXME: These are from the LIR schema, so it should be safe to hardcode this mapping?
     field_map = {
         'PARCEL_ID': 'COUNT',
         'TAXEXEMPT_TYPE': 'FIRST',
@@ -175,10 +173,6 @@ def load_and_clean_parcels(parcels_fc):
     parcels_dissolved_df = dissolve.dissolve_duplicates_by_dataframe(
         parcels_df, 'PARCEL_ID', field_map, dupe_test_fields
     )
-
-    #: Remove stats from field names FIXME: May not be needed now that arcpy dissolve is gone?
-    cleaned_fields = clean_dissolve_field_names(list(parcels_dissolved_df.columns), ['FIRST', 'SUM', 'MAX'])
-    parcels_dissolved_df.rename(columns=cleaned_fields, inplace=True)
 
     #: Remove parcels without parcel ids and empty geometries
     parcels_dissolved_df.dropna(subset=['PARCEL_ID', 'SHAPE'], inplace=True)
