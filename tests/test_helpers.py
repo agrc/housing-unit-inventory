@@ -320,6 +320,7 @@ class TestDataSetupAndCleaning:
 
         tm.assert_frame_equal(cleaned_parcels, test_df)
 
+    @pytest.mark.skip(reason='Don\'t need to rename fields when using custom, non arcpy dissolve')
     def test_load_and_clean_parcels_renames_fields_and_ignores_other_fields(self, mocker):
         parcel_df = pd.DataFrame({
             'OBJECTID': [0],
