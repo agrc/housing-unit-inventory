@@ -238,16 +238,8 @@ def set_common_area_types(evaluated_df):
         'TYPE_WFRC': 'TYPE',
         'SUBTYPE_WFRC': 'SUBTYPE',
     }, inplace=True)
-    #: FIXME: Do we need these basebldg/id fields? If not, this whole method may be superfluous
-    evaluated_df['basebldg'] = ''
-    evaluated_df['building_type_id'] = ''
 
     evaluated_df.loc[evaluated_df['SUBTYPE'] == 'pud', 'TYPE'] = 'single_family'
-    evaluated_df.loc[evaluated_df['SUBTYPE'] == 'pud', 'basebldg'] = '1'
-    evaluated_df.loc[evaluated_df['SUBTYPE'] == 'pud', 'building_type_id'] = '1'
-
-    evaluated_df.loc[evaluated_df['TYPE'] == 'multi_family', 'basebldg'] = '1'
-    evaluated_df.loc[evaluated_df['TYPE'] == 'multi_family', 'building_type_id'] = '2'
 
     return evaluated_df
 

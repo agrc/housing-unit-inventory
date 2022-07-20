@@ -95,7 +95,7 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
         ]
     )
 
-    #: Set type, subtype, basebldg, building_type_id
+    #: Set type, subtype
     evaluated_oug_parcels_with_types_df = helpers.set_common_area_types(evaluated_oug_parcels_df)
 
     #: Add a generated PARCEL_ID based on the common_area_key for future aligning with other parcels

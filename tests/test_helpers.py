@@ -211,8 +211,6 @@ class TestCommonAreas:
             'id': [1, 2, 3],
             'TYPE': ['single_family', 'multi_family', 'multi_family'],
             'SUBTYPE': ['pud', 'condo', 'townhome'],
-            'basebldg': ['1', '1', '1'],
-            'building_type_id': ['1', '2', '2'],
         })
 
         tm.assert_frame_equal(with_types_df, test_results_df)

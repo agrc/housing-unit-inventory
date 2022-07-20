@@ -64,8 +64,6 @@ class TestOwnedUnitGroupings:
                 'PARCEL_COUNT': [2, 1],
                 'NOTE': ['des_foo', 'des_bar'],
                 'UNIT_COUNT': [2, 1],
-                'basebldg': ['1', '1'],
-                'building_type_id': ['1', '1'],
                 'PARCEL_ID': ['990011', '990012'],
             },
             index=[11, 12],
@@ -132,8 +130,6 @@ class TestOwnedUnitGroupings:
                 'NOTE': ['des_foo', 'des_bar'],
                 'UNIT_COUNT': [2, 1],
                 'TYPE': ['single_family', 'single_family'],
-                'basebldg': ['1', '1'],
-                'building_type_id': ['1', '1'],
             },
             index=['foo', 'bar'],
         )
@@ -200,8 +196,6 @@ class TestOwnedUnitGroupings:
                 'PARCEL_COUNT': [3],
                 'NOTE': ['des_foo'],
                 'UNIT_COUNT': [2],
-                'basebldg': ['1'],
-                'building_type_id': ['1'],
             },
             index=['foo'],
         )
@@ -245,8 +239,6 @@ class TestByParcelTypes:
         attribute_dict = {
             'TYPE': 'single_family',
             'SUBTYPE': 'single_family',
-            'basebldg': '1',
-            'building_type_id': '1',
         }
 
         results_df = evaluations.by_parcel_types(parcels_df, parcel_types, attribute_dict)
@@ -256,8 +248,6 @@ class TestByParcelTypes:
             'parcel_type': ['single_family'],
             'TYPE': 'single_family',
             'SUBTYPE': 'single_family',
-            'basebldg': '1',
-            'building_type_id': '1',
         })
 
         tm.assert_frame_equal(results_df, test_df)
@@ -266,8 +256,6 @@ class TestByParcelTypes:
         parcel_types = ['multi_family', 'duplex', 'apartment', 'townhome', 'triplex-quadplex']
         attribute_dict = {
             'TYPE': 'multi_family',
-            'basebldg': '1',
-            'building_type_id': '2',
         }
 
         addr_pt_df = pd.DataFrame({
@@ -291,8 +279,6 @@ class TestByParcelTypes:
             'PARCEL_ID': ['2', '3', '4', '5', '6'],
             'parcel_type': ['multi_family', 'duplex', 'apartment', 'townhome', 'triplex-quadplex'],
             'TYPE': ['multi_family', 'multi_family', 'multi_family', 'multi_family', 'multi_family'],
-            'basebldg': ['1', '1', '1', '1', '1'],
-            'building_type_id': ['2', '2', '2', '2', '2'],
             'SUBTYPE': ['multi_family', 'duplex', 'apartment', 'townhome', 'apartment'],
             'NOTE': ['', '', '', '', 'triplex-quadplex'],
             'UNIT_COUNT': [2, 2, 2, 2, 2],
@@ -305,7 +291,6 @@ class TestByParcelTypes:
         attribute_dict = {
             'TYPE': 'multi_family',
             'SUBTYPE': 'mobile_home_park',
-            'basebldg': '1',
         }
 
         addr_pt_count_series = pd.Series(data=[10], index=['7'], name='UNIT_COUNT')
@@ -323,7 +308,6 @@ class TestByParcelTypes:
             'parcel_type': ['mobile_home_park'],
             'TYPE': ['multi_family'],
             'SUBTYPE': ['mobile_home_park'],
-            'basebldg': ['1'],
             'UNIT_COUNT': [10],
         })
 

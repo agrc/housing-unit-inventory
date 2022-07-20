@@ -86,7 +86,6 @@ def davis_county():
     single_family_attributes = {
         'TYPE': 'single_family',
         'SUBTYPE': 'single_family',
-        'basebldg': '1',
         'building_type_id': '1',
     }
     single_family_features_df = evaluations.by_parcel_types(
@@ -97,7 +96,6 @@ def davis_county():
     multi_family_types = ['multi_family', 'duplex', 'apartment', 'townhome', 'triplex-quadplex']
     multi_family_attributes = {
         'TYPE': 'multi_family',
-        'basebldg': '1',
         'building_type_id': '2',
     }
     multi_family_single_parcel_features_df = evaluations.by_parcel_types(
@@ -109,7 +107,6 @@ def davis_county():
     mobile_home_attributes = {
         'TYPE': 'multi_family',
         'SUBTYPE': 'mobile_home_park',
-        'basebldg': '1',
     }
     mobile_home_communities_features_df = evaluations.by_parcel_types(
         classified_parcels_df, ['mobile_home_park'], mobile_home_attributes, address_pts_no_base_df
