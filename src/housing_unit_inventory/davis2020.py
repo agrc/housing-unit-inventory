@@ -1,3 +1,6 @@
+"""Initial copy of all the jupyter cells into a single file. Kept for reference to ensure the county_scripts.py has everything.
+
+"""
 import os
 
 import arcpy

@@ -33,22 +33,21 @@ setup(
     },
     keywords=['gis'],
     install_requires=[
-        'pandas',
-        'numpy',
-        'arcgis',
+        'pandas==1.3.*',
+        'arcgis==2.0.*',
     ],
     extras_require={
         'tests': [
             'pylint-quotes==0.2.*',
-            'pylint==2.5.*',
-            'pytest-cov==2.9.*',
+            'pylint==2.14.*',
+            'pytest-cov==3.0.*',
             'pytest-instafail==0.4.*',
-            'pytest-isort==1.0.*',
-            'pytest-pylint==0.14.*',
+            'pytest-isort==3.0.*',
+            'pytest-pylint==0.18.*',
             'pytest-watch==4.2.*',
-            'pytest==4.*',
-            'yapf==0.30.*',
-            'pytest-mock==3.2.*',
+            'pytest==6.2.*',
+            'yapf==0.32.*',
+            'pytest-mock==3.8.*',
         ]
     },
     setup_requires=[
