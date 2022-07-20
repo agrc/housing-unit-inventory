@@ -36,36 +36,38 @@ def _series_single_mode(series):
 
 
 def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, common_area_df) -> pd.DataFrame.spatial:
+    """Aggregate info from parcels in each OUG into the OUG geometry along with a new "parcel id" for each OUG
 
-    #: common_area_key_col: a unique key (probably just a copied ObjectID?) for all the common areas
+    Groups parcels by OUG id in common_area_key_col and performs the relevant aggregation stats for each attribute.
+    Combines the attributes back to the OUG geometries for the final report.
 
-    #: Summarize specific fields of parcels that intersect the common area with specific stats for each field
-    #:      Save summaries to common area parcels
-    #:      Need to convert parcels to centroids to ensure spatial join is accurate
-    #:      Count number of parcels in the common area
-    #: Count number of address points in the common area parcel
-    #: BUILT_YR should be most common or latest (if most common is 0)
+    The "parcel id" is just '99' + the OUG ID if the ID can be converted to an int or '99' + a range from 0000-9999,
+    so it will always be 99xxxx, where xxxx is either the OUG ID (may not be 4 digits) or the range value.
 
-    # fields = {
-    #     'TOTAL_MKT_VALUE': 'Sum',
-    #     'LAND_MKT_VALUE': 'Sum',
-    #     'BLDG_SQFT': 'Sum',
-    #     'FLOORS_CNT': 'Mean',
-    #     'BUILT_YR': 'Mode', (or max if mode=0/multiple)
-    # }
+    Args:
+        parcels_df (pd.DataFrame): All classified parcels as a DataFrame
+        common_area_key_col (str): Column name for the key that identifies which OUG a parcel belongs to
+        address_points_df (pd.DataFrame.spatial): Address points, used to calculate address point count
+        common_area_df (pd.DataFrame.spatial): DataFrame of all the OUGs
+
+    Returns:
+        pd.DataFrame.spatial: common_area_df subsetted to relevant OUGs (and specific fields) with aggregated info added
+    """
 
     #: arcgis.geometry.get_area, .contains, .centroid
 
     oug_parcels_df = parcels_df[parcels_df['parcel_type'] == 'owned_unit_grouping'].copy()
 
-    logging.debug(f'{oug_parcels_df.shape[0]} parcels being evaluated as owned unit groupings...')
+    logging.debug('%s parcels being evaluated as owned unit groupings...', oug_parcels_df.shape[0])
 
+    #: Basically a right join of common areas and parcels based on the common area key so that we don't get common area
+    #: geometries that don't include any parcels
     intersecting_common_areas_df = helpers.get_common_areas_intersecting_parcels_by_key(
         common_area_df, parcels_df, common_area_key_col
     )
 
     #: use groupby to summarize the parcel attributes per common area
-    #: each series should be indexed by and refere back to the common_area_key_col, not the parcels
+    #: each series should be indexed by and refer back to the common_area_key_col, not the parcels
     parcels_grouped_by_oug_id = oug_parcels_df.groupby(common_area_key_col)
     total_mkt_value_sum_series = parcels_grouped_by_oug_id['TOTAL_MKT_VALUE'].sum()
     land_mkt_value_sum_series = parcels_grouped_by_oug_id['LAND_MKT_VALUE'].sum()
@@ -73,6 +75,7 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
     floors_cnt_mean_series = parcels_grouped_by_oug_id['FLOORS_CNT'].mean()
     built_yr_series = helpers.get_proper_built_yr_value_series(oug_parcels_df, common_area_key_col, 'BUILT_YR')
     parcel_count_series = parcels_grouped_by_oug_id['SHAPE'].count().rename('PARCEL_COUNT')
+    #: TODO: Davis-specific 'des_all'
     notes_mode_series = parcels_grouped_by_oug_id['des_all'].agg(_series_single_mode).rename('NOTE')
     address_count_series = helpers.get_address_point_count_series(
         intersecting_common_areas_df, address_points_df, common_area_key_col
@@ -122,9 +125,9 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
 def by_parcel_types(parcels_df, parcel_types, attribute_dict, address_points_df=None, subtypes_method=None):
     """Run the evaluations subsetting by various parcel_types.
 
-    Add TYPE, SUBTYPE, basebldg, building_type_id, based on values set in attribute_dict. Add UNIT_COUNT based on
-    address points if passed in via address_points_df. Set SUBTYPE and add NOTE if
-    helpers.set_multi_family_single_parcel_subtypes is passed via subtypes_method.
+    Add TYPE and SUBTYPE based on values set in attribute_dict. Add UNIT_COUNT based on address points if passed in
+    via address_points_df. Set SUBTYPE and add NOTE if helpers.set_multi_family_single_parcel_subtypes is passed via
+    subtypes_method.
 
     Args:
         parcels_df (pd.DataFrame): Parcels dataset with a unique PARCEL_ID column

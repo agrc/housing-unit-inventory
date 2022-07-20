@@ -45,8 +45,8 @@ def remove_zero_unit_house_counts(parcels_df):
 def built_decade(parcels_df, built_yr_field='BUILT_YR', built_decade_field='BLT_DECADE'):
     """Calculate built_decade_field from built_yr_field in-place
 
-    Raises a UserWarning with the number of rows whose built_decade_field is before 1846 or after the current year + 2 (yes,
-    there were structures prior to Fort Buenaventura, but I highly doubt any are still in use as housing).
+    Raises a UserWarning with the number of rows whose built_decade_field is before 1846 or after the current year + 2
+    (yes, there were structures prior to Fort Buenaventura, but I highly doubt any are still in use as housing).
 
     Args:
         parcels_df (pd.DataFrame): Parcels dataset with built_decade_field column
@@ -57,7 +57,7 @@ def built_decade(parcels_df, built_yr_field='BUILT_YR', built_decade_field='BLT_
                                          (parcels_df[built_yr_field] > this_year + 2)]
     if invalid_built_year_rows.shape[0]:
         warnings.warn(
-            f'{invalid_built_year_rows.shape[0]} parcels have an invald built year (before 1847 or after current '
+            f'{invalid_built_year_rows.shape[0]} parcels have an invalid built year (before 1847 or after current '
             'year plus two)'
         )
 

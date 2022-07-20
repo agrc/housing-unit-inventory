@@ -245,7 +245,7 @@ class TestCalculations:
         tm.assert_frame_equal(parcels_df, test_df)
 
         assert warning[0].message.args[
-            0] == '1 parcels have an invald built year (before 1847 or after current year plus two)'
+            0] == '1 parcels have an invalid built year (before 1847 or after current year plus two)'
 
     def test_acreages_calculates_one_and_half_acres(self, mocker):
         geometry_mock_1 = mocker.Mock()

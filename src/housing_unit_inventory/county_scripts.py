@@ -53,7 +53,7 @@ def davis_county():
 
     #: Get a count of all parcels
     count_all = standardized_parcels_df.shape[0]
-    logging.info(f'Initial parcels in modeling area:\t {count_all}')
+    logging.info('Initial parcels in modeling area:\t %s', count_all)
 
     #: STEP 2: Classify owned unit grouping (puds, condos, etc) and mobile home community parcels
     #: Classify parcels within common areas
@@ -86,7 +86,6 @@ def davis_county():
     single_family_attributes = {
         'TYPE': 'single_family',
         'SUBTYPE': 'single_family',
-        'building_type_id': '1',
     }
     single_family_features_df = evaluations.by_parcel_types(
         classified_parcels_df, ['single_family'], single_family_attributes
@@ -96,7 +95,6 @@ def davis_county():
     multi_family_types = ['multi_family', 'duplex', 'apartment', 'townhome', 'triplex-quadplex']
     multi_family_attributes = {
         'TYPE': 'multi_family',
-        'building_type_id': '2',
     }
     multi_family_single_parcel_features_df = evaluations.by_parcel_types(
         classified_parcels_df, multi_family_types, multi_family_attributes, address_pts_no_base_df,

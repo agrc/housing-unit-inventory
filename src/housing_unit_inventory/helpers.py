@@ -380,7 +380,7 @@ def classify_from_area(parcels_df, parcel_centroids_df, parcel_key, area_df, cla
     """
 
     if area_df.spatial.sr['wkid'] != parcel_centroids_df.spatial.sr['wkid']:
-        logging.debug(f'Reprojecting areas to {parcel_centroids_df.spatial.sr["wkid"]}...')
+        logging.debug('Reprojecting areas to %s...', parcel_centroids_df.spatial.sr["wkid"])
         if not area_df.spatial.project(parcel_centroids_df.spatial.sr['wkid']):
             raise RuntimeError(f'Reprojecting area_df to {parcel_centroids_df.spatial.sr["wkid"]} did not succeed.')
 
@@ -434,14 +434,14 @@ def get_common_areas_intersecting_parcels_by_key(common_areas_df, parcels_df, co
 
 
 def concat_cities_metro_townships(cities_df, townships_df):
-    """Concattanate cities and metro townships into a single dataframe with specific fields
+    """Concatenate cities and metro townships into a single dataframe with specific fields
 
     Args:
         cities_df (pd.DataFrame): Cities dataframe with 'name', 'ugrcode', and 'SHAPE' columns
         townships_df (pd.DataFrame): Metro Townships dataframe with 'name', 'ugrcode', and 'SHAPE' columns
 
     Returns:
-        pd.DataFrame: Concattanated spatial dataframe containing only 'name', 'ugrcode', and 'SHAPE' columns
+        pd.DataFrame: Concatenated spatial dataframe containing only 'name', 'ugrcode', and 'SHAPE' columns
     """
 
     concat_df = pd.concat([cities_df, townships_df], join='inner')
