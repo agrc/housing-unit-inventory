@@ -994,6 +994,55 @@ class TestClassifyFromArea:
 
         tm.assert_frame_equal(oug_parcels, test_df)
 
+    def test_classify_from_area_subsets_columns_in_area_data(self, mocker):
+        mocker.patch.object(helpers.pd.DataFrame, 'spatial')
+
+        test_parcels_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'UNIT_COUNT': [1, 2],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+        })
+
+        test_centroids_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['centroid_shape_1', 'centroid_shape_2'],
+        })
+        test_centroids_df.spatial.sr = {'wkid': 'foo'}
+
+        test_areas_df = pd.DataFrame({
+            'common_area_key': [1],
+            'SHAPE': ['addr_shape_1'],
+            'NAME': ['city1'],
+            'field1': ['bar'],
+            'field2': ['boo'],
+        })
+        test_areas_df.spatial.sr = {'wkid': 'foo'}
+
+        joined_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'SHAPE': ['centroid_shape_1', 'centroid_shape_2'],
+            'NAME': ['city1', 'city1'],
+            'field2': ['boo', 'boo'],
+            'index_right': [0, 1],
+        })
+        test_centroids_df.spatial.join.return_value = joined_df
+
+        columns = ['Name', 'field2']
+
+        area_joined_parcels = helpers.classify_from_area(
+            test_parcels_df, test_centroids_df, 'PARCEL_ID', test_areas_df, columns_to_keep=columns
+        )
+
+        test_df = pd.DataFrame({
+            'PARCEL_ID': [11, 12],
+            'UNIT_COUNT': [1, 2],
+            'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
+            'NAME': ['city1', 'city1'],
+            'field2': ['boo', 'boo'],
+        })
+
+        tm.assert_frame_equal(area_joined_parcels, test_df)
+
     def test_classify_from_area_reprojects(self, mocker):
         test_parcels_df = pd.DataFrame({
             'PARCEL_ID': [11, 12],

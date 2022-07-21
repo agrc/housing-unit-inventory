@@ -361,7 +361,7 @@ def concat_evaluated_dataframes(dataframes, new_index='PARCEL_ID'):
     return concated_dataframes
 
 
-def classify_from_area(parcels_df, parcel_centroids_df, parcel_key, area_df, classify_info=()):
+def classify_from_area(parcels_df, parcel_centroids_df, parcel_key, area_df, classify_info=(), columns_to_keep=[]):
     """Add information from area polygons and/or provided values to parcels whose centroids are in the areas
 
     Args:
@@ -383,6 +383,12 @@ def classify_from_area(parcels_df, parcel_centroids_df, parcel_key, area_df, cla
         logging.debug('Reprojecting areas to %s...', parcel_centroids_df.spatial.sr["wkid"])
         if not area_df.spatial.project(parcel_centroids_df.spatial.sr['wkid']):
             raise RuntimeError(f'Reprojecting area_df to {parcel_centroids_df.spatial.sr["wkid"]} did not succeed.')
+
+    #: narrow areas_df down to specified fields
+    if columns_to_keep:
+        new_columns = set(columns_to_keep)
+        new_columns.update(['SHAPE'])
+        area_df = area_df.reindex(columns=new_columns)
 
     #: get only the centroids within the areas
     joined_centroids_df = parcel_centroids_df.spatial.join(area_df, 'inner', 'within')

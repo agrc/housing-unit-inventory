@@ -27,8 +27,8 @@ def davis_county():
 
     #: Output
     output_dir_path = Path(r'c:\gis\projects\housinginventory')
-    output_fc = output_dir_path / r'housinginventory.gdb\davis2020_7a'
-    output_csv = output_dir_path / r'davis2020_7a.csv'
+    output_fc = output_dir_path / r'housinginventory.gdb\davis2020_8'
+    output_csv = output_dir_path / r'davis2020_8.csv'
 
     #: Address points (used later)
     address_pts_no_base_df = helpers.get_non_base_addr_points(address_pts)
@@ -134,6 +134,7 @@ def davis_county():
     del classified_parcels_df
 
     #: Add city and sub-county info
+    #: TODO: Add census block info (block group is first digit of block)
     logging.info('Adding city and subcounty info...')
     logging.debug('Getting evaluated parcel centroids...')
     evaluated_centroids_df = helpers.get_centroids_copy_of_polygon_df(evaluated_parcels_df, 'PARCEL_ID')
