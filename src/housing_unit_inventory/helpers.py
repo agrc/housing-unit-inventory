@@ -223,27 +223,6 @@ def get_non_base_addr_points(address_pts_fc, type_column_name='PtType', base_add
     return address_pts_no_base_df
 
 
-def set_common_area_types(evaluated_df):
-    """Set TYPE and SUBTYPE values for common unit areas/owned unit groupings
-
-    Args:
-        evaluated_df (pd.DataFrame): The fully-evaluated common area parcel dataframe
-
-    Returns:
-        pd.DataFrame: The modified and updated evaluated_df
-    """
-
-    #: FIXME: we should do this rename when we first load the common areas so that we've got a defined interface
-    evaluated_df.rename(columns={
-        'TYPE_WFRC': 'TYPE',
-        'SUBTYPE_WFRC': 'SUBTYPE',
-    }, inplace=True)
-
-    evaluated_df.loc[evaluated_df['SUBTYPE'] == 'pud', 'TYPE'] = 'single_family'
-
-    return evaluated_df
-
-
 def load_and_clean_owned_unit_groupings(
     common_areas_fc, common_area_key_column_name, field_mapping=None, unique_key_column='OBJECTID'
 ):

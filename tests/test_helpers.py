@@ -229,23 +229,6 @@ class TestCommonAreas:
 
         tm.assert_frame_equal(common_areas_subset_df, test_df)
 
-    def test_set_common_area_types(self):
-        test_data_df = pd.DataFrame({
-            'id': [1, 2, 3],
-            'TYPE': ['single_family', 'multi_family', 'multi_family'],
-            'SUBTYPE': ['pud', 'condo', 'townhome'],
-        })
-
-        with_types_df = helpers.set_common_area_types(test_data_df)
-
-        test_results_df = pd.DataFrame({
-            'id': [1, 2, 3],
-            'TYPE': ['single_family', 'multi_family', 'multi_family'],
-            'SUBTYPE': ['pud', 'condo', 'townhome'],
-        })
-
-        tm.assert_frame_equal(with_types_df, test_results_df)
-
     def test_set_multi_family_single_parcel_subtypes_sets_normal(self):
         test_data_df = pd.DataFrame({
             'id': [1, 2, 3, 4],
