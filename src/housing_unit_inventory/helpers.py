@@ -1,6 +1,5 @@
 import logging
 import warnings
-from datetime import datetime
 
 import arcpy
 import numpy as np
@@ -76,7 +75,8 @@ def add_extra_info_from_csv(info_csv, pad_length, csv_fields, parcels_df, csv_jo
     Args:
         info_csv (str): Path to csv holding extra info
         pad_length (int): Width to pad the csv's join field with 0's to match the parcel's PARCEL_ID
-        csv_fields (List<str>): List of fields from the csv to include in the join. The first field in the list will be used as the join field against the parcels' PARCEL_ID.
+        csv_fields (List<str>): List of fields from the csv to include in the join. The first field in the list will be
+        used as the join field against the parcels' PARCEL_ID.
         parcels_df (pd.DataFrame): Parcels dataset with a PARCEL_ID column
         csv_join_field_type (Type, optional): Type the csv's join field should be set. Defaults to str.
 
@@ -244,7 +244,8 @@ def set_common_area_types(evaluated_df):
     return evaluated_df
 
 
-#: FIXME: Davis specific, also sets some vital fields that should probably be done elsewhere so that they can be reused #: for other counties.
+#: FIXME: Davis specific, also sets some vital fields that should probably be done elsewhere so that they can be
+#: reused for other counties.
 def subset_owned_unit_groupings_from_common_areas(
     common_areas_fc, common_area_key_column_name, unique_key_column='OBJECTID'
 ):
@@ -287,7 +288,16 @@ def subset_owned_unit_groupings_from_common_areas(
 
 #: FIXME: This may be Davis-specific, also the decision to force tri/quad to apartment is hidden in this
 def set_multi_family_single_parcel_subtypes(evaluated_df):
-    #: SUBTYPE = class unless class == 'triplex-quadplex', in which case it becomes 'apartment' and NOTE becomes tri-quad
+    """Sets SUBTYPE to parcel_type unless it's 'triplex-quadplex', in which case it's manually set to 'apartment'
+
+    If it does change tri-quad to apartment, it changes NOTE to tri-quad to preserve that info
+
+    Args:
+        evaluated_df (pd.DataFrame): The evaluated multi-family parcel dataframe
+
+    Returns:
+        pd.DataFrame: evaluated_df with the SUBTYPE set appropriately.
+    """
 
     evaluated_df['SUBTYPE'] = np.where(
         evaluated_df['parcel_type'] != 'triplex-quadplex', evaluated_df['parcel_type'], 'apartment'
@@ -361,7 +371,7 @@ def concat_evaluated_dataframes(dataframes, new_index='PARCEL_ID'):
     return concated_dataframes
 
 
-def classify_from_area(parcels_df, parcel_centroids_df, parcel_key, area_df, classify_info=(), columns_to_keep=[]):
+def classify_from_area(parcels_df, parcel_centroids_df, parcel_key, area_df, classify_info=(), columns_to_keep=None):
     """Add information from area polygons and/or provided values to parcels whose centroids are in the areas
 
     Args:
@@ -369,18 +379,20 @@ def classify_from_area(parcels_df, parcel_centroids_df, parcel_key, area_df, cla
         parcel_centroids_df (pd.DataFrame.spatial): Dataframe of parcel centroids and a unique key
         parcel_key (str): Name of common key column between normal parcels and centroids
         area_df (pd.DataFrame.spatial): Areas dataframe to classify the parcels against
-        classify_info (tuple, optional): Tuple of (areas unique key column, target column, value) for optionally manually setting a column value for intersecting parcels. Defaults to ().
+        classify_info (tuple, optional): Tuple of (areas unique key column, target column, value) for optionally
+        manually setting a column value for intersecting parcels. Defaults to ().
 
     Raises:
         ValueError: If all three required classify_info values are not provided.
-        UserWarning: If duplicate parcel keys are found in the spatial join, indicating a centroid is within more than one area. Check for overlapping areas (assumes areas are spatially exclusive).
+        UserWarning: If duplicate parcel keys are found in the spatial join, indicating a centroid is within more than
+        one area. Check for overlapping areas (assumes areas are spatially exclusive).
 
     Returns:
         pd.DataFrame.spatial: Original parcels_df with info from areas that contain the parcels' corresponding centroids
     """
 
     if area_df.spatial.sr['wkid'] != parcel_centroids_df.spatial.sr['wkid']:
-        logging.debug('Reprojecting areas to %s...', parcel_centroids_df.spatial.sr["wkid"])
+        logging.debug('Reprojecting areas to %s...', parcel_centroids_df.spatial.sr['wkid'])
         if not area_df.spatial.project(parcel_centroids_df.spatial.sr['wkid']):
             raise RuntimeError(f'Reprojecting area_df to {parcel_centroids_df.spatial.sr["wkid"]} did not succeed.')
 
@@ -424,11 +436,15 @@ def classify_from_area(parcels_df, parcel_centroids_df, parcel_key, area_df, cla
 def get_common_areas_intersecting_parcels_by_key(common_areas_df, parcels_df, common_area_key_col):
     """Subset common areas based on a key found in both the parcels and common areas to avoid areas with no parcels
 
-    Some common areas may extend beyond the spatial extent of the parcels. Using the common area identifier spatially copied to the parcels in an earlier step as a key, this gets only the common areas found within the parcels. Because the area geometries are then merged with the other evaluated parcels, this prevents adding blank or superfluous geometries. Basically a right join of common areas and parcels based on the common area key.
+    Some common areas may extend beyond the spatial extent of the parcels. Using the common area identifier spatially
+    copied to the parcels in an earlier step as a key, this gets only the common areas found within the parcels.
+    Because the area geometries are then merged with the other evaluated parcels, this prevents adding blank or
+    superfluous geometries. Basically a right join of common areas and parcels based on the common area key.
 
     Args:
         common_areas_df (pd.DataFrame): Common areas dataframe; may extend spatially beyond parcels extent
-        parcels_df (pd.DataFrame): Dataframe of parcels being evaluated. Must share common_area_key_col with common_areas_df.
+        parcels_df (pd.DataFrame): Dataframe of parcels being evaluated. Must share common_area_key_col with
+        common_areas_df.
         common_area_key_col (str): Column name holding key between parcels and common areas.
 
     Returns:
