@@ -59,7 +59,13 @@ def davis_county():
     #: Classify parcels within common areas
     logging.info('Classifying OUGs and MHCs...')
     common_area_key = 'common_area_key'
-    owned_unit_groupings_df = helpers.subset_owned_unit_groupings_from_common_areas(common_areas_fc, common_area_key)
+    oug_field_mappings = {
+        'TYPE_WFRC': 'TYPE',
+        'SUBTYPE_WFRC': 'SUBTYPE',
+    }
+    owned_unit_groupings_df = helpers.load_and_clean_owned_unit_groupings(
+        common_areas_fc, common_area_key, field_mapping=oug_field_mappings
+    )
 
     common_area_classify_info = (common_area_key, 'parcel_type', 'owned_unit_grouping')
     parcels_with_oug_df = helpers.classify_from_area(
@@ -75,6 +81,9 @@ def davis_county():
     classified_parcels_df = helpers.classify_from_area(
         parcels_with_oug_df, parcel_centroids_df, 'PARCEL_ID', mobile_home_communities_df, mobile_home_classify_info
     )
+
+    #: TODO: by this point, there should be no county-specific stuff left, it should all have been translated to a
+    #: common interface
 
     #: STEP 3: Run evaluations for each type of parcel
     logging.info('Evaluating owned unit groupings...')

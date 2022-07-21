@@ -244,10 +244,8 @@ def set_common_area_types(evaluated_df):
     return evaluated_df
 
 
-#: FIXME: Davis specific, also sets some vital fields that should probably be done elsewhere so that they can be
-#: reused for other counties.
-def subset_owned_unit_groupings_from_common_areas(
-    common_areas_fc, common_area_key_column_name, unique_key_column='OBJECTID'
+def load_and_clean_owned_unit_groupings(
+    common_areas_fc, common_area_key_column_name, field_mapping=None, unique_key_column='OBJECTID'
 ):
     """Get PUDs and multi-family parcels from common_areas_fc as a dataframe
 
@@ -256,6 +254,7 @@ def subset_owned_unit_groupings_from_common_areas(
     Args:
         common_areas_fc (str): Path to the common areas featureclass.
         common_area_key_column_name: Name of column to be created to hold the unique key for each common area.
+        field_mapping (dict): Used to rename specified columns, {'oldname': 'newname'}
         unique_key_column (str, optional): Column holding unique identifier for common areas. Defaults to 'OBJECTID'.
             Will be copied to new common_area_column_name column.
 
@@ -271,6 +270,10 @@ def subset_owned_unit_groupings_from_common_areas(
     if not common_areas_df[unique_key_column].is_unique:
         raise ValueError(f'Unique key column {unique_key_column} does not contain unique values.')
 
+    #: Rename columns if needed
+    if field_mapping:
+        common_areas_df.rename(columns=field_mapping, inplace=True)
+
     #: Warn if common areas contain empty geometries, then drop the appropriate rows.
     empty_shape_row_count = common_areas_df[common_areas_df['SHAPE'].isna()][unique_key_column].count()
     if empty_shape_row_count:
@@ -279,8 +282,9 @@ def subset_owned_unit_groupings_from_common_areas(
 
     common_areas_df[common_area_key_column_name] = common_areas_df[unique_key_column]
 
-    common_areas_subset_df = common_areas_df[(common_areas_df['SUBTYPE_WFRC'] == 'pud') |
-                                             (common_areas_df['TYPE_WFRC'] == 'multi_family')].copy()
+    #: Filter out any common areas that aren't PUDs or multi-family areas (industrial, commercial, etc)
+    common_areas_subset_df = common_areas_df[(common_areas_df['SUBTYPE'] == 'pud') |
+                                             (common_areas_df['TYPE'] == 'multi_family')].copy()
     common_areas_subset_df['IS_OUG'] = 'Yes'
 
     return common_areas_subset_df
@@ -391,6 +395,7 @@ def classify_from_area(parcels_df, parcel_centroids_df, parcel_key, area_df, cla
         pd.DataFrame.spatial: Original parcels_df with info from areas that contain the parcels' corresponding centroids
     """
 
+    #: Make sure everything's in the same projection
     if area_df.spatial.sr['wkid'] != parcel_centroids_df.spatial.sr['wkid']:
         logging.debug('Reprojecting areas to %s...', parcel_centroids_df.spatial.sr['wkid'])
         if not area_df.spatial.project(parcel_centroids_df.spatial.sr['wkid']):
@@ -402,16 +407,18 @@ def classify_from_area(parcels_df, parcel_centroids_df, parcel_key, area_df, cla
         new_columns.update(['SHAPE'])
         area_df = area_df.reindex(columns=new_columns)
 
-    #: get only the centroids within the areas
+    #: join centroids to the areas that contain them
     joined_centroids_df = parcel_centroids_df.spatial.join(area_df, 'inner', 'within')
 
+    #: Check for centroids that belong to multiple areas
     dup_parcel_ids = joined_centroids_df[joined_centroids_df.duplicated(subset=[parcel_key], keep=False)]
     if dup_parcel_ids.shape[0]:
         warnings.warn(
             f'{dup_parcel_ids.shape[0]} duplicate keys found in spatial join; check areas features for overlaps'
         )
 
-    #: Remove SHAPE so we can join it to parcels w/o multiple geometry fields, index_right for cleanliness
+    #: Remove SHAPE from centroids so we can join it to parcels w/o multiple geometry fields and also remove
+    #: index_right for cleanliness
     joined_centroids_df.drop(columns=['SHAPE', 'index_right'], inplace=True)
 
     #: Join intersecting centroids back to original parcels, keeping all original

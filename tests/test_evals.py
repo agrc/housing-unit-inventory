@@ -29,8 +29,8 @@ class TestOwnedUnitGroupings:
             common_area_key_column: [11, 12],
             'source': ['one', 'two'],
             'SHAPE': ['common_shape1', 'common_shape2'],
-            'TYPE_WFRC': ['pud', 'pud'],
-            'SUBTYPE_WFRC': ['pud', 'pud'],
+            'TYPE': ['pud', 'pud'],
+            'SUBTYPE': ['pud', 'pud'],
             'IS_OUG': [1, 1],
         })
 
@@ -92,8 +92,8 @@ class TestOwnedUnitGroupings:
             common_area_key_column: ['foo', 'bar'],
             'source': ['one', 'two'],
             'SHAPE': ['common_shape1', 'common_shape2'],
-            'TYPE_WFRC': ['pud', 'pud'],
-            'SUBTYPE_WFRC': ['pud', 'pud'],
+            'TYPE': ['pud', 'pud'],
+            'SUBTYPE': ['pud', 'pud'],
             'IS_OUG': [1, 1],
         })
 
@@ -160,8 +160,8 @@ class TestOwnedUnitGroupings:
             common_area_key_column: ['foo', 'bar'],
             'source': ['one', 'two'],
             'SHAPE': ['common_shape1', 'common_shape2'],
-            'TYPE_WFRC': ['pud', 'pud'],
-            'SUBTYPE_WFRC': ['pud', 'pud'],
+            'TYPE': ['pud', 'pud'],
+            'SUBTYPE': ['pud', 'pud'],
             'IS_OUG': [1, 1],
         })
 

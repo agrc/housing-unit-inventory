@@ -75,14 +75,14 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
     floors_cnt_mean_series = parcels_grouped_by_oug_id['FLOORS_CNT'].mean()
     built_yr_series = helpers.get_proper_built_yr_value_series(oug_parcels_df, common_area_key_col, 'BUILT_YR')
     parcel_count_series = parcels_grouped_by_oug_id['SHAPE'].count().rename('PARCEL_COUNT')
-    #: TODO: Davis-specific 'des_all'
+    #: FIXME: Davis-specific 'des_all'- I don't think we even use this field, should probably nuke it altogether.
     notes_mode_series = parcels_grouped_by_oug_id['des_all'].agg(_series_single_mode).rename('NOTE')
     address_count_series = helpers.get_address_point_count_series(
         intersecting_common_areas_df, address_points_df, common_area_key_col
     )
 
     #: Merge all our new info to the common area polygons, using the common_area_key_col as the df index
-    carry_over_fields = ['SHAPE', common_area_key_col, 'SUBTYPE_WFRC', 'TYPE_WFRC', 'IS_OUG']
+    carry_over_fields = ['SHAPE', common_area_key_col, 'SUBTYPE', 'TYPE', 'IS_OUG']
     evaluated_oug_parcels_df = pd.concat(
         axis=1,
         objs=[
@@ -98,28 +98,26 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
         ]
     )
 
-    #: Set type, subtype
-    evaluated_oug_parcels_with_types_df = helpers.set_common_area_types(evaluated_oug_parcels_df)
+    #: Make sure pud's are set to single_family
+    # evaluated_oug_parcels_with_types_df = helpers.set_common_area_types(evaluated_oug_parcels_df)
+    evaluated_oug_parcels_df.loc[evaluated_oug_parcels_df['SUBTYPE'] == 'pud', 'TYPE'] = 'single_family'
 
     #: Add a generated PARCEL_ID based on the common_area_key for future aligning with other parcels
     # evaluated_oug_parcels_with_types_df['PARCEL_ID'] = 'oug_' + evaluated_oug_parcels_with_types_df.index.astype(str)
     try:
-        evaluated_oug_parcels_with_types_df['PARCEL_ID'
-                                           ] = 990000 + evaluated_oug_parcels_with_types_df.index.astype(int)
+        evaluated_oug_parcels_df['PARCEL_ID'] = 990000 + evaluated_oug_parcels_df.index.astype(int)
     except TypeError:
         warnings.warn(
             f'Common area key {common_area_key_col} cannot be converted to int for PARCEL_ID creation, using simple range instead'
         )
-        evaluated_oug_parcels_with_types_df.insert(
-            0, 'PARCEL_ID', range(990000, 990000 + len(evaluated_oug_parcels_with_types_df))
-        )
+        evaluated_oug_parcels_df.insert(0, 'PARCEL_ID', range(990000, 990000 + len(evaluated_oug_parcels_df)))
 
     #: Convert PARCEL_ID to str to match type with other PARCEL_IDs
-    evaluated_oug_parcels_with_types_df = evaluated_oug_parcels_with_types_df.astype({'PARCEL_ID': str})
+    evaluated_oug_parcels_df = evaluated_oug_parcels_df.astype({'PARCEL_ID': str})
 
     #: TODO: implement some sort of count tracking. Maybe a separate data frame consisting of just the parcel ids, removing matching ones on each pass?
 
-    return evaluated_oug_parcels_with_types_df
+    return evaluated_oug_parcels_df
 
 
 def by_parcel_types(parcels_df, parcel_types, attribute_dict, address_points_df=None, subtypes_method=None):
