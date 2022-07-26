@@ -18,6 +18,7 @@ from . import helpers
 #:      multi-family
 #:      mobile_home_park
 
+
 #: Unused now
 def _series_single_mode(series):
     """Find the mode of series using pd.Series.mode. If there are multiple, only return the first (per sorting)
@@ -152,3 +153,57 @@ def by_parcel_types(parcels_df, parcel_types, attribute_dict, address_points_df=
         return parcels_with_addr_pts_df
 
     return working_parcels_df
+
+
+def compare_to_census_tracts(evaluated_df, census_tracts_df, outpath):
+    """Aggregate and compare the evaluated data to 2020 census tract data
+
+    Aggregates data by the tract geoid/FIPS code and then averages, sums, etc. The aggregated data are then joined to the census geometries, populations, and unit counts using the FIPS code. Finally, it compares pre 2019 evaluated unit counts and the 2020 census housing unit totals. A positive number indicates the evaluation has more units than the census, a negative number indicates it had fewer units than the census.
+
+    Args:
+        evaluated_df (pd.DataFrame): The completely evaluated parcel/OUG data
+        census_tracts_df (pd.DataFrame.spatial): The census tract data, including SHAPEs, population (pop100), and housing units (hu100)
+        outpath (Path): Compared tract output location
+    """
+
+    #: Average density in dwelling units per acre
+    avg_sf_dua = evaluated_df[evaluated_df['TYPE'] == 'single_family'][['DUA', 'TRACT_FIPS']]\
+        .groupby('TRACT_FIPS').mean()\
+        .rename(columns={'DUA': 'avg_sf_dua'})
+    avg_mf_dua = evaluated_df[evaluated_df['TYPE'] == 'multi_family'][['DUA', 'TRACT_FIPS']]\
+        .groupby('TRACT_FIPS').mean()\
+        .rename(columns={'DUA': 'avg_mf_dua'})
+    avg_all_dua = evaluated_df[['DUA', 'TRACT_FIPS']]\
+        .groupby('TRACT_FIPS').mean()\
+        .rename(columns={'DUA': 'avg_all_dua'})
+
+    #: Average single family sq ft and value
+    sf_avgs = evaluated_df[evaluated_df['TYPE'] == 'single_family'][['TOT_BD_FT2', 'TOT_VALUE', 'TRACT_FIPS']]\
+        .groupby('TRACT_FIPS').mean()\
+        .rename(columns={'TOT_BD_FT2': 'avg_sf_sqft', 'TOT_VALUE': 'avg_sf_value'})
+
+    #: Get count of units built before 2019 to provide a better check against 2020 census counts
+    pre_2020_unit_count = evaluated_df[evaluated_df['APX_BLT_YR'] < 2019][['TRACT_FIPS', 'UNIT_COUNT']]\
+        .groupby('TRACT_FIPS').sum()\
+        .rename(columns={'UNIT_COUNT': 'pre_2020_unit_count'})
+
+    #: Get total unit counts, sq ft, and value for each tract
+    sums = evaluated_df[['UNIT_COUNT', 'TOT_BD_FT2', 'TOT_VALUE', 'TRACT_FIPS']]\
+        .groupby('TRACT_FIPS').sum()
+
+    #: Join sums to census tract geometries, population, and unit counts
+    joined_df = pd.concat([
+        census_tracts_df[['SHAPE', 'pop100', 'hu100']],
+        sums,
+        pre_2020_unit_count,
+        avg_sf_dua,
+        avg_mf_dua,
+        avg_all_dua,
+        sf_avgs,
+    ],
+                          axis=1).dropna(subset=['UNIT_COUNT'])
+
+    #: Create a metric of evaluated counts minus 2020 census counts
+    joined_df['eval_minus_census'] = joined_df['pre_2020_unit_count'] - joined_df['hu100']
+
+    joined_df.spatial.to_featureclass(outpath)

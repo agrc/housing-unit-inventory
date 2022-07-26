@@ -2,6 +2,7 @@
   "cSpell.words": [
     "ACCOUNTNO",
     "AGRC",
+    "avgs",
     "Codecov",
     "concated",
     "EFFBUILT",
@@ -11,6 +12,7 @@
     "instafail",
     "isort",
     "OUGs",
+    "outpath",
     "pylint",
     "pytest",
     "quadplex",
@@ -21,6 +23,7 @@
     "subsetting",
     "TAXEXEMPT",
     "townhome",
+    "tractce",
     "ugrcode",
     "WFRC",
     "yapf",

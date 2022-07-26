@@ -15,8 +15,8 @@ def davis_county():
     #: Inputs
     input_dir_path = Path(r'c:\gis\git\housing-unit-inventory\Parcels\2020-Davis\Inputs')
     opensgid_path = Path(r'c:\gis\projects\housinginventory\opensgid.agrc.utah.gov.sde')
-    # parcels_fc = input_dir_path / r'Davis_County_LIR_Parcels.gdb/Parcels_Davis_LIR_UTM12'
-    parcels_fc = Path(r'c:\gis\projects\housinginventory\housinginventory.gdb\davis_test_parcels')
+    parcels_fc = input_dir_path / r'Davis_County_LIR_Parcels.gdb/Parcels_Davis_LIR_UTM12'
+    # parcels_fc = Path(r'c:\gis\projects\housinginventory\housinginventory.gdb\davis_test_parcels')
     address_pts = input_dir_path / r'AddressPoints_Davis.gdb/address_points_davis'
     common_areas_fc = input_dir_path / r'Common_Areas.gdb/Common_Areas_Reviewed'
     extended_info_csv = input_dir_path / r'davis_extended_simplified.csv'
@@ -24,11 +24,14 @@ def davis_county():
     subcounties = input_dir_path / r'SubCountyArea_2019.shp'
     cities = opensgid_path / 'opensgid.boundaries.municipal_boundaries'
     metro_townships = opensgid_path / 'opensgid.boundaries.metro_townships'
+    census_blocks = opensgid_path / 'opensgid.demographic.census_blocks_2020'
+    census_tracts = opensgid_path / 'opensgid.demographic.census_tracts_2020'
 
     #: Output
     output_dir_path = Path(r'c:\gis\projects\housinginventory')
-    output_fc = output_dir_path / r'housinginventory.gdb\davis2020_8'
-    output_csv = output_dir_path / r'davis2020_8.csv'
+    output_fc = output_dir_path / r'housinginventory.gdb\davis2020_9'
+    output_csv = output_dir_path / r'davis2020_9.csv'
+    census_output_fc = output_dir_path / r'housinginventory.gdb\davis2020_9_by_tract'
 
     #: Address points (used later)
     address_pts_no_base_df = helpers.get_non_base_addr_points(address_pts)
@@ -56,6 +59,7 @@ def davis_county():
     logging.info('Initial parcels in modeling area:\t %s', count_all)
 
     #: STEP 2: Classify owned unit grouping (puds, condos, etc) and mobile home community parcels
+    #: TODO: Split OUGs along census blocks to allow more accurate aggregation at the block level?
     #: Classify parcels within common areas
     logging.info('Classifying OUGs and MHCs...')
     common_area_key = 'common_area_key'
@@ -82,7 +86,7 @@ def davis_county():
         parcels_with_oug_df, parcel_centroids_df, 'PARCEL_ID', mobile_home_communities_df, mobile_home_classify_info
     )
 
-    #: TODO: by this point, there should be no county-specific stuff left, it should all have been translated to a
+    #: NOTE: by this point, there should be no county-specific stuff left, it should all have been translated to a
     #: common interface
 
     #: STEP 3: Run evaluations for each type of parcel
@@ -143,8 +147,7 @@ def davis_county():
     del classified_parcels_df
 
     #: Add city and sub-county info
-    #: TODO: Add census block info (block group is first digit of block)
-    logging.info('Adding city and subcounty info...')
+    logging.info('Adding city, subcounty, and census block info...')
     logging.debug('Getting evaluated parcel centroids...')
     evaluated_centroids_df = helpers.get_centroids_copy_of_polygon_df(evaluated_parcels_df, 'PARCEL_ID')
 
@@ -158,8 +161,19 @@ def davis_county():
     )
 
     subcounties_df = pd.DataFrame.spatial.from_featureclass(subcounties)
-    final_parcels_df = helpers.classify_from_area(
+    parcels_with_subcounties_df = helpers.classify_from_area(
         parcels_with_cities_df, evaluated_centroids_df, 'PARCEL_ID', subcounties_df
+    )
+
+    #: Add census block info (block group is first digit of block id)
+    census_blocks_df = pd.DataFrame.spatial.from_featureclass(census_blocks)
+    census_blocks_fields = ['geoid20', 'tractce20']
+    final_parcels_df = helpers.classify_from_area(
+        parcels_with_subcounties_df,
+        evaluated_centroids_df,
+        'PARCEL_ID',
+        census_blocks_df,
+        columns_to_keep=census_blocks_fields
     )
 
     final_parcels_df['COUNTY'] = 'DAVIS'
@@ -175,6 +189,8 @@ def davis_county():
             'BLDG_SQFT': 'TOT_BD_FT2',
             'TOTAL_MKT_VALUE': 'TOT_VALUE',
             'PARCEL_ACRES': 'ACRES',
+            'geoid20': 'BLOCK_FIPS',
+            'tractce20': 'TRACT_FIPS',
         },
         inplace=True
     )
@@ -198,10 +214,14 @@ def davis_county():
 
     final_fields = [
         'SHAPE', 'UNIT_ID', 'TYPE', 'SUBTYPE', 'IS_OUG', 'UNIT_COUNT', 'DUA', 'ACRES', 'TOT_BD_FT2', 'TOT_VALUE',
-        'APX_BLT_YR', 'BLT_DECADE', 'CITY', 'COUNTY', 'SUBCOUNTY', 'PARCEL_ID'
+        'APX_BLT_YR', 'BLT_DECADE', 'CITY', 'COUNTY', 'SUBCOUNTY', 'PARCEL_ID', 'BLOCK_FIPS', 'TRACT_FIPS'
     ]
 
     logging.info('Writing final data out to disk...')
     output_df = final_parcels_df.reindex(columns=final_fields)
     output_df.spatial.to_featureclass(output_fc, sanitize_columns=False)
     output_df.drop(columns=['SHAPE']).to_csv(output_csv)
+
+    logging.info('Evaluating against Census data...')
+    census_tracts_df = pd.DataFrame.spatial.from_featureclass(census_tracts)
+    evaluations.compare_to_census_tracts(output_df, census_tracts_df, census_output_fc)
