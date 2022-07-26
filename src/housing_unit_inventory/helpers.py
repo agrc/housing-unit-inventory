@@ -454,3 +454,19 @@ def concat_cities_metro_townships(cities_df, townships_df):
 
     concat_df = pd.concat([cities_df, townships_df], join='inner')
     return concat_df[['name', 'ugrcode', 'SHAPE']].copy()
+
+
+def extract_tract_geoid(dataframe, block_geoid='BLOCK_FIPS', tract_geoid='TRACT_FIPS'):
+    """Get the tract geoid by taking the first 11 digits from the block geoid, operating on an entire dataframe
+
+    Args:
+        dataframe (pd.DataFrame): Input data that has a block geoid column
+        block_geoid (str, optional): Block geoid column, can be string or number. Defaults to 'BLOCK_FIPS'.
+        tract_geoid (str, optional): Name of column to create for storing tract geoid. Defaults to 'TRACT_FIPS'.
+
+    Returns:
+        pd.DataFrame: Input dataframe with new tract geoid column added.
+    """
+
+    dataframe[tract_geoid] = dataframe[block_geoid].apply(lambda x: ''.join([i for i in str(x)][:11]))
+    return dataframe

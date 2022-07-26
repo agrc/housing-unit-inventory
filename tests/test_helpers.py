@@ -1221,3 +1221,22 @@ class TestFinalMergingAndCleaning:
             'ugrcode': ['fo', 'br', 'bz'],
             'SHAPE': ['shape1', 'shape2', 'shape3'],
         })
+
+
+class TestFIPSExtraction:
+
+    def test_extract_tract_geoid_normal(self):
+        dataframe = pd.DataFrame({
+            'id': [1, 2],
+            'block': [223336666664444, 223339999994444],
+        })
+
+        extracted_df = helpers.extract_tract_geoid(dataframe, 'block', 'tract')
+
+        test_df = pd.DataFrame({
+            'id': [1, 2],
+            'block': [223336666664444, 223339999994444],
+            'tract': ['22333666666', '22333999999'],
+        })
+
+        tm.assert_frame_equal(extracted_df, test_df)

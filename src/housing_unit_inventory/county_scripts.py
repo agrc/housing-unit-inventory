@@ -167,7 +167,7 @@ def davis_county():
 
     #: Add census block info (block group is first digit of block id)
     census_blocks_df = pd.DataFrame.spatial.from_featureclass(census_blocks)
-    census_blocks_fields = ['geoid20', 'tractce20']
+    census_blocks_fields = ['geoid20']
     final_parcels_df = helpers.classify_from_area(
         parcels_with_subcounties_df,
         evaluated_centroids_df,
@@ -175,6 +175,8 @@ def davis_county():
         census_blocks_df,
         columns_to_keep=census_blocks_fields
     )
+
+    final_parcels_df = helpers.extract_tract_geoid(final_parcels_df, block_geoid='geoid20')
 
     final_parcels_df['COUNTY'] = 'DAVIS'
 
@@ -190,7 +192,6 @@ def davis_county():
             'TOTAL_MKT_VALUE': 'TOT_VALUE',
             'PARCEL_ACRES': 'ACRES',
             'geoid20': 'BLOCK_FIPS',
-            'tractce20': 'TRACT_FIPS',
         },
         inplace=True
     )

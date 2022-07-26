@@ -192,6 +192,7 @@ def compare_to_census_tracts(evaluated_df, census_tracts_df, outpath):
         .groupby('TRACT_FIPS').sum()
 
     #: Join sums to census tract geometries, population, and unit counts
+    census_tracts_df.set_index('geoid20', inplace=True)
     joined_df = pd.concat([
         census_tracts_df[['SHAPE', 'pop100', 'hu100']],
         sums,
