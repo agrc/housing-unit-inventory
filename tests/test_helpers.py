@@ -589,7 +589,7 @@ class TestDataSetupAndCleaning:
 
     def test_get_centroids_copy_of_polygon_df_joins_properly(self, mocker):
 
-        mocker.patch('arcpy.management.FeatureToPoint')
+        # mocker.patch('arcpy.management.FeatureToPoint')
         mocker.patch.object(pd.DataFrame.spatial, 'to_featureclass')
 
         parcels_df = pd.DataFrame({
@@ -619,7 +619,7 @@ class TestDataSetupAndCleaning:
 
     def test_get_centroids_copy_of_polygon_df_handles_different_join_field_types(self, mocker):
 
-        mocker.patch('arcpy.management.FeatureToPoint')
+        # mocker.patch('arcpy.management.FeatureToPoint')
         mocker.patch.object(pd.DataFrame.spatial, 'to_featureclass')
 
         parcels_df = pd.DataFrame({
