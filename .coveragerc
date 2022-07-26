@@ -3,6 +3,7 @@ omit =
     # files to omit from coverage. should be sample files etc
     # */connection_sample.py
     src/housing_unit_inventory/davis2020.py
+    src/housing_unit_inventory/county_scripts.py
 
 [report]
 exclude_lines =
