@@ -18,7 +18,7 @@ The housing unit inventory outputs its data to both feature class and CSV. It in
 - **TYPE**: `single_family` or `multi_family`.
 - **SUBTYPE**: Comes from the common areas SUBTYPE field for owned unit groupings, is set manually for single family homes, or comes from `parcel_type` for single-parcel, multi-family parcels.
 - **IS_OUG**: Whether the feature is an owned unit grouping with aggregated values. Either `1`/`Yes` or `0`/`No`
-- **UNIT_COUNT**: Number of units in the feautre. Set manually for single family homes and duplexes and for all others (owned unit groupings, mobile homes, multi-family) it uses theaddress point count
+- **UNIT_COUNT**: Number of units in the feature. Set manually for single family homes and duplexes and for all others (owned unit groupings, mobile homes, multi-family) it uses the address point count
 - **DUA**: Dwelling units per acre. Recalculated acres (see below) divided by `UNIT_COUNT`
 - **ACRES**: Acreage of feature calculated from the parcel/owned unit grouping geometry at the very end, after all dissolves and groupings have been done.
 - **TOT_BD_FT2**: Total building sq ft. Comes from parcel's square footage either directly or summed for multi-parcel groupings.
