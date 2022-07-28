@@ -134,7 +134,7 @@ def get_centroids_copy_of_polygon_df(polygon_df, join_field):
 
     blank_centroids = centroids_df['SHAPE'].isna().sum()
     if blank_centroids:
-        print(f'{blank_centroids} blank centroids!')
+        logging.info('%s blank centroids!', blank_centroids)
 
     return centroids_df[[join_field, 'SHAPE']].copy()
 

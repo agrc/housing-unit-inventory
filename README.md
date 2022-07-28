@@ -8,7 +8,7 @@ It can be difficult to properly evaluate density and value information for condo
 
 The inventory also uses the statewide [address points dataset](https://gis.utah.gov/data/location/address-data/) to determine the number of units for multi-unit properties. Any non-residential unit addresses within a multi-family development or other owned unit grouping (apartment offices, clubhouses, etc) need to be marked as base addresses. If these are not marked in the statewide layer, we'll need an updated layer from the county.
 
-Finally, classification of mobile homes can be inconsistent sometimes. Some mobile home communities are owned as a single large parcel, while others can have each plot owned individually. The property class for these can also vary within a single community, making it hard to identify how mobile homes contribute to the overal housing mix. The inventory can use a custom-created mobile home community layer to ensure all mobile homes are classified properly.
+Finally, classification and parcelization of mobile homes can be inconsistent sometimes. Some mobile home communities are owned as a single large parcel, while others can have each plot owned individually. The property class for these can also vary within a single community, making it hard to identify how mobile homes contribute to the overal housing mix. The inventory can use a custom-created mobile home community layer to classify and aggregate parcels similar to the owned unit groupings.
 
 ## Outputs
 
