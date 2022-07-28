@@ -15,6 +15,9 @@ def _recursive_geometric_union_of_series(shape_series):
         arcgis.geometry.Geometry: The geometric union of all the Geometries.
     """
 
+    #: Our base case is having just two geometries, which we can then union together. Once we've got that, we work
+    #: our way back up the stack dissolving the two dissolved geometries with the next one in line all the way
+    #: back up to the top.
     if shape_series.size == 2:
         return shape_series.iloc[0].union(shape_series.iloc[1])
     else:
