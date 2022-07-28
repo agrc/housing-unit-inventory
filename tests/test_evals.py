@@ -1,9 +1,9 @@
+import mock_arcpy
 import numpy as np
 import pandas as pd
 import pytest
 from arcgis.features import GeoAccessor, GeoSeriesAccessor
 from arcgis.geometry import Geometry
-from mock_arcpy import arcpy
 from pandas import testing as tm
 
 from housing_unit_inventory import evaluations, helpers

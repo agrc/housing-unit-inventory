@@ -1,8 +1,8 @@
+import mock_arcpy
 import numpy as np
 import pandas as pd
 import pytest
 from arcgis.features import GeoAccessor, GeoSeriesAccessor
-from mock_arcpy import arcpy
 from pandas import testing as tm
 
 from housing_unit_inventory import dissolve, helpers
@@ -589,7 +589,6 @@ class TestDataSetupAndCleaning:
 
     def test_get_centroids_copy_of_polygon_df_joins_properly(self, mocker):
 
-        # mocker.patch('arcpy.management.FeatureToPoint')
         mocker.patch.object(pd.DataFrame.spatial, 'to_featureclass')
 
         parcels_df = pd.DataFrame({
@@ -619,7 +618,6 @@ class TestDataSetupAndCleaning:
 
     def test_get_centroids_copy_of_polygon_df_handles_different_join_field_types(self, mocker):
 
-        # mocker.patch('arcpy.management.FeatureToPoint')
         mocker.patch.object(pd.DataFrame.spatial, 'to_featureclass')
 
         parcels_df = pd.DataFrame({
