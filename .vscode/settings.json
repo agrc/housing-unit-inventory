@@ -36,22 +36,16 @@
   "coverage-gutters.showLineCoverage": true,
   "coverage-gutters.showRulerCoverage": false,
   "editor.codeActionsOnSave": {
-    "source.organizeImports": true
+    "source.organizeImports": "explicit"
   },
   "editor.formatOnSave": true,
   "editor.rulers": [
     120
   ],
   "files.insertFinalNewline": true,
-  "python.formatting.provider": "yapf",
-  "python.formatting.yapfArgs": [
-    "--style",
-    "${workspaceRoot}/setup.cfg"
-  ],
-  "python.formatting.yapfPath": "yapf",
-  "python.linting.enabled": true,
-  "python.linting.flake8Enabled": false,
-  "python.linting.pycodestyleEnabled": false,
-  "python.linting.pylintEnabled": true,
   "python.testing.pytestEnabled": true,
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true
+  }
 }
