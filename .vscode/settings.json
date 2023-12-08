@@ -16,6 +16,7 @@
     "pylint",
     "pytest",
     "quadplex",
+    "sindex",
     "SQFT",
     "subcounties",
     "subcounty",

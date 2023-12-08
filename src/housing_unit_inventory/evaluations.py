@@ -57,9 +57,9 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
 
     #: arcgis.geometry.get_area, .contains, .centroid
 
-    oug_parcels_df = parcels_df[parcels_df['parcel_type'] == 'owned_unit_grouping'].copy()
+    oug_parcels_df = parcels_df[parcels_df["parcel_type"] == "owned_unit_grouping"].copy()
 
-    logging.debug('%s parcels being evaluated as owned unit groupings...', oug_parcels_df.shape[0])
+    logging.debug("%s parcels being evaluated as owned unit groupings...", oug_parcels_df.shape[0])
 
     #: Basically a right join of common areas and parcels based on the common area key so that we don't get common area
     #: geometries that don't include any parcels
@@ -70,18 +70,18 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
     #: use groupby to summarize the parcel attributes per common area
     #: each series should be indexed by and refer back to the common_area_key_col, not the parcels
     parcels_grouped_by_oug_id = oug_parcels_df.groupby(common_area_key_col)
-    total_mkt_value_sum_series = parcels_grouped_by_oug_id['TOTAL_MKT_VALUE'].sum()
-    land_mkt_value_sum_series = parcels_grouped_by_oug_id['LAND_MKT_VALUE'].sum()
-    bldg_sqft_sum_series = parcels_grouped_by_oug_id['BLDG_SQFT'].sum()
-    floors_cnt_mean_series = parcels_grouped_by_oug_id['FLOORS_CNT'].mean()
-    built_yr_series = helpers.get_proper_built_yr_value_series(oug_parcels_df, common_area_key_col, 'BUILT_YR')
-    parcel_count_series = parcels_grouped_by_oug_id['SHAPE'].count().rename('PARCEL_COUNT')
+    total_mkt_value_sum_series = parcels_grouped_by_oug_id["TOTAL_MKT_VALUE"].sum()
+    land_mkt_value_sum_series = parcels_grouped_by_oug_id["LAND_MKT_VALUE"].sum()
+    bldg_sqft_sum_series = parcels_grouped_by_oug_id["BLDG_SQFT"].sum()
+    floors_cnt_mean_series = parcels_grouped_by_oug_id["FLOORS_CNT"].mean()
+    built_yr_series = helpers.get_proper_built_yr_value_series(oug_parcels_df, common_area_key_col, "BUILT_YR")
+    parcel_count_series = parcels_grouped_by_oug_id["SHAPE"].count().rename("PARCEL_COUNT")
     address_count_series = helpers.get_address_point_count_series(
         intersecting_common_areas_df, address_points_df, common_area_key_col
     )
 
     #: Merge all our new info to the common area polygons, using the common_area_key_col as the df index
-    carry_over_fields = ['SHAPE', common_area_key_col, 'SUBTYPE', 'TYPE', 'IS_OUG']
+    carry_over_fields = ["SHAPE", common_area_key_col, "SUBTYPE", "TYPE", "IS_OUG"]
     evaluated_oug_parcels_df = pd.concat(
         axis=1,
         objs=[
@@ -93,25 +93,25 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
             built_yr_series,
             parcel_count_series,
             address_count_series,
-        ]
+        ],
     )
 
     #: Make sure pud's are set to single_family
     # evaluated_oug_parcels_with_types_df = helpers.set_common_area_types(evaluated_oug_parcels_df)
-    evaluated_oug_parcels_df.loc[evaluated_oug_parcels_df['SUBTYPE'] == 'pud', 'TYPE'] = 'single_family'
+    evaluated_oug_parcels_df.loc[evaluated_oug_parcels_df["SUBTYPE"] == "pud", "TYPE"] = "single_family"
 
     #: Add a generated PARCEL_ID based on the common_area_key for future aligning with other parcels
     # evaluated_oug_parcels_with_types_df['PARCEL_ID'] = 'oug_' + evaluated_oug_parcels_with_types_df.index.astype(str)
     try:
-        evaluated_oug_parcels_df['PARCEL_ID'] = 990000 + evaluated_oug_parcels_df.index.astype(int)
+        evaluated_oug_parcels_df["PARCEL_ID"] = 990000 + evaluated_oug_parcels_df.index.astype(int)
     except TypeError:
         warnings.warn(
-            f'Common area key {common_area_key_col} cannot be converted to int for PARCEL_ID creation, using simple range instead'
+            f"Common area key {common_area_key_col} cannot be converted to int for PARCEL_ID creation, using simple range instead"
         )
-        evaluated_oug_parcels_df.insert(0, 'PARCEL_ID', range(990000, 990000 + len(evaluated_oug_parcels_df)))
+        evaluated_oug_parcels_df.insert(0, "PARCEL_ID", range(990000, 990000 + len(evaluated_oug_parcels_df)))
 
     #: Convert PARCEL_ID to str to match type with other PARCEL_IDs
-    evaluated_oug_parcels_df = evaluated_oug_parcels_df.astype({'PARCEL_ID': str})
+    evaluated_oug_parcels_df = evaluated_oug_parcels_df.astype({"PARCEL_ID": str})
 
     #: TODO: implement some sort of count tracking. Maybe a separate data frame consisting of just the parcel ids, removing matching ones on each pass?
 
@@ -138,7 +138,7 @@ def by_parcel_types(parcels_df, parcel_types, attribute_dict, address_points_df=
         pd.DataFrame: The subset of parcels with the appropriate fields added.
     """
 
-    working_parcels_df = parcels_df[parcels_df['parcel_type'].isin(parcel_types)].copy()
+    working_parcels_df = parcels_df[parcels_df["parcel_type"].isin(parcel_types)].copy()
     for attribute, value in attribute_dict.items():
         working_parcels_df[attribute] = value
 
@@ -147,9 +147,9 @@ def by_parcel_types(parcels_df, parcel_types, attribute_dict, address_points_df=
 
     if isinstance(address_points_df, pd.DataFrame):
         address_points_series = helpers.get_address_point_count_series(
-            working_parcels_df, address_points_df, 'PARCEL_ID'
+            working_parcels_df, address_points_df, "PARCEL_ID"
         )
-        parcels_with_addr_pts_df = working_parcels_df.merge(address_points_series, how='left', on='PARCEL_ID')
+        parcels_with_addr_pts_df = working_parcels_df.merge(address_points_series, how="left", on="PARCEL_ID")
         return parcels_with_addr_pts_df
 
     return working_parcels_df
@@ -167,44 +167,57 @@ def compare_to_census_tracts(evaluated_df, census_tracts_df, outpath):
     """
 
     #: Average density in dwelling units per acre
-    avg_sf_dua = evaluated_df[evaluated_df['TYPE'] == 'single_family'][['DUA', 'TRACT_FIPS']]\
-        .groupby('TRACT_FIPS').mean()\
-        .rename(columns={'DUA': 'avg_sf_dua'})
-    avg_mf_dua = evaluated_df[evaluated_df['TYPE'] == 'multi_family'][['DUA', 'TRACT_FIPS']]\
-        .groupby('TRACT_FIPS').mean()\
-        .rename(columns={'DUA': 'avg_mf_dua'})
-    avg_all_dua = evaluated_df[['DUA', 'TRACT_FIPS']]\
-        .groupby('TRACT_FIPS').mean()\
-        .rename(columns={'DUA': 'avg_all_dua'})
+    avg_sf_dua = (
+        evaluated_df[evaluated_df["TYPE"] == "single_family"][["DUA", "TRACT_FIPS"]]
+        .groupby("TRACT_FIPS")
+        .mean()
+        .rename(columns={"DUA": "avg_sf_dua"})
+    )
+    avg_mf_dua = (
+        evaluated_df[evaluated_df["TYPE"] == "multi_family"][["DUA", "TRACT_FIPS"]]
+        .groupby("TRACT_FIPS")
+        .mean()
+        .rename(columns={"DUA": "avg_mf_dua"})
+    )
+    avg_all_dua = (
+        evaluated_df[["DUA", "TRACT_FIPS"]].groupby("TRACT_FIPS").mean().rename(columns={"DUA": "avg_all_dua"})
+    )
 
     #: Average single family sq ft and value
-    sf_avgs = evaluated_df[evaluated_df['TYPE'] == 'single_family'][['TOT_BD_FT2', 'TOT_VALUE', 'TRACT_FIPS']]\
-        .groupby('TRACT_FIPS').mean()\
-        .rename(columns={'TOT_BD_FT2': 'avg_sf_sqft', 'TOT_VALUE': 'avg_sf_value'})
+    sf_avgs = (
+        evaluated_df[evaluated_df["TYPE"] == "single_family"][["TOT_BD_FT2", "TOT_VALUE", "TRACT_FIPS"]]
+        .groupby("TRACT_FIPS")
+        .mean()
+        .rename(columns={"TOT_BD_FT2": "avg_sf_sqft", "TOT_VALUE": "avg_sf_value"})
+    )
 
     #: Get count of units built before 2019 to provide a better check against 2020 census counts
-    pre_2020_unit_count = evaluated_df[evaluated_df['APX_BLT_YR'] < 2019][['TRACT_FIPS', 'UNIT_COUNT']]\
-        .groupby('TRACT_FIPS').sum()\
-        .rename(columns={'UNIT_COUNT': 'pre_2020_unit_count'})
+    pre_2020_unit_count = (
+        evaluated_df[evaluated_df["APX_BLT_YR"] < 2019][["TRACT_FIPS", "UNIT_COUNT"]]
+        .groupby("TRACT_FIPS")
+        .sum()
+        .rename(columns={"UNIT_COUNT": "pre_2020_unit_count"})
+    )
 
     #: Get total unit counts, sq ft, and value for each tract
-    sums = evaluated_df[['UNIT_COUNT', 'TOT_BD_FT2', 'TOT_VALUE', 'TRACT_FIPS']]\
-        .groupby('TRACT_FIPS').sum()
+    sums = evaluated_df[["UNIT_COUNT", "TOT_BD_FT2", "TOT_VALUE", "TRACT_FIPS"]].groupby("TRACT_FIPS").sum()
 
     #: Join sums to census tract geometries, population, and unit counts
-    census_tracts_df.set_index('geoid20', inplace=True)
-    joined_df = pd.concat([
-        census_tracts_df[['SHAPE', 'pop100', 'hu100']],
-        sums,
-        pre_2020_unit_count,
-        avg_sf_dua,
-        avg_mf_dua,
-        avg_all_dua,
-        sf_avgs,
-    ],
-                          axis=1).dropna(subset=['UNIT_COUNT'])
+    census_tracts_df.set_index("geoid20", inplace=True)
+    joined_df = pd.concat(
+        [
+            census_tracts_df[["SHAPE", "pop100", "hu100"]],
+            sums,
+            pre_2020_unit_count,
+            avg_sf_dua,
+            avg_mf_dua,
+            avg_all_dua,
+            sf_avgs,
+        ],
+        axis=1,
+    ).dropna(subset=["UNIT_COUNT"])
 
     #: Create a metric of evaluated counts minus 2020 census counts
-    joined_df['eval_minus_census'] = joined_df['pre_2020_unit_count'] - joined_df['hu100']
+    joined_df["eval_minus_census"] = joined_df["pre_2020_unit_count"] - joined_df["hu100"]
 
     joined_df.spatial.to_featureclass(outpath)

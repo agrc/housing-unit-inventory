@@ -32,16 +32,12 @@ def get_proper_built_yr_value_series(parcels_df, index_col, built_yr_col):
 
     #: If there are multiple modes, we just get the largest by flattening the index into a df and doing another groupby
     if isinstance(built_yr_mode_series.index, pd.MultiIndex):
-        built_yr_mode_series = (
-            pd.DataFrame(built_yr_mode_series) \
-                .reset_index() \
-                .groupby(index_col)[built_yr_col].max()
-        )
+        built_yr_mode_series = pd.DataFrame(built_yr_mode_series).reset_index().groupby(index_col)[built_yr_col].max()
 
     built_yr_max_series = parcels_grouped[built_yr_col].max()
-    built_yr_df = pd.DataFrame({'mode': built_yr_mode_series, 'max': built_yr_max_series})
-    built_yr_df[built_yr_col] = built_yr_df['mode']
-    built_yr_df.loc[built_yr_df[built_yr_col] <= 0, built_yr_col] = built_yr_df['max']
+    built_yr_df = pd.DataFrame({"mode": built_yr_mode_series, "max": built_yr_max_series})
+    built_yr_df[built_yr_col] = built_yr_df["mode"]
+    built_yr_df.loc[built_yr_df[built_yr_col] <= 0, built_yr_col] = built_yr_df["max"]
 
     return built_yr_df[built_yr_col]
 
@@ -63,9 +59,9 @@ def change_geometry(dataframe, to_new_geometry_column, current_geometry_name):
     #: WARNING: if you do this twice with the same geometry, you may overwrite the other column and lose it forever.
     #: I haven't tested that yet.
 
-    dataframe[current_geometry_name] = dataframe['SHAPE']
-    dataframe['SHAPE'] = dataframe[to_new_geometry_column]
-    dataframe.spatial.set_geometry('SHAPE')
+    dataframe[current_geometry_name] = dataframe["SHAPE"]
+    dataframe["SHAPE"] = dataframe[to_new_geometry_column]
+    dataframe.spatial.set_geometry("SHAPE")
     dataframe.spatial.sindex(reset=True)  #: not sure how necessary this is, but for safety's sake
 
 
@@ -90,22 +86,23 @@ def add_extra_info_from_csv(info_csv, pad_length, csv_fields, parcels_df, csv_jo
     csv_join_field = csv_fields[0]
     csv_df = pd.read_csv(info_csv, dtype={csv_join_field: csv_join_field_type})
 
+    #: NOTE: doesn't this set it to str regardless of csv_join_field_type? Should we require the join field to be str?
     csv_df[csv_join_field] = csv_df[csv_join_field].str.zfill(pad_length)
 
     csv_df.dropna(subset=[csv_join_field], inplace=True)
 
     try:
         parcels_merged_df = parcels_df.merge(
-            csv_df[csv_fields], left_on='PARCEL_ID', right_on=csv_join_field, how='left', validate='m:1'
+            csv_df[csv_fields], left_on="PARCEL_ID", right_on=csv_join_field, how="left", validate="m:1"
         )
     except pd.errors.MergeError as error:
-        raise ValueError(f'Values in csv join field {csv_join_field} are not unique.') from error
+        raise ValueError(f"Values in csv join field {csv_join_field} are not unique.") from error
 
     return parcels_merged_df
 
 
 def get_centroids_copy_of_polygon_df(polygon_df, join_field):
-    """Get the centroids of a polygon dataframe by round-tripping through FeatureToPoint, using INSIDE parameter
+    """Get the centroids of a polygon dataframe by round-tripping through arcpy's FeatureToPoint using INSIDE parameter
 
     Args:
         polygon_df (pd.DataFrame.spatial): Dataframe to get the centroids of (guaranteed to be inside the polygons)
@@ -115,15 +112,15 @@ def get_centroids_copy_of_polygon_df(polygon_df, join_field):
         pd.DataFrame.spatial: Dataframe containing just the centroids and the common join field.
     """
 
-    memory_parcels = 'memory/parcels'
-    memory_centroids = 'memory/centroids'
+    memory_parcels = "memory/parcels"
+    memory_centroids = "memory/centroids"
 
     for featureclass in [memory_centroids, memory_parcels]:
         if arcpy.Exists(featureclass):
             arcpy.management.Delete(featureclass)
 
     polygon_df.spatial.to_featureclass(memory_parcels)
-    arcpy.management.FeatureToPoint(memory_parcels, memory_centroids, 'INSIDE')
+    arcpy.management.FeatureToPoint(memory_parcels, memory_centroids, "INSIDE")
     centroids_df = pd.DataFrame.spatial.from_featureclass(memory_centroids)
 
     centroids_df.rename(columns={join_field.lower(): join_field}, inplace=True)  #: feature class lowercases the columns
@@ -132,11 +129,11 @@ def get_centroids_copy_of_polygon_df(polygon_df, join_field):
     source_type = polygon_df[join_field].dtype
     centroids_df[join_field] = centroids_df[join_field].astype(source_type)
 
-    blank_centroids = centroids_df['SHAPE'].isna().sum()
+    blank_centroids = centroids_df["SHAPE"].isna().sum()
     if blank_centroids:
-        logging.info('%s blank centroids!', blank_centroids)
+        logging.info("%s blank centroids!", blank_centroids)
 
-    return centroids_df[[join_field, 'SHAPE']].copy()
+    return centroids_df[[join_field, "SHAPE"]].copy()
 
 
 def load_and_clean_parcels(parcels_fc):
@@ -154,31 +151,31 @@ def load_and_clean_parcels(parcels_fc):
     parcels_df = pd.DataFrame.spatial.from_featureclass(parcels_fc)
 
     field_map = {
-        'PARCEL_ID': 'COUNT',
-        'TAXEXEMPT_TYPE': 'FIRST',
-        'TOTAL_MKT_VALUE': 'SUM',
-        'LAND_MKT_VALUE': 'SUM',
-        'PARCEL_ACRES': 'SUM',
-        'PROP_CLASS': 'FIRST',
-        'PRIMARY_RES': 'FIRST',
-        'HOUSE_CNT': 'MAX',
-        'BLDG_SQFT': 'SUM',
-        'FLOORS_CNT': 'MAX',
-        'BUILT_YR': 'FIRST',
-        'EFFBUILT_YR': 'FIRST',
+        "PARCEL_ID": "COUNT",
+        "TAXEXEMPT_TYPE": "FIRST",
+        "TOTAL_MKT_VALUE": "SUM",
+        "LAND_MKT_VALUE": "SUM",
+        "PARCEL_ACRES": "SUM",
+        "PROP_CLASS": "FIRST",
+        "PRIMARY_RES": "FIRST",
+        "HOUSE_CNT": "MAX",
+        "BLDG_SQFT": "SUM",
+        "FLOORS_CNT": "MAX",
+        "BUILT_YR": "FIRST",
+        "EFFBUILT_YR": "FIRST",
     }
 
     dupe_test_fields = list(field_map.keys())
 
     parcels_dissolved_df = dissolve.dissolve_duplicates_by_dataframe(
-        parcels_df, 'PARCEL_ID', field_map, dupe_test_fields
+        parcels_df, "PARCEL_ID", field_map, dupe_test_fields
     )
 
     #: Remove parcels without parcel ids and empty geometries
-    parcels_dissolved_df.dropna(subset=['PARCEL_ID', 'SHAPE'], inplace=True)
+    parcels_dissolved_df.dropna(subset=["PARCEL_ID", "SHAPE"], inplace=True)
 
     #: Ensure HOUSE_CNT is a float (for later comparison and handling NaNs)
-    parcels_dissolved_df['HOUSE_CNT'] = parcels_dissolved_df['HOUSE_CNT'].astype(float)
+    parcels_dissolved_df["HOUSE_CNT"] = parcels_dissolved_df["HOUSE_CNT"].astype(float)
 
     return parcels_dissolved_df
 
@@ -197,14 +194,14 @@ def clean_dissolve_field_names(field_names, prefixes):
 
     cleaned_names = {}
     for name_with_stat in field_names:
-        prefix, _, original_field_name = name_with_stat.partition('_')
+        prefix, _, original_field_name = name_with_stat.partition("_")
         if prefix in prefixes:
             cleaned_names[name_with_stat] = original_field_name
 
     return cleaned_names
 
 
-def get_non_base_addr_points(address_pts_fc, type_column_name='PtType', base_address_value='BASE ADDRESS'):
+def get_non_base_addr_points(address_pts_fc, type_column_name="PtType", base_address_value="BASE ADDRESS"):
     """Get address points that aren't a base address (ie, main, non-unit address for an apartment building)
 
     Args:
@@ -216,19 +213,18 @@ def get_non_base_addr_points(address_pts_fc, type_column_name='PtType', base_add
         pd.DataFrame.spatial: A spatial dataframe without any base addresses
     """
 
-    address_pts_no_base_df = (
-        pd.DataFrame.spatial.from_featureclass(address_pts_fc) \
-        .query(f'{type_column_name} != @base_address_value')
-        )
+    address_pts_no_base_df = pd.DataFrame.spatial.from_featureclass(address_pts_fc).query(
+        f"{type_column_name} != @base_address_value"
+    )
     return address_pts_no_base_df
 
 
 def load_and_clean_owned_unit_groupings(
-    common_areas_fc, common_area_key_column_name, field_mapping=None, unique_key_column='OBJECTID'
+    common_areas_fc, common_area_key_column_name, field_mapping=None, unique_key_column="OBJECTID"
 ):
     """Get PUDs and multi-family parcels from common_areas_fc as a dataframe
 
-    Also set IS_OUG to 'Yes' and copy unique_eky_column to to common_area_key_column_name.
+    Also set IS_OUG to 'Yes' and copy unique_key_column to to common_area_key_column_name.
 
     Args:
         common_areas_fc (str): Path to the common areas featureclass.
@@ -247,24 +243,25 @@ def load_and_clean_owned_unit_groupings(
 
     common_areas_df = pd.DataFrame.spatial.from_featureclass(common_areas_fc)
     if not common_areas_df[unique_key_column].is_unique:
-        raise ValueError(f'Unique key column {unique_key_column} does not contain unique values.')
+        raise ValueError(f"Unique key column {unique_key_column} does not contain unique values.")
 
     #: Rename columns if needed
     if field_mapping:
         common_areas_df.rename(columns=field_mapping, inplace=True)
 
     #: Warn if common areas contain empty geometries, then drop the appropriate rows.
-    empty_shape_row_count = common_areas_df[common_areas_df['SHAPE'].isna()][unique_key_column].count()
+    empty_shape_row_count = common_areas_df[common_areas_df["SHAPE"].isna()][unique_key_column].count()
     if empty_shape_row_count:
-        warnings.warn(f'{empty_shape_row_count} common area row[s] had empty geometries')
-        common_areas_df.dropna(subset=['SHAPE'], inplace=True)
+        warnings.warn(f"{empty_shape_row_count} common area row[s] had empty geometries")
+        common_areas_df.dropna(subset=["SHAPE"], inplace=True)
 
     common_areas_df[common_area_key_column_name] = common_areas_df[unique_key_column]
 
     #: Filter out any common areas that aren't PUDs or multi-family areas (industrial, commercial, etc)
-    common_areas_subset_df = common_areas_df[(common_areas_df['SUBTYPE'] == 'pud') |
-                                             (common_areas_df['TYPE'] == 'multi_family')].copy()
-    common_areas_subset_df['IS_OUG'] = 'Yes'
+    common_areas_subset_df = common_areas_df[
+        (common_areas_df["SUBTYPE"] == "pud") | (common_areas_df["TYPE"] == "multi_family")
+    ].copy()
+    common_areas_subset_df["IS_OUG"] = "Yes"
 
     return common_areas_subset_df
 
@@ -282,10 +279,10 @@ def set_multi_family_single_parcel_subtypes(evaluated_df):
         pd.DataFrame: evaluated_df with the SUBTYPE set appropriately.
     """
 
-    evaluated_df['SUBTYPE'] = np.where(
-        evaluated_df['parcel_type'] != 'triplex-quadplex', evaluated_df['parcel_type'], 'apartment'
+    evaluated_df["SUBTYPE"] = np.where(
+        evaluated_df["parcel_type"] != "triplex-quadplex", evaluated_df["parcel_type"], "apartment"
     )
-    evaluated_df['NOTE'] = np.where(evaluated_df['parcel_type'] != 'triplex-quadplex', '', evaluated_df['parcel_type'])
+    evaluated_df["NOTE"] = np.where(evaluated_df["parcel_type"] != "triplex-quadplex", "", evaluated_df["parcel_type"])
 
     return evaluated_df
 
@@ -303,9 +300,10 @@ def get_address_point_count_series(areas_df, address_points_df, key_col):
     """
 
     address_count_series = (
-        areas_df.spatial.join(address_points_df, 'left', 'contains') \
-        .groupby(key_col)['SHAPE'].count() \
-        .rename('UNIT_COUNT')
+        areas_df.spatial.join(address_points_df, "left", "contains")
+        .groupby(key_col)["SHAPE"]
+        .count()
+        .rename("UNIT_COUNT")
     )
 
     return address_count_series
@@ -327,14 +325,14 @@ def standardize_fields(parcels_df, field_mapping):
 
     for original_name in field_mapping.keys():
         if original_name not in parcels_df.columns:
-            raise ValueError(f'Field {original_name} not found in parcels dataset.')
+            raise ValueError(f"Field {original_name} not found in parcels dataset.")
 
     renamed_df = parcels_df.rename(columns=field_mapping)
 
     return renamed_df
 
 
-def concat_evaluated_dataframes(dataframes, new_index='PARCEL_ID'):
+def concat_evaluated_dataframes(dataframes, new_index="PARCEL_ID"):
     """Concatenate dataframes along the index and reset the index to new_index
 
     Args:
@@ -349,7 +347,7 @@ def concat_evaluated_dataframes(dataframes, new_index='PARCEL_ID'):
     """
 
     #: FIXME: reset index, reimplement validation (maybe custom validation check?)
-    concated_dataframes = pd.concat(dataframes)  #.set_index(new_index, verify_integrity=True)
+    concated_dataframes = pd.concat(dataframes)  # .set_index(new_index, verify_integrity=True)
 
     return concated_dataframes
 
@@ -363,45 +361,45 @@ def classify_from_area(parcels_df, parcel_centroids_df, parcel_key, area_df, cla
         parcel_key (str): Name of common key column between normal parcels and centroids
         area_df (pd.DataFrame.spatial): Areas dataframe to classify the parcels against
         classify_info (tuple, optional): Tuple of (areas unique key column, target column, value) for optionally
-        manually setting a column value for intersecting parcels. Defaults to ().
+            manually setting a column value for intersecting parcels. Defaults to ().
 
     Raises:
         ValueError: If all three required classify_info values are not provided.
         UserWarning: If duplicate parcel keys are found in the spatial join, indicating a centroid is within more than
-        one area. Check for overlapping areas (assumes areas are spatially exclusive).
+            one area. Check for overlapping areas (assumes areas are spatially exclusive).
 
     Returns:
         pd.DataFrame.spatial: Original parcels_df with info from areas that contain the parcels' corresponding centroids
     """
 
     #: Make sure everything's in the same projection
-    if area_df.spatial.sr['wkid'] != parcel_centroids_df.spatial.sr['wkid']:
-        logging.debug('Reprojecting areas to %s...', parcel_centroids_df.spatial.sr['wkid'])
-        if not area_df.spatial.project(parcel_centroids_df.spatial.sr['wkid']):
+    if area_df.spatial.sr["wkid"] != parcel_centroids_df.spatial.sr["wkid"]:
+        logging.debug("Reprojecting areas to %s...", parcel_centroids_df.spatial.sr["wkid"])
+        if not area_df.spatial.project(parcel_centroids_df.spatial.sr["wkid"]):
             raise RuntimeError(f'Reprojecting area_df to {parcel_centroids_df.spatial.sr["wkid"]} did not succeed.')
 
     #: narrow areas_df down to specified fields
     if columns_to_keep:
         new_columns = set(columns_to_keep)
-        new_columns.update(['SHAPE'])
+        new_columns.update(["SHAPE"])
         area_df = area_df.reindex(columns=new_columns)
 
     #: join centroids to the areas that contain them
-    joined_centroids_df = parcel_centroids_df.spatial.join(area_df, 'inner', 'within')
+    joined_centroids_df = parcel_centroids_df.spatial.join(area_df, "inner", "within")
 
     #: Check for centroids that belong to multiple areas
     dup_parcel_ids = joined_centroids_df[joined_centroids_df.duplicated(subset=[parcel_key], keep=False)]
     if dup_parcel_ids.shape[0]:
         warnings.warn(
-            f'{dup_parcel_ids.shape[0]} duplicate keys found in spatial join; check areas features for overlaps'
+            f"{dup_parcel_ids.shape[0]} duplicate keys found in spatial join; check areas features for overlaps"
         )
 
     #: Remove SHAPE from centroids so we can join it to parcels w/o multiple geometry fields and also remove
     #: index_right for cleanliness
-    joined_centroids_df.drop(columns=['SHAPE', 'index_right'], inplace=True)
+    joined_centroids_df.drop(columns=["SHAPE", "index_right"], inplace=True)
 
     #: Join intersecting centroids back to original parcels, keeping all original
-    merged_parcels = pd.merge(parcels_df, joined_centroids_df, how='left', on=parcel_key)
+    merged_parcels = pd.merge(parcels_df, joined_centroids_df, how="left", on=parcel_key)
 
     if classify_info:
         #: Make sure we've got all the necessary classification info
@@ -409,7 +407,7 @@ def classify_from_area(parcels_df, parcel_centroids_df, parcel_key, area_df, cla
             areas_unique_key_column, classify_column, classify_value = classify_info
         except ValueError as error:
             raise ValueError(
-                'classify_info should be (areas_unique_key_column, classify_column, classify_value)'
+                "classify_info should be (areas_unique_key_column, classify_column, classify_value)"
             ) from error
 
         #: Make sure parcel is associated with an area- areas_unique_key_col is not null
@@ -452,11 +450,11 @@ def concat_cities_metro_townships(cities_df, townships_df):
         pd.DataFrame: Concatenated spatial dataframe containing only 'name', 'ugrcode', and 'SHAPE' columns
     """
 
-    concat_df = pd.concat([cities_df, townships_df], join='inner')
-    return concat_df[['name', 'ugrcode', 'SHAPE']].copy()
+    concat_df = pd.concat([cities_df, townships_df], join="inner")
+    return concat_df[["name", "ugrcode", "SHAPE"]].copy()
 
 
-def extract_tract_geoid(dataframe, block_geoid='BLOCK_FIPS', tract_geoid='TRACT_FIPS'):
+def extract_tract_geoid(dataframe, block_geoid="BLOCK_FIPS", tract_geoid="TRACT_FIPS"):
     """Get the tract geoid by taking the first 11 digits from the block geoid, operating on an entire dataframe
 
     Args:
@@ -468,5 +466,5 @@ def extract_tract_geoid(dataframe, block_geoid='BLOCK_FIPS', tract_geoid='TRACT_
         pd.DataFrame: Input dataframe with new tract geoid column added.
     """
 
-    dataframe[tract_geoid] = dataframe[block_geoid].apply(lambda x: ''.join([i for i in str(x)][:11]))
+    dataframe[tract_geoid] = dataframe[block_geoid].apply(lambda x: "".join([i for i in str(x)][:11]))
     return dataframe
