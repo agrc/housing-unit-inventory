@@ -1,3 +1,8 @@
+"""Contains a method for dissolving geometries and their attributes based on a specified field, with logic for handling
+rows that have duplicate addresses (ie, a parcel gets split and they copy all the attributes to both new parcels so we
+don't want to sum them).
+"""
+
 import logging
 import warnings
 from collections import defaultdict
@@ -36,11 +41,10 @@ def _dissolve_geometries(duplicates_df, dissolve_field):
     """
 
     grouped = duplicates_df.groupby(dissolve_field)
-    dissolved_geometries_series = grouped['SHAPE'].agg(_recursive_geometric_union_of_series)
-    dissolved_geometries_df = pd.DataFrame({
-        dissolve_field: dissolved_geometries_series.index,
-        'SHAPE': dissolved_geometries_series.values
-    })
+    dissolved_geometries_series = grouped["SHAPE"].agg(_recursive_geometric_union_of_series)
+    dissolved_geometries_df = pd.DataFrame(
+        {dissolve_field: dissolved_geometries_series.index, "SHAPE": dissolved_geometries_series.values}
+    )
 
     return dissolved_geometries_df
 
@@ -63,30 +67,31 @@ def _dissolve_attributes(duplicates_df, dissolve_field, fields_map, sum_duplicat
     groupby = duplicates_df.groupby(dissolve_field)
     ops_and_fields = _group_common_field_ops(fields_map)
     for op_name, op_fields in ops_and_fields.items():
-        if op_name not in ['count', 'first', 'sum', 'max']:
+        if op_name not in ["count", "first", "sum", "max"]:
             warnings.warn(f'Attribute operation "{op_name}" not supported, skipping...')
             continue
-        if dissolve_field in op_fields and op_name != 'count':
+        if dissolve_field in op_fields and op_name != "count":
             warnings.warn(
                 f'Dissolve field "{dissolve_field}" should only use "count" operation; result likely nonsensical'
             )
-        if op_name == 'count':
+        if op_name == "count":
             op_df = groupby[op_fields].count()
-        if op_name == 'first':
+        if op_name == "first":
             op_df = groupby[op_fields].first()
-        if op_name == 'sum':
-            op_df = groupby.agg(_smart_groupby_sum, sum_fields=op_fields,
-                                test_fields=sum_duplicate_test_fields)[op_fields]
-        if op_name == 'max':
+        if op_name == "sum":
+            op_df = groupby.agg(_smart_groupby_sum, sum_fields=op_fields, test_fields=sum_duplicate_test_fields)[
+                op_fields
+            ]
+        if op_name == "max":
             op_df = groupby[op_fields].max()
 
         #: Because of the groupby, the row index should be the same for each op, so we concat along the columns
-        dissolved_attributes_df = pd.concat([dissolved_attributes_df, op_df], axis='columns')
+        dissolved_attributes_df = pd.concat([dissolved_attributes_df, op_df], axis="columns")
 
     #: Rename dissolve field with name_op if it's in the field map (prevents having a column the same as the index)
     if dissolve_field in fields_map:
         dissolved_attributes_df.rename(
-            columns={dissolve_field: f'{dissolve_field}_{fields_map[dissolve_field]}'}, inplace=True
+            columns={dissolve_field: f"{dissolve_field}_{fields_map[dissolve_field]}"}, inplace=True
         )
 
     #: Pull dissolve_field back into columns to match geometry df schema
@@ -145,7 +150,7 @@ def _combine_geometries_and_attributes(geometries_df, attributes_df, dissolve_fi
         pd.DataFrame: Dataframe merged on dissolved_field containing all fields in geometries_df and attributes_df
     """
 
-    return attributes_df.merge(geometries_df, on=dissolve_field, how='outer', validate='1:1')
+    return attributes_df.merge(geometries_df, on=dissolve_field, how="outer", validate="1:1")
 
 
 def _recombine_dissolved_with_all(dissolved_combined, uniques):
@@ -183,7 +188,7 @@ def _extract_duplicates_and_uniques(dataframe, dissolve_field):
     original_length = dataframe.shape[0]
     duplicates_length = duplicates.shape[0]
     uniques_length = uniques.shape[0]
-    logging.debug(f'{original_length} original rows, {duplicates_length} duplicates and {uniques_length} uniques')
+    logging.debug(f"{original_length} original rows, {duplicates_length} duplicates and {uniques_length} uniques")
 
     if duplicates_length + uniques_length != original_length:
         raise RuntimeError("Duplicates plus uniques don't equal original.")
@@ -192,7 +197,7 @@ def _extract_duplicates_and_uniques(dataframe, dissolve_field):
 
 
 def dissolve_duplicates_by_dataframe(dataframe, dissolve_field, fields_map, sum_duplicate_test_fields):
-    """Dissolve gemoetries with duplicate values in specified field, summarizing other fields according to fields map. Fields being summed wont be summed if the rows are duplicates.
+    """Dissolve geometries with duplicate values in specified field, summarizing other fields according to fields map. Fields being summed wont be summed if the rows are duplicates.
 
     Args:
         dataframe (pd.DataFrame): Spatial dataframe with at least one column with duplicate values.
@@ -214,7 +219,7 @@ def dissolve_duplicates_by_dataframe(dataframe, dissolve_field, fields_map, sum_
 
     #: Filter down to just the columns in fields_map
     keep_columns = list(fields_map.keys())
-    keep_columns.append('SHAPE')
+    keep_columns.append("SHAPE")
     all_combined = all_combined[keep_columns].copy()
 
     return all_combined
