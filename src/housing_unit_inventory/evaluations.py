@@ -36,7 +36,9 @@ def _series_single_mode(series):
     return modes
 
 
-def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, common_area_df) -> pd.DataFrame.spatial:
+def owned_unit_groupings(
+    parcels_df, common_area_key_col, common_area_df, address_points_df=None
+) -> pd.DataFrame.spatial:
     """Aggregate info from parcels in each OUG into the OUG geometry along with a new "parcel id" for each OUG
 
     Groups parcels by OUG id in common_area_key_col and performs the relevant aggregation stats for each attribute.
@@ -76,9 +78,12 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
     floors_cnt_mean_series = parcels_grouped_by_oug_id["FLOORS_CNT"].mean()
     built_yr_series = helpers.get_proper_built_yr_value_series(oug_parcels_df, common_area_key_col, "BUILT_YR")
     parcel_count_series = parcels_grouped_by_oug_id["SHAPE"].count().rename("PARCEL_COUNT")
-    address_count_series = helpers.get_address_point_count_series(
-        intersecting_common_areas_df, address_points_df, common_area_key_col
-    )
+    if address_points_df is not None:
+        unit_count_series = helpers.get_address_point_count_series(
+            intersecting_common_areas_df, address_points_df, common_area_key_col
+        )
+    else:
+        unit_count_series = parcels_grouped_by_oug_id["HOUSE_CNT"].sum().rename("UNIT_COUNT")
 
     #: Merge all our new info to the common area polygons, using the common_area_key_col as the df index
     carry_over_fields = ["SHAPE", common_area_key_col, "SUBTYPE", "TYPE", "IS_OUG"]
@@ -92,7 +97,7 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
             floors_cnt_mean_series,
             built_yr_series,
             parcel_count_series,
-            address_count_series,
+            unit_count_series,
         ],
     )
 
@@ -104,7 +109,8 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
     # evaluated_oug_parcels_with_types_df['PARCEL_ID'] = 'oug_' + evaluated_oug_parcels_with_types_df.index.astype(str)
     try:
         evaluated_oug_parcels_df["PARCEL_ID"] = 990000 + evaluated_oug_parcels_df.index.astype(int)
-    except TypeError:
+    except ValueError as error:
+        logging.debug(error)
         warnings.warn(
             f"Common area key {common_area_key_col} cannot be converted to int for PARCEL_ID creation, using simple range instead"
         )
@@ -113,7 +119,8 @@ def owned_unit_groupings(parcels_df, common_area_key_col, address_points_df, com
     #: Convert PARCEL_ID to str to match type with other PARCEL_IDs
     evaluated_oug_parcels_df = evaluated_oug_parcels_df.astype({"PARCEL_ID": str})
 
-    #: TODO: implement some sort of count tracking. Maybe a separate data frame consisting of just the parcel ids, removing matching ones on each pass?
+    #: TODO: implement some sort of count tracking. Maybe a separate data frame consisting of just the parcel ids,
+    #: removing matching ones on each pass?
 
     return evaluated_oug_parcels_df
 
@@ -158,11 +165,15 @@ def by_parcel_types(parcels_df, parcel_types, attribute_dict, address_points_df=
 def compare_to_census_tracts(evaluated_df, census_tracts_df, outpath):
     """Aggregate and compare the evaluated data to 2020 census tract data
 
-    Aggregates data by the tract geoid/FIPS code and then averages, sums, etc. The aggregated data are then joined to the census geometries, populations, and unit counts using the FIPS code. Finally, it compares pre 2019 evaluated unit counts and the 2020 census housing unit totals. A positive number indicates the evaluation has more units than the census, a negative number indicates it had fewer units than the census.
+    Aggregates data by the tract geoid/FIPS code and then averages, sums, etc. The aggregated data are then joined to
+    the census geometries, populations, and unit counts using the FIPS code. Finally, it compares pre 2019 evaluated
+    unit counts and the 2020 census housing unit totals. A positive number indicates the evaluation has more units than
+    the census, a negative number indicates it had fewer units than the census.
 
     Args:
         evaluated_df (pd.DataFrame): The completely evaluated parcel/OUG data
-        census_tracts_df (pd.DataFrame.spatial): The census tract data, including SHAPEs, population (pop100), and housing units (hu100)
+        census_tracts_df (pd.DataFrame.spatial): The census tract data, including SHAPEs, population (pop100), and
+            housing units (hu100)
         outpath (Path): Compared tract output location
     """
 
