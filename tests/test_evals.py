@@ -4,8 +4,9 @@ import pandas as pd
 import pytest
 from arcgis.features import GeoAccessor, GeoSeriesAccessor
 from arcgis.geometry import Geometry
-from housing_unit_inventory import evaluations, helpers
 from pandas import testing as tm
+
+from housing_unit_inventory import evaluations, helpers
 
 
 class TestOwnedUnitGroupings:
@@ -58,7 +59,6 @@ class TestOwnedUnitGroupings:
                 "TYPE": ["single_family", "single_family"],
                 "IS_OUG": [1, 1],
                 "TOTAL_MKT_VALUE": [25, 15],
-                "LAND_MKT_VALUE": [12, 10],
                 "BLDG_SQFT": [800, 1000],
                 "FLOORS_CNT": [1.0, 2.0],
                 "BUILT_YR": [1901, 1902],
@@ -80,7 +80,6 @@ class TestOwnedUnitGroupings:
                 "parcel_type": ["owned_unit_grouping", "owned_unit_grouping", "owned_unit_grouping"],
                 common_area_key_column: ["foo", "foo", "bar"],
                 "TOTAL_MKT_VALUE": [10, 15, 15],
-                "LAND_MKT_VALUE": [5, 7, 10],
                 "BLDG_SQFT": [300, 500, 1000],
                 "FLOORS_CNT": [1, 1, 2],
                 "SHAPE": ["shape1", "shape2", "shape3"],
@@ -124,7 +123,6 @@ class TestOwnedUnitGroupings:
                 "TYPE": ["single_family", "single_family"],
                 "IS_OUG": [1, 1],
                 "TOTAL_MKT_VALUE": [25, 15],
-                "LAND_MKT_VALUE": [12, 10],
                 "BLDG_SQFT": [800, 1000],
                 "FLOORS_CNT": [1.0, 2.0],
                 "BUILT_YR": [1901, 1902],
@@ -142,6 +140,65 @@ class TestOwnedUnitGroupings:
             warning[0].message.args[0]
             == "Common area key common_area_key cannot be converted to int for PARCEL_ID creation, using simple range instead"
         )
+
+    def test_eval_owned_unit_groupings_uses_unit_counts_instead_of_addr_pts(self, mocker):
+        common_area_key_column = "common_area_key"
+        parcels_df = pd.DataFrame(
+            {
+                "PARCEL_ID": [1, 2, 3],
+                "parcel_type": ["owned_unit_grouping", "owned_unit_grouping", "owned_unit_grouping"],
+                common_area_key_column: [11, 11, 12],
+                "TOTAL_MKT_VALUE": [10, 15, 15],
+                "LAND_MKT_VALUE": [5, 7, 10],
+                "BLDG_SQFT": [300, 500, 1000],
+                "FLOORS_CNT": [1, 1, 2],
+                "SHAPE": ["shape1", "shape2", "shape3"],
+                "HOUSE_CNT": [2, 1, 1],
+            }
+        )
+
+        common_area_df = pd.DataFrame(
+            {
+                common_area_key_column: [11, 12],
+                "source": ["one", "two"],
+                "SHAPE": ["common_shape1", "common_shape2"],
+                "TYPE": ["pud", "pud"],
+                "SUBTYPE": ["pud", "pud"],
+                "IS_OUG": [1, 1],
+            }
+        )
+
+        year_built_series = pd.Series(data=[1901, 1902], index=[11, 12], name="BUILT_YR")
+        year_built_series.index.name = common_area_key_column
+        year_built_method_mock = mocker.Mock()
+        year_built_method_mock.return_value = year_built_series
+        mocker.patch("housing_unit_inventory.helpers.get_proper_built_yr_value_series", new=year_built_method_mock)
+
+        addr_pt_mock = mocker.patch("housing_unit_inventory.helpers.get_address_point_count_series")
+
+        oug_parcels_df = evaluations.owned_unit_groupings(parcels_df, common_area_key_column, common_area_df)
+
+        test_df = pd.DataFrame(
+            {
+                "SHAPE": ["common_shape1", "common_shape2"],
+                "SUBTYPE": ["pud", "pud"],
+                "TYPE": ["single_family", "single_family"],
+                "IS_OUG": [1, 1],
+                "TOTAL_MKT_VALUE": [25, 15],
+                "BLDG_SQFT": [800, 1000],
+                "FLOORS_CNT": [1.0, 2.0],
+                "BUILT_YR": [1901, 1902],
+                "PARCEL_COUNT": [2, 1],
+                "UNIT_COUNT": [3, 1],
+                "PARCEL_ID": ["990011", "990012"],
+            },
+            index=[11, 12],
+        )
+        test_df.index.name = common_area_key_column
+
+        tm.assert_frame_equal(oug_parcels_df, test_df)
+
+        addr_pt_mock.assert_not_called()
 
     def test_series_single_mode_returns_first_of_multiple_modes(self):
         test_series = pd.Series(["foo", "foo", "bar", "bar", "baz"])

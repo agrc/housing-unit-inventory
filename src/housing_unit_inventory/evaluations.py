@@ -73,7 +73,6 @@ def owned_unit_groupings(
     #: each series should be indexed by and refer back to the common_area_key_col, not the parcels
     parcels_grouped_by_oug_id = oug_parcels_df.groupby(common_area_key_col)
     total_mkt_value_sum_series = parcels_grouped_by_oug_id["TOTAL_MKT_VALUE"].sum()
-    land_mkt_value_sum_series = parcels_grouped_by_oug_id["LAND_MKT_VALUE"].sum()
     bldg_sqft_sum_series = parcels_grouped_by_oug_id["BLDG_SQFT"].sum()
     floors_cnt_mean_series = parcels_grouped_by_oug_id["FLOORS_CNT"].mean()
     built_yr_series = helpers.get_proper_built_yr_value_series(oug_parcels_df, common_area_key_col, "BUILT_YR")
@@ -92,7 +91,6 @@ def owned_unit_groupings(
         objs=[
             intersecting_common_areas_df[carry_over_fields].copy().set_index(common_area_key_col),
             total_mkt_value_sum_series,
-            land_mkt_value_sum_series,
             bldg_sqft_sum_series,
             floors_cnt_mean_series,
             built_yr_series,
