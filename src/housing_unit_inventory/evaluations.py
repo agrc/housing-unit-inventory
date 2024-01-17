@@ -44,6 +44,9 @@ def owned_unit_groupings(
     Groups parcels by OUG id in common_area_key_col and performs the relevant aggregation stats for each attribute.
     Combines the attributes back to the OUG geometries for the final report.
 
+    If original_parcel_type is present in parcels_df, it will set the SUBTYPE to the most common value for each OUG. If
+    not, it will set the SUBTYPE to 'pud'.
+
     The "parcel id" is just '99' + the OUG ID if the ID can be converted to an int or '99' + a range from 0000-9999,
     so it will always be 99xxxx, where xxxx is either the OUG ID (may not be 4 digits) or the range value.
 
@@ -74,9 +77,15 @@ def owned_unit_groupings(
     parcels_grouped_by_oug_id = oug_parcels_df.groupby(common_area_key_col)
     total_mkt_value_sum_series = parcels_grouped_by_oug_id["TOTAL_MKT_VALUE"].sum()
     bldg_sqft_sum_series = parcels_grouped_by_oug_id["BLDG_SQFT"].sum()
-    floors_cnt_mean_series = parcels_grouped_by_oug_id["FLOORS_CNT"].mean()
     built_yr_series = helpers.get_proper_built_yr_value_series(oug_parcels_df, common_area_key_col, "BUILT_YR")
     parcel_count_series = parcels_grouped_by_oug_id["SHAPE"].count().rename("PARCEL_COUNT")
+    try:
+        subtype_series = parcels_grouped_by_oug_id["original_parcel_type"].apply(
+            helpers.get_most_common_value_in_series
+        )
+        subtype_series.name = "SUBTYPE"
+    except KeyError:
+        subtype_series = pd.Series("pud", index=parcel_count_series.index, name="SUBTYPE")
     if address_points_df is not None:
         unit_count_series = helpers.get_address_point_count_series(
             intersecting_common_areas_df, address_points_df, common_area_key_col
@@ -85,17 +94,17 @@ def owned_unit_groupings(
         unit_count_series = parcels_grouped_by_oug_id["HOUSE_CNT"].sum().rename("UNIT_COUNT")
 
     #: Merge all our new info to the common area polygons, using the common_area_key_col as the df index
-    carry_over_fields = ["SHAPE", common_area_key_col, "SUBTYPE", "TYPE", "IS_OUG"]
+    carry_over_fields = ["SHAPE", common_area_key_col, "TYPE", "IS_OUG"]
     evaluated_oug_parcels_df = pd.concat(
         axis=1,
         objs=[
             intersecting_common_areas_df[carry_over_fields].copy().set_index(common_area_key_col),
             total_mkt_value_sum_series,
             bldg_sqft_sum_series,
-            floors_cnt_mean_series,
             built_yr_series,
             parcel_count_series,
             unit_count_series,
+            subtype_series,
         ],
     )
 

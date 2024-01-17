@@ -4,9 +4,8 @@ import pandas as pd
 import pytest
 from arcgis.features import GeoAccessor, GeoSeriesAccessor
 from arcgis.geometry import Geometry
-from pandas import testing as tm
-
 from housing_unit_inventory import evaluations, helpers
+from pandas import testing as tm
 
 
 class TestOwnedUnitGroupings:
@@ -20,7 +19,6 @@ class TestOwnedUnitGroupings:
                 "TOTAL_MKT_VALUE": [10, 15, 15],
                 "LAND_MKT_VALUE": [5, 7, 10],
                 "BLDG_SQFT": [300, 500, 1000],
-                "FLOORS_CNT": [1, 1, 2],
                 "SHAPE": ["shape1", "shape2", "shape3"],
             }
         )
@@ -30,7 +28,7 @@ class TestOwnedUnitGroupings:
                 common_area_key_column: [11, 12],
                 "source": ["one", "two"],
                 "SHAPE": ["common_shape1", "common_shape2"],
-                "TYPE": ["pud", "pud"],
+                "TYPE": ["single_family", "single_family"],
                 "SUBTYPE": ["pud", "pud"],
                 "IS_OUG": [1, 1],
             }
@@ -55,15 +53,80 @@ class TestOwnedUnitGroupings:
         test_df = pd.DataFrame(
             {
                 "SHAPE": ["common_shape1", "common_shape2"],
-                "SUBTYPE": ["pud", "pud"],
                 "TYPE": ["single_family", "single_family"],
                 "IS_OUG": [1, 1],
                 "TOTAL_MKT_VALUE": [25, 15],
                 "BLDG_SQFT": [800, 1000],
-                "FLOORS_CNT": [1.0, 2.0],
                 "BUILT_YR": [1901, 1902],
                 "PARCEL_COUNT": [2, 1],
                 "UNIT_COUNT": [2, 1],
+                "SUBTYPE": ["pud", "pud"],
+                "PARCEL_ID": ["990011", "990012"],
+            },
+            index=[11, 12],
+        )
+        test_df.index.name = common_area_key_column
+
+        tm.assert_frame_equal(oug_parcels_df, test_df)
+
+    def test_eval_owned_unit_groupings_gets_common_subtype(self, mocker):
+        common_area_key_column = "common_area_key"
+        parcels_df = pd.DataFrame(
+            {
+                "PARCEL_ID": [1, 2, 3, 4],
+                "parcel_type": [
+                    "owned_unit_grouping",
+                    "owned_unit_grouping",
+                    "owned_unit_grouping",
+                    "owned_unit_grouping",
+                ],
+                "original_parcel_type": ["townhouse", "condo", "condo", "shanty"],
+                common_area_key_column: [11, 11, 11, 12],
+                "TOTAL_MKT_VALUE": [10, 15, 15, 15],
+                # "LAND_MKT_VALUE": [5, 7, 10],
+                "BLDG_SQFT": [300, 500, 500, 1000],
+                "SHAPE": ["shape1", "shape2", "shape3", "shape4"],
+            }
+        )
+
+        common_area_df = pd.DataFrame(
+            {
+                common_area_key_column: [11, 12],
+                "source": ["one", "two"],
+                "SHAPE": ["common_shape1", "common_shape2"],
+                "TYPE": ["single_family", "single_family"],
+                "SUBTYPE": ["pud", "pud"],
+                "IS_OUG": [1, 1],
+            }
+        )
+
+        year_built_series = pd.Series(data=[1901, 1902], index=[11, 12], name="BUILT_YR")
+        year_built_series.index.name = common_area_key_column
+        year_built_method_mock = mocker.Mock()
+        year_built_method_mock.return_value = year_built_series
+
+        mocker.patch("housing_unit_inventory.helpers.get_proper_built_yr_value_series", new=year_built_method_mock)
+
+        addr_pt_series = pd.Series(data=[3, 1], index=[11, 12], name="UNIT_COUNT")
+        addr_pt_series.index.name = common_area_key_column
+        addr_count_method_mock = mocker.Mock()
+        addr_count_method_mock.return_value = addr_pt_series
+
+        mocker.patch("housing_unit_inventory.helpers.get_address_point_count_series", new=addr_count_method_mock)
+
+        oug_parcels_df = evaluations.owned_unit_groupings(parcels_df, common_area_key_column, common_area_df, "foo")
+
+        test_df = pd.DataFrame(
+            {
+                "SHAPE": ["common_shape1", "common_shape2"],
+                "TYPE": ["single_family", "single_family"],
+                "IS_OUG": [1, 1],
+                "TOTAL_MKT_VALUE": [40, 15],
+                "BLDG_SQFT": [1300, 1000],
+                "BUILT_YR": [1901, 1902],
+                "PARCEL_COUNT": [3, 1],
+                "UNIT_COUNT": [3, 1],
+                "SUBTYPE": ["condo", "shanty"],
                 "PARCEL_ID": ["990011", "990012"],
             },
             index=[11, 12],
@@ -81,7 +144,6 @@ class TestOwnedUnitGroupings:
                 common_area_key_column: ["foo", "foo", "bar"],
                 "TOTAL_MKT_VALUE": [10, 15, 15],
                 "BLDG_SQFT": [300, 500, 1000],
-                "FLOORS_CNT": [1, 1, 2],
                 "SHAPE": ["shape1", "shape2", "shape3"],
                 "POLYS": ["poly1", "poly2", "poly3"],
             }
@@ -92,7 +154,7 @@ class TestOwnedUnitGroupings:
                 common_area_key_column: ["foo", "bar"],
                 "source": ["one", "two"],
                 "SHAPE": ["common_shape1", "common_shape2"],
-                "TYPE": ["pud", "pud"],
+                "TYPE": ["single_family", "single_family"],
                 "SUBTYPE": ["pud", "pud"],
                 "IS_OUG": [1, 1],
             }
@@ -119,16 +181,15 @@ class TestOwnedUnitGroupings:
             {
                 "PARCEL_ID": ["990000", "990001"],
                 "SHAPE": ["common_shape1", "common_shape2"],
-                "SUBTYPE": ["pud", "pud"],
                 "TYPE": ["single_family", "single_family"],
                 "IS_OUG": [1, 1],
                 "TOTAL_MKT_VALUE": [25, 15],
                 "BLDG_SQFT": [800, 1000],
-                "FLOORS_CNT": [1.0, 2.0],
                 "BUILT_YR": [1901, 1902],
                 "PARCEL_COUNT": [2, 1],
                 "UNIT_COUNT": [2, 1],
                 "TYPE": ["single_family", "single_family"],
+                "SUBTYPE": ["pud", "pud"],
             },
             index=["foo", "bar"],
         )
@@ -151,7 +212,6 @@ class TestOwnedUnitGroupings:
                 "TOTAL_MKT_VALUE": [10, 15, 15],
                 "LAND_MKT_VALUE": [5, 7, 10],
                 "BLDG_SQFT": [300, 500, 1000],
-                "FLOORS_CNT": [1, 1, 2],
                 "SHAPE": ["shape1", "shape2", "shape3"],
                 "HOUSE_CNT": [2, 1, 1],
             }
@@ -162,7 +222,7 @@ class TestOwnedUnitGroupings:
                 common_area_key_column: [11, 12],
                 "source": ["one", "two"],
                 "SHAPE": ["common_shape1", "common_shape2"],
-                "TYPE": ["pud", "pud"],
+                "TYPE": ["single_family", "single_family"],
                 "SUBTYPE": ["pud", "pud"],
                 "IS_OUG": [1, 1],
             }
@@ -181,15 +241,14 @@ class TestOwnedUnitGroupings:
         test_df = pd.DataFrame(
             {
                 "SHAPE": ["common_shape1", "common_shape2"],
-                "SUBTYPE": ["pud", "pud"],
                 "TYPE": ["single_family", "single_family"],
                 "IS_OUG": [1, 1],
                 "TOTAL_MKT_VALUE": [25, 15],
                 "BLDG_SQFT": [800, 1000],
-                "FLOORS_CNT": [1.0, 2.0],
                 "BUILT_YR": [1901, 1902],
                 "PARCEL_COUNT": [2, 1],
                 "UNIT_COUNT": [3, 1],
+                "SUBTYPE": ["pud", "pud"],
                 "PARCEL_ID": ["990011", "990012"],
             },
             index=[11, 12],
