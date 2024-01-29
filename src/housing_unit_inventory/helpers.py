@@ -258,6 +258,7 @@ def load_and_clean_owned_unit_groupings(
     common_areas_df[common_area_key_column_name] = common_areas_df[unique_key_column]
 
     #: Filter out any common areas that aren't PUDs or multi-family areas (industrial, commercial, etc)
+    #: These came from WFRC's common areas dataset and may be unique to them
     common_areas_subset_df = common_areas_df[
         (common_areas_df["SUBTYPE"] == "pud") | (common_areas_df["TYPE"] == "multi_family")
     ].copy()
@@ -468,3 +469,70 @@ def extract_tract_geoid(dataframe, block_geoid="BLOCK_FIPS", tract_geoid="TRACT_
 
     dataframe[tract_geoid] = dataframe[block_geoid].apply(lambda x: "".join([i for i in str(x)][:11]))
     return dataframe
+
+
+def combine_washington_cama_parcels(df):
+    """Combine Washington County cama records for a parcel that has multiple improvements.
+
+    Should be .apply()ed to a groupby('PARCELNO') object.
+
+    Args:
+        df (pd.DataFrame): CAMA data for a single parcel, may have multiple rows for mult. improvements
+
+    Returns:
+        pd.Series: The combined information for a single parcel that can be combined with others into a dataframe
+    """
+
+    #: Filter out records that are outbuildings or clubhousese; these don't contribute to the final data
+    df = df[(df["PROPERTYTYPE"] != "Out Building") & (df["BLTASDESCRIPTION"] != "clubhouse")]
+
+    attrs_dict = {}
+    attrs_dict["PARCELNO"] = df["PARCELNO"].iloc[0]
+
+    #: These should take the most common value
+    for mode_column in ["PROPERTYTYPE", "PRIMARY_NONPRIMARY", "SUBDIVISIONNAME", "BLTASDESCRIPTION"]:
+        try:
+            attrs_dict[mode_column] = df[mode_column].mode()[0]
+        except Exception:
+            attrs_dict[mode_column] = pd.NA
+
+    #: These should get the sum
+    for sum_column in ["TOTALUNITCOUNT", "IMPSF"]:
+        try:
+            attrs_dict[sum_column] = df[sum_column].sum()
+        except Exception:
+            attrs_dict[sum_column] = 0
+
+    #: Year built should be the most common year, but if that's 0, it should be the max
+    try:
+        year_built = df["BLTASYEARBUILT"].mode()[0]
+        attrs_dict["BLTASYEARBUILT"] = year_built if year_built != 0 else df["BLTASYEARBUILT"].max()
+    except Exception:
+        attrs_dict["BLTASYEARBUILT"] = 0
+
+    for max_column in ["TOTALVALUE"]:
+        try:
+            attrs_dict[max_column] = df[max_column].max()
+        except Exception:
+            attrs_dict[max_column] = 0
+
+    return pd.Series(attrs_dict)
+
+
+def get_most_common_value_in_series(series):
+    """Get the most common value in a series
+
+    If there are equal numbers of multiple values, it returns the first one. If there are no common values, it returns
+    pd.NA
+
+    Args:
+        series (pd.Series): Series to get the most common value from
+
+    Returns:
+        object: Most common value in series
+    """
+
+    try:
+        return series.mode()[0]
+    except KeyError:
+        return pd.NA
