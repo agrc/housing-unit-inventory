@@ -33,7 +33,7 @@ setup(
     },
     keywords=["gis"],
     install_requires=[
-        "arcgis==2.2.*",
+        "arcgis>=2.2,<2.4",
     ],
     extras_require={
         "tests": [
