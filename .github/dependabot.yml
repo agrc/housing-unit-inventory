@@ -1,10 +1,22 @@
 version: 2
 updates:
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
-      interval: "monthly"
-  - package-ecosystem: "pip"
-    directory: "/"
+      interval: monthly
+    cooldown:
+      default-days: 10
+      exclude:
+        - agrc/*
+  - package-ecosystem: pip
+    directory: /
     schedule:
-      interval: "monthly"
+      interval: monthly
+    cooldown:
+      default-days: 10
+      semver-major-days: 60
+      semver-minor-days: 14
+      semver-patch-days: 7
+      exclude:
+        - ugrc-*
+        - agrc-*
