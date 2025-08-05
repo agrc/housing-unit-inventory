@@ -753,7 +753,10 @@ def davis():
     )
 
     #: Mobile home communities
-    parcels_without_mobile_homes = evaluate_mobile_home_communities(
+    # parcels_without_mobile_homes = evaluate_mobile_home_communities(
+    #     parcels_without_apartments, mobile_home_communities, scratch, address_pts_no_base, gdb
+    # )
+    evaluate_mobile_home_communities(
         parcels_without_apartments, mobile_home_communities, scratch, address_pts_no_base, gdb
     )
     #
