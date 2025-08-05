@@ -777,10 +777,11 @@ class TestClassifyFromArea:
             'UNIT_COUNT': [1, 2],
             'SHAPE': ['parcel_shape_1', 'parcel_shape_2'],
             'common_area_key': [1, np.nan],
-            'parcel_type': ['owned_unit_grouping', np.nan]
+            'parcel_type': ['owned_unit_grouping', 'nan']
         })
 
         tm.assert_frame_equal(oug_parcels, test_df)
+
 
     # def test_classify_from_area_raises_warning_on_more_rows_after_join(self, mocker):
     #     test_parcels_df = pd.DataFrame({
