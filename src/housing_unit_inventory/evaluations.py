@@ -2,8 +2,8 @@ import logging
 import warnings
 
 import pandas as pd
-from arcgis.features import GeoAccessor, GeoSeriesAccessor
-from arcgis.geometry import Geometry
+from arcgis.features import GeoAccessor, GeoSeriesAccessor  # noqa: F401
+from arcgis.geometry import Geometry  # noqa: F401
 
 from . import helpers
 
