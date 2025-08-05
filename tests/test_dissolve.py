@@ -384,7 +384,7 @@ class TestAttributeDissolve:
 
         test_df = pd.DataFrame({
             'PARCEL_ID': ['1'],
-            'TEST': [100],
+            'TEST': [100.],
         })
 
         tm.assert_frame_equal(dissolved_df, test_df)
