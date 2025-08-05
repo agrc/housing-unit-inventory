@@ -5,10 +5,11 @@ import os
 
 import arcpy
 import pandas as pd
+
 # import numpy as np
 # from arcgis import GIS
-from arcgis.features import GeoAccessor, GeoSeriesAccessor
-from arcgis.geometry import Geometry
+from arcgis.features import GeoAccessor, GeoSeriesAccessor  # noqa: F401
+from arcgis.geometry import Geometry  # noqa: F401
 
 #: TODO:
 #:      Do as much in data frames as possible

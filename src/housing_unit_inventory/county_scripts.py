@@ -3,7 +3,7 @@ from pathlib import Path
 
 import arcpy
 import pandas as pd
-from arcgis.features import GeoAccessor, GeoSeriesAccessor
+from arcgis.features import GeoAccessor, GeoSeriesAccessor  # noqa: F401
 
 from . import calculate, dissolve, evaluations, helpers
 
